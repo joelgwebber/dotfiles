@@ -1,0 +1,8 @@
+[font]
+size = 14
+
+[font.normal]
+family = "CaskaydiaCove Nerd Font Mono"
+
+[shell]
+program = "/bin/zsh"
