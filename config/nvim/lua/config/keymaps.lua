@@ -1,11 +1,16 @@
--- Change next/prev tab from H/L to [Shift-]Tab
+-- Change next/prev tab from H/L to other stuff.
 vim.keymap.del("n", "H")
 vim.keymap.del("n", "L")
-vim.keymap.set({ "n", "t" }, "<C-D-l>", "<cmd>BufferLineCycleNext<cr>", { desc = "Next buffer" })
-vim.keymap.set({ "n", "t" }, "<C-D-l>", "<cmd>BufferLineCycleNext<cr>", { desc = "Next buffer" })
+
+vim.keymap.set({ "n", "t" }, "[b", "<cmd>BufferLineCyclePrev<cr>", { desc = "Prev buffer" })
+vim.keymap.set({ "n", "t" }, "]b", "<cmd>BufferLineCycleNext<cr>", { desc = "Next buffer" })
+vim.keymap.set({ "n", "t" }, "[B", "<cmd>BufferLineMovePrev<cr>", { desc = "Prev buffer" })
+vim.keymap.set({ "n", "t" }, "]B", "<cmd>BufferLineMoveNext<cr>", { desc = "Next buffer" })
+
 vim.keymap.set({ "n", "t" }, "<C-D-h>", "<cmd>BufferLineCyclePrev<cr>", { desc = "Prev buffer" })
-vim.keymap.set({ "n", "t" }, "<C-D-S-l>", "<cmd>BufferLineMoveNext<cr>", { desc = "Next buffer" })
+vim.keymap.set({ "n", "t" }, "<C-D-l>", "<cmd>BufferLineCycleNext<cr>", { desc = "Next buffer" })
 vim.keymap.set({ "n", "t" }, "<C-D-S-h>", "<cmd>BufferLineMovePrev<cr>", { desc = "Prev buffer" })
+vim.keymap.set({ "n", "t" }, "<C-D-S-l>", "<cmd>BufferLineMoveNext<cr>", { desc = "Next buffer" })
 
 -- Add basic shortcuts for yarepl.
 vim.keymap.set("n", "<Leader>rr", "<cmd>REPLStart<cr>")
