@@ -13,8 +13,10 @@ require("workspaces").setup({
   },
 })
 
--- vim.opt.runtimepath:prepend("~/src/nvcalc.nvim")
--- require("nvcalc").nvcalc()
+-- Fix annoying split when opening a file while a terminal is open.
+require("neo-tree").setup({
+  open_files_do_not_replace_types = {},
+})
 
 require("tokyonight").setup({
   style = "storm",
@@ -29,21 +31,5 @@ require("tokyonight").setup({
 vim.cmd([[hi WinSeparator guifg=#3e68d7 guibg=#222436]])
 vim.cmd([[source ~/.vimrc]])
 
--- OSC52 stuff for ssh.
-local function copy(lines, _)
-  require("osc52").copy(table.concat(lines, "\n"))
-end
-
-local function paste()
-  return { vim.fn.split(vim.fn.getreg(""), "\n"), vim.fn.getregtype("") }
-end
-
-vim.g.clipboard = {
-  name = "osc52",
-  copy = { ["+"] = copy, ["*"] = copy },
-  paste = { ["+"] = paste, ["*"] = paste },
-}
-
--- Now the '+' register will copy to system clipboard using OSC52
--- vim.keymap.set("n", "<leader>C", '"+y')
--- vim.keymap.set("n", "<leader>CC", '"+yy')
+-- vim.opt.runtimepath:prepend("~/src/nvcalc.nvim")
+-- require("nvcalc").nvcalc()
