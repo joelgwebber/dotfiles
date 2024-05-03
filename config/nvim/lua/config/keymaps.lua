@@ -2,15 +2,22 @@
 vim.keymap.del("n", "H")
 vim.keymap.del("n", "L")
 
-vim.keymap.set({ "n", "t" }, "[b", "<cmd>BufferLineCyclePrev<cr>", { desc = "Prev buffer" })
-vim.keymap.set({ "n", "t" }, "]b", "<cmd>BufferLineCycleNext<cr>", { desc = "Next buffer" })
-vim.keymap.set({ "n", "t" }, "[B", "<cmd>BufferLineMovePrev<cr>", { desc = "Prev buffer" })
-vim.keymap.set({ "n", "t" }, "]B", "<cmd>BufferLineMoveNext<cr>", { desc = "Next buffer" })
+-- Switch from neo-tree's slow "buffer explorer" to "Telescope buffers".
+vim.keymap.del("n", "<Leader>be")
+vim.keymap.set("n", "<Leader>be", "<Cmd>Telescope buffers<cr>")
 
-vim.keymap.set({ "n", "t" }, "<C-D-h>", "<cmd>BufferLineCyclePrev<cr>", { desc = "Prev buffer" })
-vim.keymap.set({ "n", "t" }, "<C-D-l>", "<cmd>BufferLineCycleNext<cr>", { desc = "Next buffer" })
-vim.keymap.set({ "n", "t" }, "<C-D-S-h>", "<cmd>BufferLineMovePrev<cr>", { desc = "Prev buffer" })
-vim.keymap.set({ "n", "t" }, "<C-D-S-l>", "<cmd>BufferLineMoveNext<cr>", { desc = "Next buffer" })
+-- vim.keymap.set({ "n", "t" }, "[b", "<cmd>BufferLineCyclePrev<cr>", { desc = "Prev buffer" })
+-- vim.keymap.set({ "n", "t" }, "]b", "<cmd>BufferLineCycleNext<cr>", { desc = "Next buffer" })
+-- vim.keymap.set({ "n", "t" }, "[B", "<cmd>BufferLineMovePrev<cr>", { desc = "Prev buffer" })
+-- vim.keymap.set({ "n", "t" }, "]B", "<cmd>BufferLineMoveNext<cr>", { desc = "Next buffer" })
+--
+-- vim.keymap.set({ "n", "t" }, "<C-D-h>", "<cmd>BufferLineCyclePrev<cr>", { desc = "Prev buffer" })
+-- vim.keymap.set({ "n", "t" }, "<C-D-l>", "<cmd>BufferLineCycleNext<cr>", { desc = "Next buffer" })
+-- vim.keymap.set({ "n", "t" }, "<C-D-S-h>", "<cmd>BufferLineMovePrev<cr>", { desc = "Prev buffer" })
+-- vim.keymap.set({ "n", "t" }, "<C-D-S-l>", "<cmd>BufferLineMoveNext<cr>", { desc = "Next buffer" })
+
+-- Neotree reveal current file.
+vim.keymap.set({ "n" }, "<C-n>", "<cmd>Neotree filesystem reveal<cr>", { desc = "Reveal file" })
 
 -- Add basic shortcuts for yarepl.
 vim.keymap.set("n", "<Leader>rr", "<cmd>REPLStart<cr>")

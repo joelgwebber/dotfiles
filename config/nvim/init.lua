@@ -13,10 +13,48 @@ require("workspaces").setup({
   },
 })
 
--- Fix annoying split when opening a file while a terminal is open.
 require("neo-tree").setup({
+  -- Fix annoying split when opening a file while a terminal is open.
   open_files_do_not_replace_types = {},
+
+  -- Turn on file following.
+  -- TODO: This doesn't actually seem to work?
+  default_component_configs = {
+    buffers = {
+      follow_current_file = {
+        enable = true,
+        leave_dirs_open = false,
+      },
+    },
+    filesystem = {
+      follow_current_file = {
+        enable = true,
+        leave_dirs_open = false,
+      },
+    },
+  },
 })
+
+require("telescope").setup({
+  pickers = {
+    buffers = {
+      show_all_buffers = true,
+      sort_mru = true,
+      mappings = {
+        n = {
+          ["d"] = "delete_buffer",
+        },
+      },
+    },
+  },
+})
+
+-- Load mini.bufremove to avoid weird window behaviors when closing buffers.
+local bufremove = require("mini.bufremove")
+bufremove.setup({})
+vim.api.nvim_create_user_command("Q", function()
+  bufremove.delete()
+end, {})
 
 require("tokyonight").setup({
   style = "storm",
