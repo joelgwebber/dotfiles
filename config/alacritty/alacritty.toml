@@ -1,8 +1,12 @@
 [font]
-size = 14
+size = 16
 
 [font.normal]
 family = "CaskaydiaCove Nerd Font Mono"
 
 [shell]
 program = "/bin/zsh"
+
+[window]
+option_as_alt = "Both"
+
