@@ -12,12 +12,12 @@ end
 
 -- Document existing key chains
 local which = require 'which-key'
-which.register {
+which.add {
   ['g'] = { name = '[g]oto', _ = 'which_key_ignore' },
 }
 
 -- Missing/clarified descriptions ------------------------------------------------------------------
-which.register {
+which.add {
   ['n'] = { name = '[n]ext result', _ = 'which_key_ignore' },
   ['N'] = { name = 'Prev result', _ = 'which_key_ignore' },
   ['D'] = { name = '[D]elete to end', _ = 'which_key_ignore' },
@@ -55,7 +55,7 @@ local diag_enable = function(enabled)
   end
 end
 
-which.register {
+which.add {
   ['['] = { name = 'prev', _ = 'which_key_ignore' },
   [']'] = { name = 'next', _ = 'which_key_ignore' },
 }
@@ -66,7 +66,7 @@ nmap(']e', diag_next 'E', 'Next [e]rror')
 nmap('[w', diag_prev 'W', 'Previous [w]arning')
 nmap(']w', diag_next 'W', 'Next [w]arning')
 
-which.register {
+which.add {
   ['<leader>d'] = { name = '[d]iagnostics', _ = 'which_key_ignore' },
 }
 nmap('<leader>dd', '<cmd>Trouble diagnostics<cr>', '[d]iagnostic [d]isplay')
@@ -75,7 +75,7 @@ nmap('<leader>ds', diag_enable(true), '[d]iagnostic [s]how')
 nmap('<leader>dh', diag_enable(false), '[d]iagnostic [h]ide')
 
 -- Window controls ---------------------------------------------------------------------------------
-which.register {
+which.add {
   ['<leader>w'] = { name = '[w]indow', _ = 'which_key_ignore' },
 }
 nmap('<leader>wd', '<cmd>q<cr>', '[w]indow [d]elete')
@@ -99,7 +99,7 @@ nmap('<C-Down>', '2<C-w>-', 'Decrease window hsize')
 nmap('<C-Up>', '2<C-w>+', 'Increase window vsize')
 
 -- Buffer controls ---------------------------------------------------------------------------------
-which.register {
+which.add {
   ['<leader>b'] = { name = '[b]uffer', _ = 'which_key_ignore' },
 }
 nmap('<leader>bd', '<cmd>bdelete<cr>', '[b]uffer [d]elete')
@@ -111,7 +111,7 @@ nmap('<leader>bD', '<cmd>bdelete!<cr>', '[b]uffer [D]elete!')
 -- I find Trouble's splitters to be better for navigating code, and prefer Telescope's
 -- popup for quick searches (files, buffers, etc).
 
-which.register {
+which.add {
   ['<leader>c'] = { name = '[c]ode', _ = 'which_key_ignore' },
 }
 
@@ -130,33 +130,38 @@ nmap('<leader>cf', function()
   require('conform').format { async = true, lsp_fallback = true }
 end, '[c]ode [f]ormat')
 
--- Outline
-nmap('<leader>co', '<cmd>Trouble symbols<CR>', '[c]ode [o]utline')
-
 -- Opens a popup that displays documentation about the word under your cursor
 nmap('K', vim.lsp.buf.hover, 'Hover Documentation')
 
+-- Outline
+-- TODO: Make a cleaner abstraction for close/reopen Trouble windows.
+nmap('<leader>co', '<cmd>Trouble symbols close<cr>' .. '<cmd>Trouble symbols focus win.relative=win win.position=right<cr>', '[c]ode [o]utline')
+
 -- Jump to the definition of the word under your cursor.
-nmap('gd', '<cmd>Trouble lsp_definitions<cr>', '[g]oto [d]efinition')
+nmap('gd', '<cmd>Trouble lsp_definitions close<cr>' .. '<cmd>Trouble lsp_definitions focus win.relative=win win.position=bottom<cr>', '[g]oto [d]efinition')
 
 -- Find references for the word under your cursor.
-nmap('gr', '<cmd>Trouble lsp_references<cr>', '[g]oto [r]eferences')
+nmap('gr', '<cmd>Trouble lsp_references close<cr>' .. '<cmd>Trouble lsp_references focus win.relative=win win.position=bottom<cr>', '[g]oto [r]eferences')
 
 -- Jump to the implementation of the word under your cursor.
 --  Useful when your language has ways of declaring types without an actual implementation.
-nmap('gI', '<cmd>Trouble lsp_implementations<cr>', '[g]oto [I]mplementation')
+nmap(
+  'gI',
+  '<cmd>Trouble lsp_implementations close<cr>' .. '<cmd>Trouble lsp_implementations focus win.relative=win win.position=bottom<cr>]]',
+  '[g]oto [I]mplementation'
+)
 
 -- Jump to the type of the word under your cursor.
 --  Useful when you're not sure what type a variable is and you want to see
 --  the definition of its *type*, not where it was *defined*.
-nmap('gt', '<cmd>Trouble lsp_type_definitions<cr>', '[g]oto [t]ype')
+nmap('gt', '<cmd>Trouble lsp_type_definitions close<cr>' .. '<cmd>Trouble lsp_type_definitions focus win.relative=win win.position=bottom<cr>', '[g]oto [t]ype')
 
 -- This is Goto Declaration (not definition).
 --  For example, in C this would take you to the header.
 nmap('gD', vim.lsp.buf.declaration, '[g]oto [D]eclaration')
 
 -- Search ------------------------------------------------------------------------------------------
-which.register {
+which.add {
   ['<leader>s'] = { name = '[s]earch', _ = 'which_key_ignore' },
 }
 
@@ -219,7 +224,7 @@ end, 'Treesitter search')
 -- end, 'Remote Flash')
 
 -- Obsidian ----------------------------------------------------------------------------------------
-which.register {
+which.add {
   ['<leader>o'] = { name = '[o]bsidian', _ = 'which_key_ignore' },
 }
 nmap('<leader>ow', '<cmd>ObsidianWorkspace<cr>', '[o]bsidian [w]orkspace')
@@ -229,7 +234,7 @@ nmap('<leader>os', '<cmd>ObsidianSearch<cr>', '[o]bsidian [s]earch')
 nmap('<leader>on', '<cmd>ObsidianNew<cr>', '[o]bsidian [n]ew')
 
 -- Git ---------------------------------------------------------------------------------------------
-which.register {
+which.add {
   ['<leader>g'] = { name = '[g]it', _ = 'which_key_ignore' },
 }
 nmap('<leader>gg', '<cmd>LazyGit<cr>', '[g]it Lazy[g]it')
@@ -242,7 +247,7 @@ nmap('<C-n>', function()
 end, 'Locate file')
 
 -- REPL --------------------------------------------------------------------------------------------
-which.register {
+which.add {
   ['<leader>r'] = { name = '[r]epl', _ = 'which_key_ignore' },
 }
 nmap('<Leader>rr', '<cmd>REPLStart<cr>', '[r]epl open')
@@ -252,7 +257,7 @@ nmap('<Leader>rl', '<cmd>REPLSendLine<cr>', '[r]epl send [l]ine')
 vmap('<Leader>r', '<cmd>REPLSendVisual<cr>', '[r]epl send')
 
 -- Testing -----------------------------------------------------------------------------------------
-which.register {
+which.add {
   ['<leader>t'] = { name = '[t]est', _ = 'which_key_ignore' },
 }
 nmap('<Leader>tt', '<cmd>Neotest summary<cr>', '[t]est show [t]ests')
@@ -260,7 +265,7 @@ nmap('<Leader>tr', '<cmd>Neotest run<cr>', '[t]est [r]un')
 nmap('<Leader>to', '<cmd>Neotest output-panel<cr>', '[t]est [o]utput')
 
 -- Noice -------------------------------------------------------------------------------------------
-which.register {
+which.add {
   ['<leader>n'] = { name = '[n]oice', _ = 'which_key_ignore' },
 }
 local noice = require 'noice'
@@ -292,7 +297,7 @@ function ClearScrollback()
 end
 
 -- SuperCollider -----------------------------------------------------------------------------------
-which.register {
+which.add {
   ['<leader>a'] = { name = '[a] SuperCollider', _ = 'which_key_ignore' },
 }
 local sc = require 'scnvim'
