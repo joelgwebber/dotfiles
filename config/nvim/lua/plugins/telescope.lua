@@ -7,6 +7,7 @@ return { -- Fuzzy Finder (files, lsp, etc)
     { 'nvim-lua/plenary.nvim' },
     { -- If encountering errors, see telescope-fzf-native README for installation instructions
       'nvim-telescope/telescope-fzf-native.nvim',
+      'nvim-telescope/telescope-live-grep-args.nvim',
       build = 'make',
       cond = function()
         return vim.fn.executable 'make' == 1
@@ -17,7 +18,9 @@ return { -- Fuzzy Finder (files, lsp, etc)
   },
 
   config = function()
-    require('telescope').setup {
+    local telescope = require 'telescope'
+
+    telescope.setup {
       extensions = {
         ['ui-select'] = {
           require('telescope.themes').get_dropdown(),
@@ -38,6 +41,8 @@ return { -- Fuzzy Finder (files, lsp, etc)
         },
       },
     }
+
+    telescope.load_extension 'live_grep_args'
 
     -- Enable Telescope extensions if they are installed
     pcall(require('telescope').load_extension, 'fzf')

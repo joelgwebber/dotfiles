@@ -10,32 +10,35 @@ local function vmap(lhs, rhs, desc)
   map('v', lhs, rhs, desc)
 end
 
+local function nvmap(lhs, rhs, desc)
+  map({ 'n', 'v' }, lhs, rhs, desc)
+end
+
 -- Document existing key chains
 local which = require 'which-key'
-which.add {
-  ['g'] = { name = '[g]oto', _ = 'which_key_ignore' },
-}
 
 -- Missing/clarified descriptions ------------------------------------------------------------------
 which.add {
-  ['n'] = { name = '[n]ext result', _ = 'which_key_ignore' },
-  ['N'] = { name = 'Prev result', _ = 'which_key_ignore' },
-  ['D'] = { name = '[D]elete to end', _ = 'which_key_ignore' },
-  ['Y'] = { name = '[Y]ank to end', _ = 'which_key_ignore' },
-  ['C'] = { name = '[C]hange to end', _ = 'which_key_ignore' },
-  ['c'] = { name = '[c]hange', _ = 'which_key_ignore' },
-  ['d'] = { name = '[d]elete', _ = 'which_key_ignore' },
-  ['y'] = { name = '[y]ank', _ = 'which_key_ignore' },
-  ['v'] = { name = '[v]isual select', _ = 'which_key_ignore' },
-  ['<C-F>'] = { name = '[F]orward page', _ = 'which_key_ignore' },
-  ['<C-B>'] = { name = '[B]ack page', _ = 'which_key_ignore' },
-  ['<C-U>'] = { name = '[U]p half-page', _ = 'which_key_ignore' },
-  ['<C-D>'] = { name = '[D]own half-page', _ = 'which_key_ignore' },
-  ['<C-I>'] = { name = 'Go [I]n', _ = 'which_key_ignore' },
-  ['<C-O>'] = { name = 'Go [O]ut', _ = 'which_key_ignore' },
-  ['<C-Y>'] = { name = 'Scroll Up', _ = 'which_key_ignore' },
-  ['<C-E>'] = { name = 'Scroll Down', _ = 'which_key_ignore' },
-  ['<leader>'] = { name = 'Commands', _ = 'which_key_ignore' },
+  { 'n', group = '[n]ext result' },
+  { 'N', group = 'Prev result' },
+  { 'D', group = '[D]elete to end' },
+  { 'Y', group = '[Y]ank to end' },
+  { 'C', group = '[C]hange to end' },
+  { 'c', group = '[c]hange' },
+  { 'd', group = '[d]elete' },
+  { 'y', group = '[y]ank' },
+  { 'v', group = '[v]isual select' },
+  { 'g', group = '[g]oto' },
+  { 'z', group = 'show' },
+  { '<C-F>', group = '[F]orward page' },
+  { '<C-B>', group = '[B]ack page' },
+  { '<C-U>', group = '[U]p half-page' },
+  { '<C-D>', group = '[D]own half-page' },
+  { '<C-I>', group = 'Go [I]n' },
+  { '<C-O>', group = 'Go [O]ut' },
+  { '<C-Y>', group = 'Scroll Up' },
+  { '<C-E>', group = 'Scroll Down' },
+  { '<leader>', group = 'Commands' },
 }
 
 -- Diagnostic messages -----------------------------------------------------------------------------
@@ -56,8 +59,8 @@ local diag_enable = function(enabled)
 end
 
 which.add {
-  ['['] = { name = 'prev', _ = 'which_key_ignore' },
-  [']'] = { name = 'next', _ = 'which_key_ignore' },
+  { '[', group = 'prev' },
+  { ']', group = 'next' },
 }
 nmap('[d', diag_prev(), 'Previous [d]iagnostic')
 nmap(']d', diag_next(), 'Next [d]iagnostic')
@@ -67,7 +70,7 @@ nmap('[w', diag_prev 'W', 'Previous [w]arning')
 nmap(']w', diag_next 'W', 'Next [w]arning')
 
 which.add {
-  ['<leader>d'] = { name = '[d]iagnostics', _ = 'which_key_ignore' },
+  { '<leader>d', group = '[d]iagnostics' },
 }
 nmap('<leader>dd', '<cmd>Trouble diagnostics<cr>', '[d]iagnostic [d]isplay')
 nmap('<leader>dt', '<cmd>Trouble todo<cr>', '[d]iagnostic [t]odo')
@@ -76,7 +79,7 @@ nmap('<leader>dh', diag_enable(false), '[d]iagnostic [h]ide')
 
 -- Window controls ---------------------------------------------------------------------------------
 which.add {
-  ['<leader>w'] = { name = '[w]indow', _ = 'which_key_ignore' },
+  { '<leader>w', group = '[w]indow' },
 }
 nmap('<leader>wd', '<cmd>q<cr>', '[w]indow [d]elete')
 nmap('<leader>ws', '<cmd>split<cr>', '[w]indow [s]plit')
@@ -100,7 +103,7 @@ nmap('<C-Up>', '2<C-w>+', 'Increase window vsize')
 
 -- Buffer controls ---------------------------------------------------------------------------------
 which.add {
-  ['<leader>b'] = { name = '[b]uffer', _ = 'which_key_ignore' },
+  { '<leader>b', group = '[b]uffer' },
 }
 nmap('<leader>bd', '<cmd>bdelete<cr>', '[b]uffer [d]elete')
 nmap('<leader>bD', '<cmd>bdelete!<cr>', '[b]uffer [D]elete!')
@@ -112,7 +115,7 @@ nmap('<leader>bD', '<cmd>bdelete!<cr>', '[b]uffer [D]elete!')
 -- popup for quick searches (files, buffers, etc).
 
 which.add {
-  ['<leader>c'] = { name = '[c]ode', _ = 'which_key_ignore' },
+  { '<leader>c', group = '[c]ode' },
 }
 
 -- All the symbols in your current document.
@@ -162,7 +165,7 @@ nmap('gD', vim.lsp.buf.declaration, '[g]oto [D]eclaration')
 
 -- Search ------------------------------------------------------------------------------------------
 which.add {
-  ['<leader>s'] = { name = '[s]earch', _ = 'which_key_ignore' },
+  { '<leader>s', group = '[s]earch' },
 }
 
 local telescope = require 'telescope.builtin'
@@ -171,7 +174,8 @@ nmap('<leader>sk', telescope.keymaps, '[s]earch [k]eymaps')
 nmap('<leader>sf', telescope.find_files, '[s]earch [f]iles')
 nmap('<leader>ss', telescope.builtin, '[s]earch [s]elect Telescope')
 nmap('<leader>sw', telescope.grep_string, '[s]earch current [w]ord')
-nmap('<leader>sg', telescope.live_grep, '[s]earch by [g]rep')
+-- nmap('<leader>sg', telescope.live_grep, '[s]earch by [g]rep')
+nmap('<leader>sg', '<cmd>lua require("telescope").extensions.live_grep_args.live_grep_args()<cr>', '[s]earch by [g]rep')
 nmap('<leader>sr', telescope.resume, '[s]earch [r]esume last')
 nmap('<leader>s.', telescope.oldfiles, '[s]earch recent files')
 nmap('<leader><leader>', telescope.buffers, 'Find existing buffers')
@@ -218,14 +222,9 @@ map({ 'o', 'x' }, 'R', function()
   require('flash').treesitter_search()
 end, 'Treesitter search')
 
--- TODO: This was recommended in the docs, but I don't quite get it.
--- map({ 'o' }, 'r', function()
---   require('flash').remote()
--- end, 'Remote Flash')
-
 -- Obsidian ----------------------------------------------------------------------------------------
 which.add {
-  ['<leader>o'] = { name = '[o]bsidian', _ = 'which_key_ignore' },
+  { '<leader>o', group = '[o]bsidian' },
 }
 nmap('<leader>ow', '<cmd>ObsidianWorkspace<cr>', '[o]bsidian [w]orkspace')
 nmap('<leader>oo', '<cmd>ObsidianQuickSwitch<cr>', '[o]bsidian [o]pen')
@@ -235,7 +234,7 @@ nmap('<leader>on', '<cmd>ObsidianNew<cr>', '[o]bsidian [n]ew')
 
 -- Git ---------------------------------------------------------------------------------------------
 which.add {
-  ['<leader>g'] = { name = '[g]it', _ = 'which_key_ignore' },
+  { '<leader>g', group = '[g]it' },
 }
 nmap('<leader>gg', '<cmd>LazyGit<cr>', '[g]it Lazy[g]it')
 nmap('<leader>gb', '<cmd>GitBlameToggle<cr>', '[g]it [b]lame')
@@ -248,7 +247,7 @@ end, 'Locate file')
 
 -- REPL --------------------------------------------------------------------------------------------
 which.add {
-  ['<leader>r'] = { name = '[r]epl', _ = 'which_key_ignore' },
+  { '<leader>r', group = '[r]epl' },
 }
 nmap('<Leader>rr', '<cmd>REPLStart<cr>', '[r]epl open')
 nmap('<Leader>rf', '<cmd>REPLFocus<cr>', '[r]epl [f]ocus')
@@ -258,7 +257,7 @@ vmap('<Leader>r', '<cmd>REPLSendVisual<cr>', '[r]epl send')
 
 -- Testing -----------------------------------------------------------------------------------------
 which.add {
-  ['<leader>t'] = { name = '[t]est', _ = 'which_key_ignore' },
+  { '<leader>t', group = '[t]est' },
 }
 nmap('<Leader>tt', '<cmd>Neotest summary<cr>', '[t]est show [t]ests')
 nmap('<Leader>tr', '<cmd>Neotest run<cr>', '[t]est [r]un')
@@ -266,7 +265,7 @@ nmap('<Leader>to', '<cmd>Neotest output-panel<cr>', '[t]est [o]utput')
 
 -- Noice -------------------------------------------------------------------------------------------
 which.add {
-  ['<leader>n'] = { name = '[n]oice', _ = 'which_key_ignore' },
+  { '<leader>n', group = '[n]oice' },
 }
 local noice = require 'noice'
 nmap('<leader>nl', function()
@@ -285,7 +284,8 @@ end, 'Dismiss All')
 -- Terminal ----------------------------------------------------------------------------------------
 
 -- Esc/Esc to exit terminal
-map('t', '<Esc><Esc>', '<C-\\><C-n>', 'Exit terminal mode')
+-- TODO: This is interfering with lazygit.
+-- map('t', '<Esc><Esc>', '<C-\\><C-n>', 'Exit terminal mode')
 
 -- Clear scrollback hack for the terminal.
 map('t', '<C-S-l>', '<cmd>lua ClearScrollback()<cr><C-l>')
@@ -298,21 +298,27 @@ end
 
 -- SuperCollider -----------------------------------------------------------------------------------
 which.add {
-  ['<leader>a'] = { name = '[a] SuperCollider', _ = 'which_key_ignore' },
+  { '<leader>m', group = '[m]usic' },
 }
 local sc = require 'scnvim'
-nmap('<leader>as', sc.start, '[a] SuperCollider [s]tart')
-nmap('<leader>ap', sc.stop, '[a] SuperCollider sto[p]')
-nmap('<leader>ak', sc.recompile, '[a] SuperCollider re[k]ompile')
-nmap('<leader>ag', function()
+nmap('<leader>ms', sc.start, '[s]tart')
+nmap('<leader>mp', sc.stop, 'sto[p]')
+nmap('<leader>mk', sc.recompile, 're[k]ompile')
+nmap('<leader>mg', function()
   vim.cmd [[ SCNvimGenerateAssets ]]
-end, '[a] SuperCollider [g]enerate')
-nmap('<leader>ah', '<cmd>SCNvimHelp Home<cr>', '[a] SuperCollider [h]elp')
+end, '[g]enerate')
+nmap('<leader>mh', '<cmd>SCNvimHelp Home<cr>', '[h]elp')
+
+-- Avante ------------------------------------------------------------------------------------------
+which.add {
+  { '<leader>a', group = '[a]vante' },
+}
+-- local avante = require 'avante.api'
+nvmap('<leader>aa', '<cmd>AvanteAsk<cr>', '[a]vante [a]sk')
+nvmap('<leader>ar', '<cmd>AvanteRefresh<cr>', '[a]vante [r]efresh')
+nvmap('<leader>ae', '<cmd>AvanteEdit<cr>', '[a]vante [e]dit')
 
 -- Other fixes -------------------------------------------------------------------------------------
-
--- I hate the regular join behavior. This skips the extra space.
--- nmap('J', '<cmd>join!<cr>')
 
 -- Set highlight on search, but clear on pressing <Esc> in normal mode
 vim.opt.hlsearch = true
