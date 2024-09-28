@@ -238,12 +238,21 @@ require('lazy').setup {
     },
     config = function()
       require('go').setup()
+      -- if you need to install/update all binaries
+      -- build = ':lua require("go.install").update_all_sync()',
     end,
     event = { 'CmdlineEnter' },
     ft = { 'go', 'gomod' },
+  },
 
-    -- if you need to install/update all binaries
-    -- build = ':lua require("go.install").update_all_sync()',
+  {
+    'joshuavial/aider.nvim',
+    config = function()
+      require('aider').setup {
+        auto_manage_context = false,
+        default_bindings = false,
+      }
+    end,
   },
 
   -- Other plugins with more configuration

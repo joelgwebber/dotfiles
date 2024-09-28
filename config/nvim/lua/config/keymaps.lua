@@ -309,14 +309,14 @@ nmap('<leader>mg', function()
 end, '[g]enerate')
 nmap('<leader>mh', '<cmd>SCNvimHelp Home<cr>', '[h]elp')
 
--- Avante ------------------------------------------------------------------------------------------
+-- Aider ------------------------------------------------------------------------------------------
 which.add {
-  { '<leader>a', group = '[a]vante' },
+  { '<leader>a', group = '[a]ider' },
 }
--- local avante = require 'avante.api'
-nvmap('<leader>aa', '<cmd>AvanteAsk<cr>', '[a]vante [a]sk')
-nvmap('<leader>ar', '<cmd>AvanteRefresh<cr>', '[a]vante [r]efresh')
-nvmap('<leader>ae', '<cmd>AvanteEdit<cr>', '[a]vante [e]dit')
+local aider = require 'aider'
+nvmap('<leader>aa', function()
+  aider.AiderOpen '--dark-mode --subtree-only --no-auto-commits'
+end, '[a]ider [a]sk')
 
 -- Other fixes -------------------------------------------------------------------------------------
 

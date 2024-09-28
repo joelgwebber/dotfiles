@@ -10,3 +10,24 @@ program = "/bin/zsh"
 [window]
 option_as_alt = "Both"
 
+# Manually correct ctrl-shift-HJKL for Alacritty.
+[[keyboard.bindings]]
+  key = "H"
+  mods = "Control | Shift"
+  chars = "\u001b[72;6u"
+
+[[keyboard.bindings]]
+  key = "J"
+  mods = "Control | Shift"
+  chars = "\u001b[74;6u"
+
+[[keyboard.bindings]]
+  key = "K"
+  mods = "Control | Shift"
+  chars = "\u001b[75;6u"
+
+[[keyboard.bindings]]
+  key = "L"
+  mods = "Control | Shift"
+  chars = "\u001b[76;6u"
+
