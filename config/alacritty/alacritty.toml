@@ -1,5 +1,5 @@
 [font]
-size = 16
+size = 12
 
 [font.normal]
 family = "CaskaydiaCove Nerd Font Mono"
@@ -9,6 +9,7 @@ program = "/bin/zsh"
 
 [window]
 option_as_alt = "Both"
+opacity = 0.8
 
 # Manually correct ctrl-shift-HJKL for Alacritty.
 [[keyboard.bindings]]
@@ -30,4 +31,14 @@ option_as_alt = "Both"
   key = "L"
   mods = "Control | Shift"
   chars = "\u001b[76;6u"
+
+[[keyboard.bindings]]
+  key = "C"
+  mods = "Control | Shift"
+  action = "Copy"
+
+[[keyboard.bindings]]
+  key = "V"
+  mods = "Control | Shift"
+  action = "Paste"
 
