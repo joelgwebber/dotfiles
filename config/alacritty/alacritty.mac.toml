@@ -1,0 +1,37 @@
+[font]
+size = 16
+
+[font.normal]
+family = "CaskaydiaCove Nerd Font Mono"
+
+# TODO: Why don't these take effect from the imported file?
+[[keyboard.bindings]]
+  key = "H"
+  mods = "Control | Shift"
+  chars = "\u001b[72;6u"
+
+[[keyboard.bindings]]
+  key = "J"
+  mods = "Control | Shift"
+  chars = "\u001b[74;6u"
+
+[[keyboard.bindings]]
+  key = "K"
+  mods = "Control | Shift"
+  chars = "\u001b[75;6u"
+
+[[keyboard.bindings]]
+  key = "L"
+  mods = "Control | Shift"
+  chars = "\u001b[76;6u"
+
+[[keyboard.bindings]]
+  key = "C"
+  mods = "Control | Shift"
+  action = "Copy"
+
+[[keyboard.bindings]]
+  key = "V"
+  mods = "Control | Shift"
+  action = "Paste"
+

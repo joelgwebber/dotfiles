@@ -67,8 +67,13 @@ return { -- LSP Configuration & Plugins
     --  - settings (table): Override the default settings passed when initializing the server.
     --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
 
+    local util = require 'lspconfig.util'
     local servers = {
-      gopls = {},
+      gopls = {
+        root_dir = function(fname)
+          return util.root_pattern 'go.work'(fname) or util.root_pattern('go.mod', '.git')(fname)
+        end,
+      },
       pyright = {},
 
       lua_ls = {

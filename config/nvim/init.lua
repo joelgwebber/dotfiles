@@ -42,28 +42,6 @@ require('lazy').setup {
     end,
   },
 
-  { -- Smooth scrolling
-    'declancm/cinnamon.nvim',
-    opts = {
-      keymaps = {
-        basic = true,
-        extra = true,
-      },
-      options = {
-        mode = 'window',
-        delay = 2,
-        max_delta = {
-          line = nil,
-          column = nil,
-          time = 100,
-        },
-      },
-    },
-    config = function(_, opts)
-      require('cinnamon').setup(opts)
-    end,
-  },
-
   { -- Flash movement
     'folke/flash.nvim',
     event = 'VeryLazy',
@@ -81,15 +59,6 @@ require('lazy').setup {
             enabled = true,
           },
         },
-
-        -- TODO: This is supposed to add smooth scrolling, but interferes with jumping.
-        -- action = function(match, state)
-        --   jump = require 'flash.jump'
-        --   require('cinnamon').scroll(function()
-        --     jump.jump(match, state)
-        --     jump.on_jump(state)
-        --   end)
-        -- end,
       }
     end,
   },
@@ -120,29 +89,6 @@ require('lazy').setup {
     event = 'VimEnter',
     dependencies = { 'nvim-lua/plenary.nvim' },
     opts = { signs = false },
-  },
-
-  { -- Nicer folding
-    -- TODO: These options aren't sticking for some reason.
-    'anuvyklack/pretty-fold.nvim',
-    config = function()
-      require('pretty-fold').setup {
-        keep_indentation = true,
-        fill_char = '•',
-        sections = {
-          left = {
-            '+',
-            function()
-              return string.rep('-', vim.v.foldlevel)
-            end,
-            ' ',
-            'number_of_folded_lines',
-            ':',
-            'content',
-          },
-        },
-      }
-    end,
   },
 
   { -- REPL
@@ -239,7 +185,7 @@ require('lazy').setup {
     config = function()
       require('go').setup()
       -- if you need to install/update all binaries
-      -- build = ':lua require("go.install").update_all_sync()',
+      -- local build = ':lua require("go.install").update_all_sync()'
     end,
     event = { 'CmdlineEnter' },
     ft = { 'go', 'gomod' },
@@ -254,6 +200,8 @@ require('lazy').setup {
       }
     end,
   },
+
+  { 'gennaro-tedesco/nvim-jqx', event = { 'BufReadPost' }, ft = { 'json', 'yaml' } },
 
   -- Other plugins with more configuration
   { import = 'plugins' },

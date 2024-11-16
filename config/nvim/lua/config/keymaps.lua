@@ -240,10 +240,9 @@ nmap('<leader>gg', '<cmd>LazyGit<cr>', '[g]it Lazy[g]it')
 nmap('<leader>gb', '<cmd>GitBlameToggle<cr>', '[g]it [b]lame')
 
 -- Tree --------------------------------------------------------------------------------------------
-nmap('<leader>e', '<cmd>NvimTreeOpen<cr>', 'Tr[e]e')
-nmap('<C-n>', function()
-  require('nvim-tree.api').tree.open { find_file = true, update_root = true }
-end, 'Locate file')
+nmap('<leader>e', '<cmd>NnnExplorer<cr>', 'Nnn [E]xplorer')
+nmap('<C-S-n>', '<cmd>NnnExplorer %:p:h<cr>', 'Locate file')
+nmap('<C-n>', '<cmd>NnnPicker %:p:h<cr>', 'Locate file (popup)')
 
 -- REPL --------------------------------------------------------------------------------------------
 which.add {
@@ -264,28 +263,25 @@ nmap('<Leader>tr', '<cmd>Neotest run<cr>', '[t]est [r]un')
 nmap('<Leader>to', '<cmd>Neotest output-panel<cr>', '[t]est [o]utput')
 
 -- Noice -------------------------------------------------------------------------------------------
-which.add {
-  { '<leader>n', group = '[n]oice' },
-}
-local noice = require 'noice'
-nmap('<leader>nl', function()
-  noice.cmd 'last'
-end, 'Noice Last Message')
-nmap('<leader>nh', function()
-  noice.cmd 'history'
-end, 'Noice History')
-nmap('<leader>na', function()
-  noice.cmd 'all'
-end, 'Noice All')
-nmap('<leader>nd', function()
-  noice.cmd 'dismiss'
-end, 'Dismiss All')
+-- TODO: Seems to be causing weird errors, and hangs on exit, so I diabled it.
+-- which.add {
+--   { '<leader>n', group = '[n]oice' },
+-- }
+-- local noice = require 'noice'
+-- nmap('<leader>nl', function()
+--   noice.cmd 'last'
+-- end, 'Noice Last Message')
+-- nmap('<leader>nh', function()
+--   noice.cmd 'history'
+-- end, 'Noice History')
+-- nmap('<leader>na', function()
+--   noice.cmd 'all'
+-- end, 'Noice All')
+-- nmap('<leader>nd', function()
+--   noice.cmd 'dismiss'
+-- end, 'Dismiss All')
 
 -- Terminal ----------------------------------------------------------------------------------------
-
--- Esc/Esc to exit terminal
--- TODO: This is interfering with lazygit.
--- map('t', '<Esc><Esc>', '<C-\\><C-n>', 'Exit terminal mode')
 
 -- Clear scrollback hack for the terminal.
 map('t', '<C-S-l>', '<cmd>lua ClearScrollback()<cr><C-l>')
@@ -315,7 +311,7 @@ which.add {
 }
 local aider = require 'aider'
 nvmap('<leader>aa', function()
-  aider.AiderOpen '--dark-mode --subtree-only --no-auto-commits'
+  aider.AiderOpen '--dark-mode --vim --no-auto-commits' --subtree-only
 end, '[a]ider [a]sk')
 
 -- Other fixes -------------------------------------------------------------------------------------
