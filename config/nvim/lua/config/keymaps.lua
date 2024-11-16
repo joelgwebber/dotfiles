@@ -91,11 +91,7 @@ nmap('<C-l>', '<C-w><C-l>', 'focus right window')
 nmap('<C-j>', '<C-w><C-j>', 'focus lower window')
 nmap('<C-k>', '<C-w><C-k>', 'focus upper window')
 
--- <C-S-hjkl/ldur> window resizing
-nmap('<C-S-h>', '4<C-w><lt>', 'Decrease window hsize')
-nmap('<C-S-l>', '4<C-w>>', 'Increase window hsize')
-nmap('<C-S-j>', '2<C-w>-', 'Decrease window vsize')
-nmap('<C-S-k>', '2<C-w>+', 'Increase window vsize')
+-- <C-M-hjkl/ldur> window resizing
 nmap('<C-Left>', '4<C-w><lt>', 'Decrease window hsize')
 nmap('<C-Right>', '4<C-w>>', 'Increase window vsize')
 nmap('<C-Down>', '2<C-w>-', 'Decrease window hsize')
@@ -241,7 +237,7 @@ nmap('<leader>gb', '<cmd>GitBlameToggle<cr>', '[g]it [b]lame')
 
 -- Tree --------------------------------------------------------------------------------------------
 nmap('<leader>e', '<cmd>NnnExplorer<cr>', 'Nnn [E]xplorer')
-nmap('<C-S-n>', '<cmd>NnnExplorer %:p:h<cr>', 'Locate file')
+nmap('<C-M-n>', '<cmd>NnnExplorer %:p:h<cr>', 'Locate file')
 nmap('<C-n>', '<cmd>NnnPicker %:p:h<cr>', 'Locate file (popup)')
 
 -- REPL --------------------------------------------------------------------------------------------
@@ -284,7 +280,7 @@ nmap('<Leader>to', '<cmd>Neotest output-panel<cr>', '[t]est [o]utput')
 -- Terminal ----------------------------------------------------------------------------------------
 
 -- Clear scrollback hack for the terminal.
-map('t', '<C-S-l>', '<cmd>lua ClearScrollback()<cr><C-l>')
+map('t', '<C-M-l>', '<cmd>lua ClearScrollback()<cr><C-l>')
 
 function ClearScrollback()
   local sb = vim.bo.scrollback
