@@ -3,6 +3,7 @@ return {
 
   dependencies = {
     'mfussenegger/nvim-dap',
+    'rcarriga/nvim-dap-ui',
   },
 
   config = function()
@@ -15,6 +16,9 @@ return {
           request = 'attach',
         },
       },
+    }
+    require('dapui').setup {
+      -- ...
     }
   end,
 }

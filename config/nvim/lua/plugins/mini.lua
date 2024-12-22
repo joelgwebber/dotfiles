@@ -18,27 +18,33 @@ return { -- Collection of various small independent plugins/modules
     require('mini.starter').setup()
 
     -- Move selection
-    require('mini.move').setup {
-      mappings = {
-        -- Move visual selection in Visual mode. Defaults are Alt (Meta) + hjkl.
-        left = '<A-h>',
-        right = '<A-l>',
-        down = '<A-j>',
-        up = '<A-k>',
+    -- TODO: Explore other mappings. This ends up being obtrusive.
+    -- require('mini.move').setup {
+    --   mappings = {
+    --     -- Move visual selection in Visual mode. Defaults are Alt (Meta) + hjkl.
+    --     left = '<A-h>',
+    --     right = '<A-l>',
+    --     down = '<A-j>',
+    --     up = '<A-k>',
+    --
+    --     -- Move current line in Normal mode
+    --     line_left = '<A-h>',
+    --     line_right = '<A-l>',
+    --     line_down = '<A-j>',
+    --     line_up = '<A-k>',
+    --   },
+    --
+    --   options = {
+    --     reindent_linewise = true,
+    --   },
+    -- }
 
-        -- Move current line in Normal mode
-        line_left = '<A-h>',
-        line_right = '<A-l>',
-        line_down = '<A-j>',
-        line_up = '<A-k>',
-      },
-
-      options = {
-        reindent_linewise = true,
+    require('mini.files').setup {
+      windows = {
+        preview = true,
+        width_preview = 50,
       },
     }
-
-    require('mini.files').setup {}
 
     -- Simple and easy statusline.
     local statusline = require 'mini.statusline'

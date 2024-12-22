@@ -140,7 +140,12 @@ nmap('<leader>co', '<cmd>Trouble symbols close<cr>' .. '<cmd>Trouble symbols foc
 nmap('gd', '<cmd>Trouble lsp_definitions close<cr>' .. '<cmd>Trouble lsp_definitions focus win.relative=win win.position=bottom<cr>', '[g]oto [d]efinition')
 
 -- Find references for the word under your cursor.
-nmap('gr', '<cmd>Trouble lsp_references close<cr>' .. '<cmd>Trouble lsp_references focus win.relative=win win.position=bottom<cr>', '[g]oto [r]eferences')
+-- Disable auto-refresh for references, as it gets in the way of navigation.
+nmap(
+  'gr',
+  '<cmd>Trouble lsp_references close<cr>' .. '<cmd>Trouble lsp_references focus auto_refresh=false win.relative=win win.position=bottom<cr>',
+  '[g]oto [r]eferences'
+)
 
 -- Jump to the implementation of the word under your cursor.
 --  Useful when your language has ways of declaring types without an actual implementation.
@@ -236,9 +241,8 @@ nmap('<leader>gg', '<cmd>LazyGit<cr>', '[g]it Lazy[g]it')
 nmap('<leader>gb', '<cmd>GitBlameToggle<cr>', '[g]it [b]lame')
 
 -- Tree --------------------------------------------------------------------------------------------
-nmap('<leader>e', '<cmd>NnnExplorer<cr>', 'Nnn [E]xplorer')
-nmap('<C-M-n>', '<cmd>NnnExplorer %:p:h<cr>', 'Locate file')
-nmap('<C-n>', '<cmd>NnnPicker %:p:h<cr>', 'Locate file (popup)')
+nmap('<leader>e', '<cmd>e .<cr>', 'File [E]xplorer')
+nmap('<C-n>', '<cmd>e %:h<cr>', 'Locate file (popup)')
 
 -- REPL --------------------------------------------------------------------------------------------
 which.add {
@@ -302,13 +306,13 @@ end, '[g]enerate')
 nmap('<leader>mh', '<cmd>SCNvimHelp Home<cr>', '[h]elp')
 
 -- Aider ------------------------------------------------------------------------------------------
-which.add {
-  { '<leader>a', group = '[a]ider' },
-}
-local aider = require 'aider'
-nvmap('<leader>aa', function()
-  aider.AiderOpen '--dark-mode --vim --no-auto-commits' --subtree-only
-end, '[a]ider [a]sk')
+-- which.add {
+--   { '<leader>a', group = '[a]ider' },
+-- }
+-- local aider = require 'aider'
+-- nvmap('<leader>aa', function()
+--   aider.AiderOpen '--dark-mode --vim --no-auto-commits' --subtree-only
+-- end, '[a]ider [a]sk')
 
 -- Other fixes -------------------------------------------------------------------------------------
 
