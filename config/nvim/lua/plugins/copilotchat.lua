@@ -1,6 +1,6 @@
 return {
   'CopilotC-Nvim/CopilotChat.nvim',
-  branch = 'canary',
+  branch = 'main',
   dependencies = {
     { 'zbirenbaum/copilot.lua' },
     { 'nvim-lua/plenary.nvim' },
@@ -8,9 +8,10 @@ return {
   build = 'make tiktoken',
 
   config = function(_)
-    require('CopilotChat.integrations.cmp').setup()
+    require('copilot').setup {}
     require('CopilotChat').setup {
       debug = true,
+      chat_autocomplete = true,
     }
   end,
 }

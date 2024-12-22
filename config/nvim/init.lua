@@ -191,16 +191,6 @@ require('lazy').setup {
     ft = { 'go', 'gomod' },
   },
 
-  {
-    'joshuavial/aider.nvim',
-    config = function()
-      require('aider').setup {
-        auto_manage_context = false,
-        default_bindings = false,
-      }
-    end,
-  },
-
   { 'gennaro-tedesco/nvim-jqx', event = { 'BufReadPost' }, ft = { 'json', 'yaml' } },
 
   -- Other plugins with more configuration
