@@ -1,12 +1,14 @@
 return {
-  'leoluz/nvim-dap-go',
+  'mfussenegger/nvim-dap',
 
   dependencies = {
-    'mfussenegger/nvim-dap',
+    'leoluz/nvim-dap-go',
+    'mfussenegger/nvim-dap-python',
     'rcarriga/nvim-dap-ui',
   },
 
   config = function()
+    require('dap-python').setup 'python'
     require('dap-go').setup {
       dap_configurations = {
         {
