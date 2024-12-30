@@ -9,18 +9,18 @@ return {
 
   config = function()
     require('dap-python').setup 'python'
-    require('dap-go').setup {
-      dap_configurations = {
-        {
-          type = 'go',
-          name = 'attach remote',
-          mode = 'remote',
-          request = 'attach',
-        },
+    require('dap-go').setup {}
+    -- require('dap.ext.vscode').load_launchjs(nil)
+    require('dap').configurations.python = {
+      {
+        type = 'python',
+        name = 'python file',
+        request = 'launch',
+        program = '${file}',
+        console = 'integratedTerminal',
+        cwd = vim.fn.getcwd(),
       },
     }
-    require('dapui').setup {
-      -- ...
-    }
+    require('dapui').setup {}
   end,
 }
