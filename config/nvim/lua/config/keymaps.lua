@@ -103,6 +103,7 @@ which.add {
 }
 nmap('<leader>bd', '<cmd>bdelete<cr>', '[b]uffer [d]elete')
 nmap('<leader>bD', '<cmd>bdelete!<cr>', '[b]uffer [D]elete!')
+nmap('<leader>by', '<cmd>let @+=expand("%:p")<cr>', '[b]uffer [y]ank path')
 
 -- Code controls -----------------------------------------------------------------------------------
 --
@@ -306,13 +307,13 @@ end, '[g]enerate')
 nmap('<leader>mh', '<cmd>SCNvimHelp Home<cr>', '[h]elp')
 
 -- Aider ------------------------------------------------------------------------------------------
--- which.add {
---   { '<leader>a', group = '[a]ider' },
--- }
--- local aider = require 'aider'
--- nvmap('<leader>aa', function()
---   aider.AiderOpen '--dark-mode --vim --no-auto-commits' --subtree-only
--- end, '[a]ider [a]sk')
+which.add {
+  { '<leader>a', group = '[a]ider' },
+}
+local aider = require 'aider'
+nvmap('<leader>aa', function()
+  aider.AiderOpen '--dark-mode --pretty --vim --stream --no-auto-commits --subtree-only'
+end, '[a]ider [a]sk')
 
 -- Other fixes -------------------------------------------------------------------------------------
 

@@ -12,7 +12,7 @@ alias grep='grep --color=auto'
 
 export PS1="%F{blue}[%m]%f %F{green}%(4~|.../%3~|%~)%f > "
 
-export PATH=~/.local/bin:$PATH
+export PATH=~/.local/bin:~/go/bin:~/.cargo/bin:$PATH
 
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
