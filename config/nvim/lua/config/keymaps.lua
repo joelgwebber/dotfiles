@@ -263,25 +263,6 @@ nmap('<Leader>tt', '<cmd>Neotest summary<cr>', '[t]est show [t]ests')
 nmap('<Leader>tr', '<cmd>Neotest run<cr>', '[t]est [r]un')
 nmap('<Leader>to', '<cmd>Neotest output-panel<cr>', '[t]est [o]utput')
 
--- Noice -------------------------------------------------------------------------------------------
--- TODO: Seems to be causing weird errors, and hangs on exit, so I diabled it.
--- which.add {
---   { '<leader>n', group = '[n]oice' },
--- }
--- local noice = require 'noice'
--- nmap('<leader>nl', function()
---   noice.cmd 'last'
--- end, 'Noice Last Message')
--- nmap('<leader>nh', function()
---   noice.cmd 'history'
--- end, 'Noice History')
--- nmap('<leader>na', function()
---   noice.cmd 'all'
--- end, 'Noice All')
--- nmap('<leader>nd', function()
---   noice.cmd 'dismiss'
--- end, 'Dismiss All')
-
 -- Terminal ----------------------------------------------------------------------------------------
 
 -- Clear scrollback hack for the terminal.
@@ -312,7 +293,7 @@ which.add {
 }
 local aider = require 'aider'
 nvmap('<leader>aa', function()
-  aider.AiderOpen '--dark-mode --pretty --vim --stream --no-auto-commits --subtree-only'
+  aider.AiderOpen '--dark-mode --pretty --vim --stream --no-auto-commits'
 end, '[a]ider [a]sk')
 
 -- Other fixes -------------------------------------------------------------------------------------

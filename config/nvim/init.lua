@@ -19,18 +19,12 @@ require('lazy').setup {
   { -- Nicer color scheme
     'folke/tokyonight.nvim',
     priority = 1000, -- Make sure to load this before all the other start plugins.
-    init = function()
-      vim.cmd.colorscheme 'tokyonight-night'
-      vim.cmd.hi 'Comment gui=none'
-    end,
-
     opts = {
-      style = 'storm',
+      style = 'night',
       terminal_colors = true,
       styles = {
         comments = { italic = true },
       },
-      -- TODO: Something about the awful highlight in stack traces.
     },
   },
 
@@ -46,7 +40,7 @@ require('lazy').setup {
     'folke/flash.nvim',
     event = 'VeryLazy',
 
-    config = function(_, opts)
+    config = function(_, _)
       require('flash').setup {
         label = {
           rainbow = {
@@ -192,6 +186,12 @@ require('lazy').setup {
   },
 
   { 'gennaro-tedesco/nvim-jqx', event = { 'BufReadPost' }, ft = { 'json', 'yaml' } },
+
+  {
+    'marcussimonsen/let-it-snow.nvim',
+    cmd = 'LetItSnow', -- Wait with loading until command is run
+    opts = {},
+  },
 
   -- Other plugins with more configuration
   { import = 'plugins' },

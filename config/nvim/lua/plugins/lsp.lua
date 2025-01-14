@@ -91,14 +91,14 @@ return { -- LSP Configuration & Plugins
       },
 
       -- Just let volar take care of typescript. It'll run tsserver internally.
-      volar = {
-        filetypes = { 'typescript', 'javascript', 'javascriptreact', 'typescriptreact', 'vue' },
-        init_options = {
-          vue = {
-            hybridMode = false,
-          },
-        },
-      },
+      -- volar = {
+      --   filetypes = { 'typescript', 'javascript', 'javascriptreact', 'typescriptreact', 'vue' },
+      --   init_options = {
+      --     vue = {
+      --       hybridMode = false,
+      --     },
+      --   },
+      -- },
     }
 
     -- Ensure the servers and tools above are installed
