@@ -199,3 +199,5 @@ require('lazy').setup {
 
 require 'config.keymaps' -- Global key mappings
 require 'config.autocmds' -- Autocommands
+
+vim.cmd 'colorscheme j15r'
