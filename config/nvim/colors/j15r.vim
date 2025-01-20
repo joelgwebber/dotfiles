@@ -15,7 +15,7 @@ let g:colors_name = 'j15r'
 let s:t_Co = &t_Co
 
 if (has('termguicolors') && &termguicolors) || has('gui_running')
-  let g:terminal_ansi_colors = ['#1c1c1c', '#d75f5f', '#87af87', '#afaf87', '#5f87af', '#af87af', '#5f8787', '#9e9e9e', '#767676', '#d7875f', '#afd7af', '#d7d787', '#87afd7', '#d7afd7', '#87afaf', '#bcbcbc']
+  let g:terminal_ansi_colors = ['#141414', '#d75f5f', '#87af87', '#afaf87', '#5f87af', '#af87af', '#5f8787', '#9e9e9e', '#767676', '#d7875f', '#afd7af', '#d7d787', '#87afd7', '#d7afd7', '#87afaf', '#bcbcbc']
   " Nvim uses g:terminal_color_{0-15} instead
   for i in range(g:terminal_ansi_colors->len())
     let g:terminal_color_{i} = g:terminal_ansi_colors[i]
@@ -39,16 +39,16 @@ hi! link vimParenSep Normal
 hi! link vimCommentString Comment
 hi! link gitCommitSummary Title
 hi! link markdownUrl String
-hi Normal guifg=#bcbcbc guibg=#1c1c1c gui=NONE cterm=NONE
-hi Statusline guifg=#1c1c1c guibg=#9e9e9e gui=NONE cterm=NONE
-hi StatuslineNC guifg=#1c1c1c guibg=#767676 gui=NONE cterm=NONE
-hi VertSplit guifg=#767676 guibg=#1c1c1c gui=NONE cterm=NONE
-hi TabLine guifg=#1c1c1c guibg=#767676 gui=NONE cterm=NONE
-hi TabLineFill guifg=#1c1c1c guibg=#767676 gui=NONE cterm=NONE
+hi Normal guifg=#bcbcbc guibg=#141414 gui=NONE cterm=NONE
+hi Statusline guifg=#141414 guibg=#9e9e9e gui=NONE cterm=NONE
+hi StatuslineNC guifg=#141414 guibg=#767676 gui=NONE cterm=NONE
+hi VertSplit guifg=#767676 guibg=#141414 gui=NONE cterm=NONE
+hi TabLine guifg=#141414 guibg=#767676 gui=NONE cterm=NONE
+hi TabLineFill guifg=#141414 guibg=#767676 gui=NONE cterm=NONE
 hi TabLineSel guifg=NONE guibg=NONE gui=bold ctermfg=NONE ctermbg=NONE cterm=bold
 hi ToolbarLine guifg=NONE guibg=NONE gui=NONE ctermfg=NONE ctermbg=NONE cterm=NONE
-hi ToolbarButton guifg=#9e9e9e guibg=#1c1c1c gui=bold,reverse cterm=bold,reverse
-hi QuickFixLine guifg=#1c1c1c guibg=#5f87af gui=NONE cterm=NONE
+hi ToolbarButton guifg=#9e9e9e guibg=#141414 gui=bold,reverse cterm=bold,reverse
+hi QuickFixLine guifg=#141414 guibg=#5f87af gui=NONE cterm=NONE
 hi CursorLineNr guifg=#ffaf5f guibg=NONE gui=bold cterm=bold
 hi LineNr guifg=#585858 guibg=NONE gui=NONE cterm=NONE
 hi LineNrAbove guifg=#585858 guibg=NONE gui=NONE cterm=NONE
@@ -57,37 +57,37 @@ hi NonText guifg=#585858 guibg=NONE gui=NONE cterm=NONE
 hi EndOfBuffer guifg=#585858 guibg=NONE gui=NONE cterm=NONE
 hi SpecialKey guifg=#585858 guibg=NONE gui=NONE cterm=NONE
 hi FoldColumn guifg=#585858 guibg=NONE gui=NONE cterm=NONE
-hi Visual guifg=#1c1c1c guibg=#87afaf gui=NONE cterm=NONE
-hi VisualNOS guifg=#1c1c1c guibg=#5f8787 gui=NONE cterm=NONE
-hi Pmenu guifg=NONE guibg=#3a3a3a gui=NONE cterm=NONE
+hi Visual guifg=#141414 guibg=#87afaf gui=NONE cterm=NONE
+hi VisualNOS guifg=#141414 guibg=#5f8787 gui=NONE cterm=NONE
+hi Pmenu guifg=NONE guibg=#202020 gui=NONE cterm=NONE
 hi PmenuThumb guifg=NONE guibg=#767676 gui=NONE cterm=NONE
 hi PmenuSbar guifg=NONE guibg=NONE gui=NONE ctermfg=NONE ctermbg=NONE cterm=NONE
-hi PmenuSel guifg=#1c1c1c guibg=#afaf87 gui=NONE cterm=NONE
-hi PmenuKind guifg=#d7875f guibg=#3a3a3a gui=NONE cterm=NONE
+hi PmenuSel guifg=#141414 guibg=#afaf87 gui=NONE cterm=NONE
+hi PmenuKind guifg=#d7875f guibg=#202020 gui=NONE cterm=NONE
 hi PmenuKindSel guifg=#d75f5f guibg=#afaf87 gui=NONE cterm=NONE
-hi PmenuExtra guifg=#767676 guibg=#3a3a3a gui=NONE cterm=NONE
-hi PmenuExtraSel guifg=#1c1c1c guibg=#afaf87 gui=NONE cterm=NONE
+hi PmenuExtra guifg=#767676 guibg=#202020 gui=NONE cterm=NONE
+hi PmenuExtraSel guifg=#141414 guibg=#afaf87 gui=NONE cterm=NONE
 hi SignColumn guifg=NONE guibg=NONE gui=NONE ctermfg=NONE ctermbg=NONE cterm=NONE
-hi Error guifg=#d75f5f guibg=#1c1c1c gui=reverse cterm=reverse
-hi ErrorMsg guifg=#d75f5f guibg=#1c1c1c gui=reverse cterm=reverse
-hi ModeMsg guifg=#1c1c1c guibg=#d7d787 gui=NONE cterm=NONE
+hi Error guifg=#d75f5f guibg=#141414 gui=reverse cterm=reverse
+hi ErrorMsg guifg=#d75f5f guibg=#141414 gui=reverse cterm=reverse
+hi ModeMsg guifg=#141414 guibg=#d7d787 gui=NONE cterm=NONE
 hi MoreMsg guifg=#87af87 guibg=NONE gui=NONE cterm=NONE
 hi Question guifg=#afaf87 guibg=NONE gui=NONE cterm=NONE
 hi WarningMsg guifg=#d7875f guibg=NONE gui=NONE cterm=NONE
-hi Todo guifg=#d7d787 guibg=#1c1c1c gui=reverse cterm=reverse
+hi Todo guifg=#d7d787 guibg=#141414 gui=reverse cterm=reverse
 hi MatchParen guifg=#ff00af guibg=NONE gui=bold cterm=bold
-hi Search guifg=#1c1c1c guibg=#87af87 gui=NONE cterm=NONE
-hi IncSearch guifg=#1c1c1c guibg=#ffaf5f gui=NONE cterm=NONE
-hi CurSearch guifg=#1c1c1c guibg=#afaf87 gui=NONE cterm=NONE
-hi WildMenu guifg=#1c1c1c guibg=#d7d787 gui=NONE cterm=NONE
-hi debugPC guifg=#1c1c1c guibg=#5f87af gui=NONE cterm=NONE
-hi debugBreakpoint guifg=#1c1c1c guibg=#d7875f gui=NONE cterm=NONE
-hi Cursor guifg=#1c1c1c guibg=#ffaf5f gui=NONE cterm=NONE
-hi lCursor guifg=#1c1c1c guibg=#5fff00 gui=NONE cterm=NONE
+hi Search guifg=#141414 guibg=#87af87 gui=NONE cterm=NONE
+hi IncSearch guifg=#141414 guibg=#ffaf5f gui=NONE cterm=NONE
+hi CurSearch guifg=#141414 guibg=#afaf87 gui=NONE cterm=NONE
+hi WildMenu guifg=#141414 guibg=#d7d787 gui=NONE cterm=NONE
+hi debugPC guifg=#141414 guibg=#5f87af gui=NONE cterm=NONE
+hi debugBreakpoint guifg=#141414 guibg=#d7875f gui=NONE cterm=NONE
+hi Cursor guifg=#141414 guibg=#ffaf5f gui=NONE cterm=NONE
+hi lCursor guifg=#141414 guibg=#5fff00 gui=NONE cterm=NONE
 hi CursorLine guifg=NONE guibg=#303030 gui=NONE cterm=NONE
 hi CursorColumn guifg=NONE guibg=#303030 gui=NONE cterm=NONE
 hi Folded guifg=#9e9e9e guibg=#262626 gui=NONE cterm=NONE
-hi ColorColumn guifg=NONE guibg=#3a3a3a gui=NONE cterm=NONE
+hi ColorColumn guifg=NONE guibg=#202020 gui=NONE cterm=NONE
 hi SpellBad guifg=NONE guibg=NONE guisp=#d75f5f gui=undercurl ctermfg=NONE ctermbg=NONE cterm=underline
 hi SpellCap guifg=NONE guibg=NONE guisp=#5f87af gui=undercurl ctermfg=NONE ctermbg=NONE cterm=underline
 hi SpellLocal guifg=NONE guibg=NONE guisp=#87af87 gui=undercurl ctermfg=NONE ctermbg=NONE cterm=underline
@@ -440,7 +440,7 @@ if s:t_Co >= 0
 endif
 
 " Background: dark
-" Color: color00          #1C1C1C        234            black
+" Color: color00          #141414        234            black
 " Color: color08          #767676        243            darkgray
 " Color: color01          #D75F5F        167            darkred
 " Color: color09          #D7875F        173            red
@@ -457,7 +457,7 @@ endif
 " Color: color07          #9E9E9E        247            gray
 " Color: color15          #BCBCBC        250            white
 " Color: colorLine        #303030        236            darkgrey
-" Color: colorB           #3a3a3a        237            darkgrey
+" Color: colorB           #202020        237            darkgrey
 " Color: colorF           #262626        235            darkgrey
 " Color: colorNonT        #585858        240            darkgrey
 " Color: colorC           #FFAF5F        215            red

@@ -16,12 +16,13 @@ return { -- LSP Configuration & Plugins
   },
 
   config = function()
-    require('lspconfig').protols.setup {}
+    local lspconfig = require 'lspconfig'
+    lspconfig.protols.setup {}
 
-    --  This function gets run when an LSP attaches to a particular buffer.
+    --  This func gets run when an LSP attaches to a particular buffer.
     --    That is to say, every time a new file is opened that is associated with
     --    an lsp (for example, opening `main.rs` is associated with `rust_analyzer`) this
-    --    function will be executed to configure the current buffer
+    --    func will be executed to configure the current buffer
     vim.api.nvim_create_autocmd('LspAttach', {
       group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
 
@@ -90,13 +91,11 @@ return { -- LSP Configuration & Plugins
         },
       },
 
-      -- Just let volar take care of typescript. It'll run tsserver internally.
-      -- volar = {
-      --   filetypes = { 'typescript', 'javascript', 'javascriptreact', 'typescriptreact', 'vue' },
-      --   init_options = {
-      --     vue = {
-      --       hybridMode = false,
-      --     },
+      -- ts_ls = {
+      --   root_dir = util.root_pattern 'package.json',
+      --   single_file_support = false,
+      --   tsserver = {
+      --     maxTsServerMemory = 8192,
       --   },
       -- },
     }
