@@ -39,16 +39,16 @@ hi! link vimParenSep Normal
 hi! link vimCommentString Comment
 hi! link gitCommitSummary Title
 hi! link markdownUrl String
-hi Normal guifg=#bcbcbc guibg=#141414 gui=NONE cterm=NONE
-hi Statusline guifg=#141414 guibg=#9e9e9e gui=NONE cterm=NONE
-hi StatuslineNC guifg=#141414 guibg=#767676 gui=NONE cterm=NONE
-hi VertSplit guifg=#767676 guibg=#141414 gui=NONE cterm=NONE
-hi TabLine guifg=#141414 guibg=#767676 gui=NONE cterm=NONE
-hi TabLineFill guifg=#141414 guibg=#767676 gui=NONE cterm=NONE
+hi Normal guifg=#bcbcbc guibg=#080808 gui=NONE cterm=NONE
+hi Statusline guifg=#080808 guibg=#9e9e9e gui=NONE cterm=NONE
+hi StatuslineNC guifg=#080808 guibg=#767676 gui=NONE cterm=NONE
+hi VertSplit guifg=#767676 guibg=#080808 gui=NONE cterm=NONE
+hi TabLine guifg=#080808 guibg=#767676 gui=NONE cterm=NONE
+hi TabLineFill guifg=#080808 guibg=#767676 gui=NONE cterm=NONE
 hi TabLineSel guifg=NONE guibg=NONE gui=bold ctermfg=NONE ctermbg=NONE cterm=bold
 hi ToolbarLine guifg=NONE guibg=NONE gui=NONE ctermfg=NONE ctermbg=NONE cterm=NONE
-hi ToolbarButton guifg=#9e9e9e guibg=#141414 gui=bold,reverse cterm=bold,reverse
-hi QuickFixLine guifg=#141414 guibg=#5f87af gui=NONE cterm=NONE
+hi ToolbarButton guifg=#9e9e9e guibg=#080808 gui=bold,reverse cterm=bold,reverse
+hi QuickFixLine guifg=#080808 guibg=#5f87af gui=NONE cterm=NONE
 hi CursorLineNr guifg=#ffaf5f guibg=NONE gui=bold cterm=bold
 hi LineNr guifg=#585858 guibg=NONE gui=NONE cterm=NONE
 hi LineNrAbove guifg=#585858 guibg=NONE gui=NONE cterm=NONE
@@ -57,33 +57,33 @@ hi NonText guifg=#585858 guibg=NONE gui=NONE cterm=NONE
 hi EndOfBuffer guifg=#585858 guibg=NONE gui=NONE cterm=NONE
 hi SpecialKey guifg=#585858 guibg=NONE gui=NONE cterm=NONE
 hi FoldColumn guifg=#585858 guibg=NONE gui=NONE cterm=NONE
-hi Visual guifg=#141414 guibg=#87afaf gui=NONE cterm=NONE
-hi VisualNOS guifg=#141414 guibg=#5f8787 gui=NONE cterm=NONE
+hi Visual guifg=NONE guibg=#204020 gui=NONE cterm=NONE
+hi VisualNOS guifg=NONE guibg=#103010 gui=NONE cterm=NONE
 hi Pmenu guifg=NONE guibg=#202020 gui=NONE cterm=NONE
 hi PmenuThumb guifg=NONE guibg=#767676 gui=NONE cterm=NONE
 hi PmenuSbar guifg=NONE guibg=NONE gui=NONE ctermfg=NONE ctermbg=NONE cterm=NONE
-hi PmenuSel guifg=#141414 guibg=#afaf87 gui=NONE cterm=NONE
+hi PmenuSel guifg=#080808 guibg=#afaf87 gui=NONE cterm=NONE
 hi PmenuKind guifg=#d7875f guibg=#202020 gui=NONE cterm=NONE
 hi PmenuKindSel guifg=#d75f5f guibg=#afaf87 gui=NONE cterm=NONE
 hi PmenuExtra guifg=#767676 guibg=#202020 gui=NONE cterm=NONE
-hi PmenuExtraSel guifg=#141414 guibg=#afaf87 gui=NONE cterm=NONE
+hi PmenuExtraSel guifg=#080808 guibg=#afaf87 gui=NONE cterm=NONE
 hi SignColumn guifg=NONE guibg=NONE gui=NONE ctermfg=NONE ctermbg=NONE cterm=NONE
-hi Error guifg=#d75f5f guibg=#141414 gui=reverse cterm=reverse
-hi ErrorMsg guifg=#d75f5f guibg=#141414 gui=reverse cterm=reverse
-hi ModeMsg guifg=#141414 guibg=#d7d787 gui=NONE cterm=NONE
+hi Error guifg=#d75f5f guibg=#080808 gui=reverse cterm=reverse
+hi ErrorMsg guifg=#d75f5f guibg=#080808 gui=reverse cterm=reverse
+hi ModeMsg guifg=#080808 guibg=#d7d787 gui=NONE cterm=NONE
 hi MoreMsg guifg=#87af87 guibg=NONE gui=NONE cterm=NONE
 hi Question guifg=#afaf87 guibg=NONE gui=NONE cterm=NONE
 hi WarningMsg guifg=#d7875f guibg=NONE gui=NONE cterm=NONE
-hi Todo guifg=#d7d787 guibg=#141414 gui=reverse cterm=reverse
+hi Todo guifg=#d7d787 guibg=#080808 gui=reverse cterm=reverse
 hi MatchParen guifg=#ff00af guibg=NONE gui=bold cterm=bold
-hi Search guifg=#141414 guibg=#87af87 gui=NONE cterm=NONE
-hi IncSearch guifg=#141414 guibg=#ffaf5f gui=NONE cterm=NONE
-hi CurSearch guifg=#141414 guibg=#afaf87 gui=NONE cterm=NONE
-hi WildMenu guifg=#141414 guibg=#d7d787 gui=NONE cterm=NONE
-hi debugPC guifg=#141414 guibg=#5f87af gui=NONE cterm=NONE
-hi debugBreakpoint guifg=#141414 guibg=#d7875f gui=NONE cterm=NONE
-hi Cursor guifg=#141414 guibg=#ffaf5f gui=NONE cterm=NONE
-hi lCursor guifg=#141414 guibg=#5fff00 gui=NONE cterm=NONE
+hi Search guifg=#080808 guibg=#87af87 gui=NONE cterm=NONE
+hi IncSearch guifg=#080808 guibg=#ffaf5f gui=NONE cterm=NONE
+hi CurSearch guifg=#080808 guibg=#afaf87 gui=NONE cterm=NONE
+hi WildMenu guifg=#080808 guibg=#d7d787 gui=NONE cterm=NONE
+hi debugPC guifg=#080808 guibg=#5f87af gui=NONE cterm=NONE
+hi debugBreakpoint guifg=#080808 guibg=#d7875f gui=NONE cterm=NONE
+hi Cursor guifg=#080808 guibg=#ffaf5f gui=NONE cterm=NONE
+hi lCursor guifg=#080808 guibg=#5fff00 gui=NONE cterm=NONE
 hi CursorLine guifg=NONE guibg=#303030 gui=NONE cterm=NONE
 hi CursorColumn guifg=NONE guibg=#303030 gui=NONE cterm=NONE
 hi Folded guifg=#9e9e9e guibg=#262626 gui=NONE cterm=NONE
@@ -153,8 +153,8 @@ if s:t_Co >= 256
   hi EndOfBuffer ctermfg=240 ctermbg=NONE cterm=NONE
   hi SpecialKey ctermfg=240 ctermbg=NONE cterm=NONE
   hi FoldColumn ctermfg=240 ctermbg=NONE cterm=NONE
-  hi Visual ctermfg=234 ctermbg=109 cterm=NONE
-  hi VisualNOS ctermfg=234 ctermbg=66 cterm=NONE
+  hi Visual ctermfg=250 ctermbg=66 cterm=NONE
+  hi VisualNOS ctermfg=250 ctermbg=66 cterm=NONE
   hi Pmenu ctermfg=NONE ctermbg=237 cterm=NONE
   hi PmenuThumb ctermfg=NONE ctermbg=243 cterm=NONE
   hi PmenuSbar ctermfg=NONE ctermbg=NONE cterm=NONE
@@ -232,7 +232,7 @@ if s:t_Co >= 16
   hi EndOfBuffer ctermfg=darkgrey ctermbg=NONE cterm=NONE
   hi SpecialKey ctermfg=darkgrey ctermbg=NONE cterm=NONE
   hi FoldColumn ctermfg=darkgrey ctermbg=NONE cterm=NONE
-  hi Visual ctermfg=black ctermbg=cyan cterm=NONE
+  hi Visual ctermfg=black ctermbg=darkcyan cterm=NONE
   hi VisualNOS ctermfg=black ctermbg=darkcyan cterm=NONE
   hi Pmenu ctermfg=black ctermbg=gray cterm=NONE
   hi PmenuThumb ctermfg=gray ctermbg=black cterm=NONE

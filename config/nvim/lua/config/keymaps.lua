@@ -263,6 +263,19 @@ nmap('<Leader>tt', '<cmd>Neotest summary<cr>', '[t]est show [t]ests')
 nmap('<Leader>tr', '<cmd>Neotest run<cr>', '[t]est [r]un')
 nmap('<Leader>to', '<cmd>Neotest output-panel<cr>', '[t]est [o]utput')
 
+-- Debugger ----------------------------------------------------------------------------------------
+which.add {
+  { '<leader>u', group = 'deb[u]g' },
+}
+nmap('<Leader>uu', '<cmd>DapUiToggle<cr>', 'deb[u]g [u]i toggle')
+nmap('<Leader>ur', '<cmd>DapContinue<cr>', 'deb[u]g [r]un / continue')
+nmap('<Leader>ut', '<cmd>DapTerminate<cr>', 'deb[u]g [t]erminate')
+nmap('<Leader>ub', '<cmd>DapToggleBreakpoint<cr>', 'deb[u]g toggle [b]reakpoint')
+nmap('<F8>', '<cmd>DapContinue<cr>', 'debug continue')
+nmap('<F10>', '<cmd>DapStepOver<cr>', 'debug step over')
+nmap('<F11>', '<cmd>DapStepInto<cr>', 'debug step into')
+nmap('S-<F11>', '<cmd>DapStepOut<cr>', 'debug step out')
+
 -- Terminal ----------------------------------------------------------------------------------------
 
 -- Clear scrollback hack for the terminal.
@@ -287,14 +300,12 @@ nmap('<leader>mg', function()
 end, '[g]enerate')
 nmap('<leader>mh', '<cmd>SCNvimHelp Home<cr>', '[h]elp')
 
--- Aider ------------------------------------------------------------------------------------------
+-- Copilot Chat ------------------------------------------------------------------------------------
 which.add {
-  { '<leader>a', group = '[a]ider' },
+  { '<leader>a', group = '[a]i' },
 }
-local aider = require 'aider'
-nvmap('<leader>aa', function()
-  aider.AiderOpen '--dark-mode --pretty --vim --stream --no-auto-commits'
-end, '[a]ider [a]sk')
+nvmap('<leader>ac', '<cmd>CopilotChat<cr>', '[a]i [c]hat')
+nvmap('<leader>am', '<cmd>CopilotChatModels<cr>', '[a]i [m]odels')
 
 -- Other fixes -------------------------------------------------------------------------------------
 
