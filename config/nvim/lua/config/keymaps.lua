@@ -309,9 +309,10 @@ nvmap('<leader>am', '<cmd>CopilotChatModels<cr>', '[a]i [m]odels')
 
 -- Other fixes -------------------------------------------------------------------------------------
 
+-- Disabled: I think this might be making some large files slow.
 -- Set highlight on search, but clear on pressing <Esc> in normal mode
-vim.opt.hlsearch = true
-nmap('<Esc>', '<cmd>nohlsearch<CR>')
+vim.opt.hlsearch = false
+-- nmap('<Esc>', '<cmd>nohlsearch<CR>')
 
 -- Make ^E and ^Y a bit less surgical.
 -- TODO: Do these in lua. Needs to be non-recursive.

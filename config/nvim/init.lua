@@ -36,27 +36,6 @@ require('lazy').setup {
     end,
   },
 
-  { -- Flash movement
-    'folke/flash.nvim',
-    event = 'VeryLazy',
-
-    config = function(_, _)
-      require('flash').setup {
-        label = {
-          rainbow = {
-            enabled = true,
-            shade = 9,
-          },
-        },
-        modes = {
-          search = {
-            enabled = true,
-          },
-        },
-      }
-    end,
-  },
-
   { -- Diagnostics
     'folke/trouble.nvim',
     dependencies = { 'nvim-tree/nvim-web-devicons' },
@@ -66,16 +45,6 @@ require('lazy').setup {
       -- bind to buffer it was opened from;
       -- auto-focus on open
     },
-  },
-
-  { -- Session persistence
-    'folke/persistence.nvim',
-    event = 'BufReadPre', -- this will only start session saving when an actual file was opened
-  },
-
-  { -- Project management
-    'ahmedkhalf/project.nvim',
-    event = 'VimEnter',
   },
 
   { -- Highlight todo, notes, etc in comments
@@ -195,6 +164,29 @@ require('lazy').setup {
 
   -- Other plugins with more configuration
   { import = 'plugins' },
+
+  -- Disabled because I've mostly found it distracting, and don't use it much
+  -- because it makes me more error-prone when searching.
+  -- { -- Flash movement
+  --   'folke/flash.nvim',
+  --   event = 'VeryLazy',
+  --
+  --   config = function(_, _)
+  --     require('flash').setup {
+  --       label = {
+  --         rainbow = {
+  --           enabled = true,
+  --           shade = 9,
+  --         },
+  --       },
+  --       modes = {
+  --         search = {
+  --           enabled = true,
+  --         },
+  --       },
+  --     }
+  --   end,
+  -- },
 }
 
 require 'config.keymaps' -- Global key mappings
