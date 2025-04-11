@@ -20,7 +20,7 @@ return {
       lua = { 'stylua' },
       python = { 'isort', 'black' },
       javascript = { { 'prettierd', 'prettier' } },
-      markdown = { 'mdformat' },
+      -- markdown = { 'mdformat' },
     },
   },
 }

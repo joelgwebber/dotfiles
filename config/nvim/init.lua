@@ -162,31 +162,14 @@ require('lazy').setup {
     opts = {},
   },
 
+  -- {
+  --   'mrcjkb/rustaceanvim',
+  --   version = '^5', -- Recommended
+  --   lazy = false, -- This plugin is already lazy
+  -- },
+
   -- Other plugins with more configuration
   { import = 'plugins' },
-
-  -- Disabled because I've mostly found it distracting, and don't use it much
-  -- because it makes me more error-prone when searching.
-  -- { -- Flash movement
-  --   'folke/flash.nvim',
-  --   event = 'VeryLazy',
-  --
-  --   config = function(_, _)
-  --     require('flash').setup {
-  --       label = {
-  --         rainbow = {
-  --           enabled = true,
-  --           shade = 9,
-  --         },
-  --       },
-  --       modes = {
-  --         search = {
-  --           enabled = true,
-  --         },
-  --       },
-  --     }
-  --   end,
-  -- },
 }
 
 require 'config.keymaps' -- Global key mappings
