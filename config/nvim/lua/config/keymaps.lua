@@ -206,10 +206,10 @@ end, '[s]earch [n]eovim files')
 
 -- Dial --------------------------------------------------------------------------------------------
 local dial = require 'dial.map'
-nmap('<M-[>', function()
+nmap('<M-,>', function()
   dial.manipulate('decrement', 'normal')
 end, 'Decrement value')
-nmap('<M-]>', function()
+nmap('<M-.>', function()
   dial.manipulate('increment', 'normal')
 end, 'Increment value')
 
@@ -223,16 +223,6 @@ end, 'Flash Treesitter')
 map({ 'o', 'x' }, 'R', function()
   require('flash').treesitter_search()
 end, 'Treesitter search')
-
--- Obsidian ----------------------------------------------------------------------------------------
-which.add {
-  { '<leader>o', group = '[o]bsidian' },
-}
-nmap('<leader>ow', '<cmd>ObsidianWorkspace<cr>', '[o]bsidian [w]orkspace')
-nmap('<leader>oo', '<cmd>ObsidianQuickSwitch<cr>', '[o]bsidian [o]pen')
-nmap('<leader>ot', '<cmd>ObsidianToday<cr>', '[o]bsidian [t]oday')
-nmap('<leader>os', '<cmd>ObsidianSearch<cr>', '[o]bsidian [s]earch')
-nmap('<leader>on', '<cmd>ObsidianNew<cr>', '[o]bsidian [n]ew')
 
 -- Git ---------------------------------------------------------------------------------------------
 which.add {
