@@ -90,14 +90,6 @@ return { -- LSP Configuration & Plugins
           },
         },
       },
-
-      -- ts_ls = {
-      --   root_dir = util.root_pattern 'package.json',
-      --   single_file_support = false,
-      --   tsserver = {
-      --     maxTsServerMemory = 8192,
-      --   },
-      -- },
     }
 
     -- Ensure the servers and tools above are installed
