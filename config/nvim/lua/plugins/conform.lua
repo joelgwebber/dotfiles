@@ -19,7 +19,14 @@ return {
     formatters_by_ft = {
       lua = { 'stylua' },
       python = { 'isort', 'black' },
-      javascript = { 'prettierd', 'prettier' },
+      go = { 'gofmt' },
+      scss = { 'prettier' },
+      javascript = { 'prettier' },
+      javascriptreact = { 'prettier' },
+      typescript = { 'prettier' },
+      typescriptreact = { 'prettier' },
+
+      -- This formatter's way too strongly opinionated to be broadly useful.
       -- markdown = { 'mdformat' },
     },
   },
