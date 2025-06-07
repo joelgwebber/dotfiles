@@ -77,6 +77,7 @@ return { -- LSP Configuration & Plugins
           return util.root_pattern 'go.work'(fname) or util.root_pattern('go.mod', '.git')(fname)
         end,
       },
+
       pyright = {},
 
       lua_ls = {

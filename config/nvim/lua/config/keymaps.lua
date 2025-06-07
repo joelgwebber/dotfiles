@@ -130,6 +130,9 @@ nmap('<leader>cf', function()
   require('conform').format { async = true, lsp_fallback = true }
 end, '[c]ode [f]ormat')
 
+-- Use `jq` to format JSON files.
+nmap('<leader>cj', '<cmd>%!jq .<cr>', '[c]ode [j]son format')
+
 -- Opens a popup that displays documentation about the word under your cursor
 nmap('K', vim.lsp.buf.hover, 'Hover Documentation')
 
@@ -214,15 +217,15 @@ nmap('<M-.>', function()
 end, 'Increment value')
 
 -- Flash -------------------------------------------------------------------------------------------
-map({ 'n', 'x', 'o' }, 's', function()
-  require('flash').jump()
-end, 'Flash')
-map({ 'n', 'x', 'o' }, 'S', function()
-  require('flash').treesitter()
-end, 'Flash Treesitter')
-map({ 'o', 'x' }, 'R', function()
-  require('flash').treesitter_search()
-end, 'Treesitter search')
+-- map({ 'n', 'x', 'o' }, 's', function()
+--   require('flash').jump()
+-- end, 'Flash')
+-- map({ 'n', 'x', 'o' }, 'S', function()
+--   require('flash').treesitter()
+-- end, 'Flash Treesitter')
+-- map({ 'o', 'x' }, 'R', function()
+--   require('flash').treesitter_search()
+-- end, 'Treesitter search')
 
 -- Git ---------------------------------------------------------------------------------------------
 which.add {
