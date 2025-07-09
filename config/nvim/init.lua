@@ -84,37 +84,6 @@ require('lazy').setup {
     end,
   },
 
-  { -- Unit testing
-    'nvim-neotest/neotest',
-    dependencies = {
-      'nvim-neotest/nvim-nio',
-      'nvim-neotest/neotest-python',
-      'fredrikaverpil/neotest-golang',
-      'nvim-lua/plenary.nvim',
-      'antoinemadec/FixCursorHold.nvim',
-      'nvim-treesitter/nvim-treesitter',
-    },
-    config = function(_, opts)
-      require('neotest').setup {
-        discovery = {
-          -- Disable discovery and limit concurrency to avoid runaway processing time for large repos.
-          enabled = false,
-          -- concurrent = 1,
-        },
-        running = { concurrent = true },
-        summary = { animated = false },
-        adapters = {
-          require 'neotest-python' {
-            -- runner = 'pytest',
-          },
-          require 'neotest-golang' {
-            -- recursive_run = true,
-          },
-        },
-      }
-    end,
-  },
-
   {
     'davidgranstrom/scnvim',
     config = function(_, opts)
@@ -147,8 +116,6 @@ require('lazy').setup {
     },
     config = function()
       require('go').setup()
-      -- if you need to install/update all binaries
-      -- local build = ':lua require("go.install").update_all_sync()'
     end,
     event = { 'CmdlineEnter' },
     ft = { 'go', 'gomod' },
@@ -161,12 +128,6 @@ require('lazy').setup {
     cmd = 'LetItSnow', -- Wait with loading until command is run
     opts = {},
   },
-
-  -- {
-  --   'mrcjkb/rustaceanvim',
-  --   version = '^5', -- Recommended
-  --   lazy = false, -- This plugin is already lazy
-  -- },
 
   -- Other plugins with more configuration
   { import = 'plugins' },

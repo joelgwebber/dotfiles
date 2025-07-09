@@ -5,6 +5,7 @@ return {
 
   opts = {
     notify_on_error = false,
+
     format_on_save = function(bufnr)
       -- Disable "format_on_save lsp_fallback" for languages that don't
       -- have a well standardized coding style. You can add additional
@@ -20,7 +21,10 @@ return {
       lua = { 'stylua' },
       python = { 'isort', 'black' },
       go = { 'gofmt' },
+      css = { 'prettier' },
       scss = { 'prettier' },
+      json = { 'jq' },
+      html = { 'djlint' },
       javascript = { 'prettier' },
       javascriptreact = { 'prettier' },
       typescript = { 'prettier' },

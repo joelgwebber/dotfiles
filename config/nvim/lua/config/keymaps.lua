@@ -130,15 +130,11 @@ nmap('<leader>cf', function()
   require('conform').format { async = true, lsp_fallback = true }
 end, '[c]ode [f]ormat')
 
--- Use `jq` to format JSON files.
-nmap('<leader>cj', '<cmd>%!jq .<cr>', '[c]ode [j]son format')
-
 -- Opens a popup that displays documentation about the word under your cursor
 nmap('K', vim.lsp.buf.hover, 'Hover Documentation')
 
 -- Outline
--- TODO: Make a cleaner abstraction for close/reopen Trouble windows.
-nmap('<leader>co', '<cmd>Trouble symbols close<cr>' .. '<cmd>Trouble symbols focus win.relative=win win.position=right<cr>', '[c]ode [o]utline')
+nmap('<leader>co', '<cmd>AerialOpen<cr>', '[c]ode [o]utline')
 
 -- Jump to the definition of the word under your cursor.
 nmap('gd', '<cmd>Trouble lsp_definitions close<cr>' .. '<cmd>Trouble lsp_definitions focus win.relative=win win.position=bottom<cr>', '[g]oto [d]efinition')
@@ -216,17 +212,6 @@ nmap('<M-.>', function()
   dial.manipulate('increment', 'normal')
 end, 'Increment value')
 
--- Flash -------------------------------------------------------------------------------------------
--- map({ 'n', 'x', 'o' }, 's', function()
---   require('flash').jump()
--- end, 'Flash')
--- map({ 'n', 'x', 'o' }, 'S', function()
---   require('flash').treesitter()
--- end, 'Flash Treesitter')
--- map({ 'o', 'x' }, 'R', function()
---   require('flash').treesitter_search()
--- end, 'Treesitter search')
-
 -- Git ---------------------------------------------------------------------------------------------
 which.add {
   { '<leader>g', group = '[g]it' },
@@ -303,9 +288,7 @@ nvmap('<leader>am', '<cmd>CopilotChatModels<cr>', '[a]i [m]odels')
 -- Other fixes -------------------------------------------------------------------------------------
 
 -- Disabled: I think this might be making some large files slow.
--- Set highlight on search, but clear on pressing <Esc> in normal mode
 vim.opt.hlsearch = false
--- nmap('<Esc>', '<cmd>nohlsearch<CR>')
 
 -- Make ^E and ^Y a bit less surgical.
 -- TODO: Do these in lua. Needs to be non-recursive.
