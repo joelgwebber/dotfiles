@@ -14,6 +14,10 @@ local function nvmap(lhs, rhs, desc)
   map({ 'n', 'v' }, lhs, rhs, desc)
 end
 
+local function tmap(lhs, rhs, desc)
+  map('t', lhs, rhs, desc)
+end
+
 -- Document existing key chains
 local which = require 'which-key'
 
@@ -91,11 +95,17 @@ nmap('<C-l>', '<C-w><C-l>', 'focus right window')
 nmap('<C-j>', '<C-w><C-j>', 'focus lower window')
 nmap('<C-k>', '<C-w><C-k>', 'focus upper window')
 
--- <C-M-hjkl/ldur> window resizing
+-- <C-ldur> window resizing
 nmap('<C-Left>', '4<C-w><lt>', 'Decrease window hsize')
 nmap('<C-Right>', '4<C-w>>', 'Increase window vsize')
 nmap('<C-Down>', '2<C-w>-', 'Decrease window hsize')
 nmap('<C-Up>', '2<C-w>+', 'Increase window vsize')
+
+-- Terminal mode window resizing
+tmap('<C-Left>', '<C-\\><C-n>4<C-w><lt>a', 'Decrease window width (terminal)')
+tmap('<C-Right>', '<C-\\><C-n>4<C-w>>a', 'Increase window width (terminal)')
+tmap('<C-Down>', '<C-\\><C-n>2<C-w>+a', 'Increase window height (terminal)')
+tmap('<C-Up>', '<C-\\><C-n>2<C-w>-a', 'Decrease window height (terminal)')
 
 -- Buffer controls ---------------------------------------------------------------------------------
 which.add {
@@ -257,13 +267,19 @@ nmap('S-<F11>', '<cmd>DapStepOut<cr>', 'debug step out')
 -- Terminal ----------------------------------------------------------------------------------------
 
 -- Clear scrollback hack for the terminal.
-map('t', '<C-M-l>', '<cmd>lua ClearScrollback()<cr><C-l>')
+-- Map the special escape sequence from kitty for Ctrl+Shift+L
+tmap('<C-S-l>', '<cmd>lua ClearScrollback()<cr><C-l>', 'Clear terminal and scrollback')
 
 function ClearScrollback()
   local sb = vim.bo.scrollback
   vim.bo.scrollback = 1
   vim.bo.scrollback = sb
 end
+
+tmap('<C-h>', '<C-\\><C-n><C-w>h', 'focus left window (terminal)')
+tmap('<C-j>', '<C-\\><C-n><C-w>j', 'focus lower window (terminal)')
+tmap('<C-k>', '<C-\\><C-n><C-w>k', 'focus upper window (terminal)')
+tmap('<C-l>', '<C-\\><C-n><C-w>l', 'focus right window (terminal)')
 
 -- SuperCollider -----------------------------------------------------------------------------------
 which.add {
@@ -282,8 +298,7 @@ nmap('<leader>mh', '<cmd>SCNvimHelp Home<cr>', '[h]elp')
 which.add {
   { '<leader>a', group = '[a]i' },
 }
-nvmap('<leader>ac', '<cmd>CopilotChat<cr>', '[a]i [c]hat')
-nvmap('<leader>am', '<cmd>CopilotChatModels<cr>', '[a]i [m]odels')
+nvmap('<leader>aa', '<cmd>ClaudeCode<cr>', '[a]i [a]ssistant')
 
 -- Other fixes -------------------------------------------------------------------------------------
 
