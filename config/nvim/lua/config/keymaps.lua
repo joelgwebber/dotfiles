@@ -144,7 +144,8 @@ end, '[c]ode [f]ormat')
 nmap('K', vim.lsp.buf.hover, 'Hover Documentation')
 
 -- Outline
-nmap('<leader>co', '<cmd>AerialOpen<cr>', '[c]ode [o]utline')
+nmap('<leader>co', '<cmd>AerialOpen float<cr>', '[c]ode [o]utline (float)')
+nmap('<leader>cO', '<cmd>AerialToggle<cr>', '[c]ode [O]utline (pin)')
 
 -- Jump to the definition of the word under your cursor.
 nmap('gd', '<cmd>Trouble lsp_definitions close<cr>' .. '<cmd>Trouble lsp_definitions focus win.relative=win win.position=bottom<cr>', '[g]oto [d]efinition')

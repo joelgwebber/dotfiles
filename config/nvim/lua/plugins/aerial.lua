@@ -26,6 +26,7 @@ return {
       show_guide_lines = true,
       show_guide_tree = true,
       show_guide_text = true,
+      close_automatic_events = {},
     }
   end,
 }

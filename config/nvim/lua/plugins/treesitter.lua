@@ -26,6 +26,20 @@ return { -- Highlight, edit, and navigate code
   end,
 
   dependencies = {
-    'nvim-treesitter/nvim-treesitter-context', -- Nice stacking code context
+    {
+      'nvim-treesitter/nvim-treesitter-context', -- Nice stacking code context
+      opts = {
+        enable = true,
+        max_lines = 3,
+        min_window_height = 0,
+        line_numbers = true,
+        multiline_threshold = 20,
+        trim_scope = 'outer',
+        mode = 'cursor',
+        separator = nil,
+        zindex = 20,
+        on_attach = nil,
+      },
+    },
   },
 }
