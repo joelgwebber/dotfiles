@@ -114,6 +114,14 @@ which.add {
 nmap('<leader>bd', '<cmd>bdelete<cr>', '[b]uffer [d]elete')
 nmap('<leader>bD', '<cmd>bdelete!<cr>', '[b]uffer [D]elete!')
 nmap('<leader>by', '<cmd>let @+=expand("%:p")<cr>', '[b]uffer [y]ank path')
+nmap('<leader>br', function()
+  local current_name = vim.fn.expand('%:t')
+  vim.ui.input({ prompt = 'Rename buffer: ', default = current_name }, function(new_name)
+    if new_name and new_name ~= '' then
+      vim.api.nvim_buf_set_name(0, new_name)
+    end
+  end)
+end, '[b]uffer [r]ename')
 
 -- Code controls -----------------------------------------------------------------------------------
 --
