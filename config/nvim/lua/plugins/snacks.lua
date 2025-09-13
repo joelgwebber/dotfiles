@@ -7,8 +7,21 @@ return {
       enabled = true,
       force = false, -- don't force if terminal doesn't support
       formats = {
-        'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'tiff',
-        'heic', 'avif', 'mp4', 'mov', 'avi', 'mkv', 'webm', 'pdf',
+        'png',
+        'jpg',
+        'jpeg',
+        'gif',
+        'bmp',
+        'webp',
+        'tiff',
+        'heic',
+        'avif',
+        'mp4',
+        'mov',
+        'avi',
+        'mkv',
+        'webm',
+        'pdf',
       },
       doc = {
         -- Enable image viewer for documents
@@ -60,7 +73,7 @@ return {
         spell = false,
         statuscolumn = '',
       },
-      cache = vim.fn.stdpath('cache') .. '/snacks/image',
+      cache = vim.fn.stdpath 'cache' .. '/snacks/image',
       convert = {
         notify = true, -- show a notification on error
         mermaid = function()
@@ -78,19 +91,19 @@ return {
   },
   config = function(_, opts)
     require('snacks').setup(opts)
-    
+
     -- Keymaps for image operations
     vim.keymap.set('n', '<leader>ih', function()
       require('snacks.image').hover()
     end, { desc = 'Show image at cursor (hover)' })
-    
+
     vim.keymap.set('n', '<leader>ic', function()
       require('snacks.image').clear()
     end, { desc = '[C]lear all images' })
-    
+
     -- Check support
     vim.keymap.set('n', '<leader>is', function()
-      local file = vim.fn.expand('<cfile>')
+      local file = vim.fn.expand '<cfile>'
       if require('snacks.image').supports(file) then
         vim.notify('Image format and terminal supported for: ' .. file)
       else
@@ -99,4 +112,3 @@ return {
     end, { desc = 'Check image [s]upport' })
   end,
 }
-
