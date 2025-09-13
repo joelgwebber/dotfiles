@@ -18,31 +18,47 @@ return { -- Collection of various small independent plugins/modules
     require('mini.starter').setup()
 
     -- Move selection
-    -- TODO: Explore other mappings. This ends up being obtrusive.
-    -- require('mini.move').setup {
-    --   mappings = {
-    --     -- Move visual selection in Visual mode. Defaults are Alt (Meta) + hjkl.
-    --     left = '<A-h>',
-    --     right = '<A-l>',
-    --     down = '<A-j>',
-    --     up = '<A-k>',
-    --
-    --     -- Move current line in Normal mode
-    --     line_left = '<A-h>',
-    --     line_right = '<A-l>',
-    --     line_down = '<A-j>',
-    --     line_up = '<A-k>',
-    --   },
-    --
-    --   options = {
-    --     reindent_linewise = true,
-    --   },
-    -- }
+    require('mini.move').setup {
+      mappings = {
+        -- Move visual selection in Visual mode. Defaults are Alt (Meta) + hjkl.
+        left = '<C-S-h>',
+        right = '<C-S-l>',
+        down = '<C-S-j>',
+        up = '<C-S-k>',
+
+        -- Move current line in Normal mode
+        line_left = '<C-S-h>',
+        line_right = '<C-S-l>',
+        line_down = '<C-S-j>',
+        line_up = '<C-S-k>',
+      },
+
+      options = {
+        reindent_linewise = true,
+      },
+    }
 
     require('mini.files').setup {
       windows = {
         preview = true,
         width_preview = 50,
+      },
+      options = {
+        use_as_default_explorer = true,
+        permanent_delete = false, -- Use trash instead of permanent delete
+      },
+      mappings = {
+        close = 'q',
+        go_in = 'l',
+        go_in_plus = '<CR>',
+        go_out = 'h',
+        go_out_plus = '-',
+        reset = '<BS>',
+        reveal_cwd = '@',
+        show_help = 'g?',
+        synchronize = '=',
+        trim_left = '<',
+        trim_right = '>',
       },
     }
 
