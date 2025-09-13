@@ -24,15 +24,22 @@ return {
 
       float = {
         border = 'rounded',
-        relative = 'cursor',
-        max_height = 0.9,
-        height = nil,
+        relative = 'editor',
+        -- Set max_height to a reasonable maximum
+        max_height = { 40, 0.9 },
+        -- Remove height to let it auto-calculate between min and max
+        -- height = nil,
         min_height = { 8, 0.1 },
 
+        -- Width settings for float window
+        max_width = { 80, 0.4 },
+        min_width = 30,
+
         override = function(conf, source_winid)
-          conf.anchor = 'NE'
-          conf.col = 0
-          conf.row = 1
+          -- Optional: adjust position
+          -- conf.anchor = 'NE'
+          -- conf.col = 0
+          -- conf.row = 1
           return conf
         end,
       },
