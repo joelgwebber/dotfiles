@@ -129,6 +129,10 @@ require('lazy').setup {
     opts = {},
   },
 
+  {
+    'jbyuki/venn.nvim',
+  },
+
   -- Other plugins with more configuration
   { import = 'plugins' },
 }
