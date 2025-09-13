@@ -88,6 +88,7 @@ which.add {
 nmap('<leader>wd', '<cmd>q<cr>', '[w]indow [d]elete')
 nmap('<leader>ws', '<cmd>split<cr>', '[w]indow [s]plit')
 nmap('<leader>wv', '<cmd>vsplit<cr>', '[w]indow [v]ertical-split')
+nmap('<leader>w=', '<C-w>=', '[w]indow [=]ize')
 
 -- <C-hjkl> window navigation
 nmap('<C-h>', '<C-w><C-h>', 'focus left window')
@@ -115,7 +116,7 @@ nmap('<leader>bd', '<cmd>bdelete<cr>', '[b]uffer [d]elete')
 nmap('<leader>bD', '<cmd>bdelete!<cr>', '[b]uffer [D]elete!')
 nmap('<leader>by', '<cmd>let @+=expand("%:p")<cr>', '[b]uffer [y]ank path')
 nmap('<leader>br', function()
-  local current_name = vim.fn.expand('%:t')
+  local current_name = vim.fn.expand '%:t'
   vim.ui.input({ prompt = 'Rename buffer: ', default = current_name }, function(new_name)
     if new_name and new_name ~= '' then
       vim.api.nvim_buf_set_name(0, new_name)
@@ -303,11 +304,17 @@ nmap('<leader>mg', function()
 end, '[g]enerate')
 nmap('<leader>mh', '<cmd>SCNvimHelp Home<cr>', '[h]elp')
 
--- Copilot Chat ------------------------------------------------------------------------------------
+-- AI Tools ----------------------------------------------------------------------------------------
 which.add {
   { '<leader>a', group = '[a]i' },
 }
 nvmap('<leader>aa', '<cmd>ClaudeCode<cr>', '[a]i [a]ssistant')
+nvmap('<leader>aA', '<cmd>ClaudeCodeContinue<cr>', '[a]i [A]ssistant (resume)')
+
+-- Notifications -----------------------------------------------------------------------------------
+nvmap('<leader>nc', function()
+  require('mini.notify').clear()
+end, '[n]otify [c]lear')
 
 -- Other fixes -------------------------------------------------------------------------------------
 
