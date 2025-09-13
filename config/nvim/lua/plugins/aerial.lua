@@ -22,6 +22,21 @@ return {
         min_width = 20,
       },
 
+      float = {
+        border = 'rounded',
+        relative = 'cursor',
+        max_height = 0.9,
+        height = nil,
+        min_height = { 8, 0.1 },
+
+        override = function(conf, source_winid)
+          conf.anchor = 'NE'
+          conf.col = 0
+          conf.row = 1
+          return conf
+        end,
+      },
+
       show_guides = true,
       show_guide_lines = true,
       show_guide_tree = true,
