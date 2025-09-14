@@ -2,6 +2,7 @@ return {
   'folke/snacks.nvim',
   priority = 1000,
   lazy = false,
+
   opts = {
     image = {
       enabled = true,
@@ -23,6 +24,7 @@ return {
         'webm',
         'pdf',
       },
+
       doc = {
         -- Enable image viewer for documents
         enabled = true,
@@ -35,6 +37,7 @@ return {
         -- Set to true to conceal the image text when rendering inline
         conceal = false,
       },
+
       math = {
         enabled = true, -- Enable math expression rendering
         typst = {
@@ -47,20 +50,23 @@ return {
         },
         latex = {
           font_size = 'Large',
-          packages = { 'amsmath', 'amssymb', 'amsfonts', 'amscd', 'mathtools' },
+          packages = { 'amsmath', 'amssymb', 'amsfonts', 'amscd', 'mathtools', 'xcolor' },
+          -- Override template to use white color directly instead of ${color} variable
           tpl = [[
             \documentclass[preview,border=2pt,varwidth,12pt]{standalone}
             \usepackage{${packages}}
             \begin{document}
             ${header}
             { \${font_size} \selectfont
-              \color[HTML]{${color}}
+              \color{white}
             ${content}}
             \end{document}]],
         },
       },
+
       -- Image directories to search for relative paths
       img_dirs = { 'img', 'images', 'assets', 'static', 'public', 'media', 'attachments' },
+
       -- Window options for image buffers
       wo = {
         wrap = false,
@@ -73,6 +79,7 @@ return {
         spell = false,
         statuscolumn = '',
       },
+
       cache = vim.fn.stdpath 'cache' .. '/snacks/image',
       convert = {
         notify = true, -- show a notification on error
@@ -89,6 +96,7 @@ return {
       },
     },
   },
+
   config = function(_, opts)
     require('snacks').setup(opts)
 
