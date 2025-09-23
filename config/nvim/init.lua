@@ -71,6 +71,10 @@ require('lazy').setup {
     dependencies = {
       'nvim-lua/plenary.nvim',
     },
+    config = function()
+      -- Use single border style for consistency
+      vim.g.lazygit_floating_window_border_chars = { '┌', '─', '┐', '│', '┘', '─', '└', '│' }
+    end,
   },
 
   { -- Inline git blame
@@ -129,9 +133,8 @@ require('lazy').setup {
     opts = {},
   },
 
-  {
-    'jbyuki/venn.nvim',
-  },
+  { 'jbyuki/venn.nvim' },
+  { 'Apeiros-46B/qalc.nvim' },
 
   -- Other plugins with more configuration
   { import = 'plugins' },
@@ -140,4 +143,13 @@ require('lazy').setup {
 require 'config.keymaps' -- Global key mappings
 require 'config.autocmds' -- Autocommands
 
-vim.cmd 'colorscheme minicyan'
+vim.cmd 'colorscheme j15r-cyan'
+
+-- Ensure mini.files and other plugin border colors are correctly applied
+-- Mini.files sets its defaults on ColorScheme event, so we need to override after
+vim.defer_fn(function()
+  local float_bg = vim.api.nvim_get_hl(0, { name = 'NormalFloat' }).bg
+  local border_fg = vim.api.nvim_get_hl(0, { name = 'FloatBorder' }).fg
+  vim.api.nvim_set_hl(0, 'MiniFilesBorder', { fg = border_fg, bg = float_bg })
+  vim.api.nvim_set_hl(0, 'MiniFilesNormal', { link = 'NormalFloat' })
+end, 10)
