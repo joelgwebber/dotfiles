@@ -150,7 +150,7 @@ nmap('<leader>cf', function()
 end, '[c]ode [f]ormat')
 
 -- Opens a popup that displays documentation about the word under your cursor
-nmap('K', vim.lsp.buf.hover, 'Hover Documentation')
+nmap('K', function() vim.lsp.buf.hover({ border = 'single' }) end, 'Hover Documentation')
 
 -- Outline
 nmap('<leader>co', '<cmd>AerialOpen float<cr>', '[c]ode [o]utline (float)')

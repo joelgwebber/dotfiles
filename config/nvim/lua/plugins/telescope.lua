@@ -21,9 +21,18 @@ return { -- Fuzzy Finder (files, lsp, etc)
     local telescope = require 'telescope'
 
     telescope.setup {
+      defaults = {
+        -- Use default telescope borders
+        prompt_prefix = ' ',
+        selection_caret = '▌ ',
+        layout_config = {
+          prompt_position = 'bottom',
+        },
+      },
+
       extensions = {
         ['ui-select'] = {
-          require('telescope.themes').get_dropdown(),
+          require('telescope.themes').get_dropdown {},
         },
       },
 

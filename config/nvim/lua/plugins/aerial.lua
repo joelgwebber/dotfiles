@@ -23,7 +23,7 @@ return {
       },
 
       float = {
-        border = 'rounded',
+        border = 'single',
         relative = 'editor',
         -- Set max_height to a reasonable maximum
         max_height = { 40, 0.9 },

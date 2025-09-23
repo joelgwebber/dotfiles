@@ -19,6 +19,25 @@ return { -- LSP Configuration & Plugins
     local lspconfig = require 'lspconfig'
     lspconfig.protols.setup {}
 
+    -- Configure LSP floating windows to use single borders
+    vim.lsp.handlers['textDocument/hover'] = vim.lsp.with(
+      vim.lsp.handlers.hover, {
+        border = 'single'
+      }
+    )
+
+    vim.lsp.handlers['textDocument/signatureHelp'] = vim.lsp.with(
+      vim.lsp.handlers.signature_help, {
+        border = 'single'
+      }
+    )
+
+    vim.diagnostic.config({
+      float = {
+        border = 'single'
+      }
+    })
+
     --  This func gets run when an LSP attaches to a particular buffer.
     --    That is to say, every time a new file is opened that is associated with
     --    an lsp (for example, opening `main.rs` is associated with `rust_analyzer`) this
