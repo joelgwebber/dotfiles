@@ -144,12 +144,3 @@ require 'config.keymaps' -- Global key mappings
 require 'config.autocmds' -- Autocommands
 
 vim.cmd 'colorscheme j15r-cyan'
-
--- Ensure mini.files and other plugin border colors are correctly applied
--- Mini.files sets its defaults on ColorScheme event, so we need to override after
-vim.defer_fn(function()
-  local float_bg = vim.api.nvim_get_hl(0, { name = 'NormalFloat' }).bg
-  local border_fg = vim.api.nvim_get_hl(0, { name = 'FloatBorder' }).fg
-  vim.api.nvim_set_hl(0, 'MiniFilesBorder', { fg = border_fg, bg = float_bg })
-  vim.api.nvim_set_hl(0, 'MiniFilesNormal', { link = 'NormalFloat' })
-end, 10)
