@@ -72,8 +72,8 @@ require('lazy').setup {
       'nvim-lua/plenary.nvim',
     },
     config = function()
-      -- Use single border style for consistency
-      vim.g.lazygit_floating_window_border_chars = { '┌', '─', '┐', '│', '┘', '─', '└', '│' }
+      -- Remove outer border since LazyGit has its own internal borders
+      vim.g.lazygit_floating_window_border_chars = { '', '', '', '', '', '', '', '' }
     end,
   },
 
