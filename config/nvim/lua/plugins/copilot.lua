@@ -2,6 +2,7 @@ return {
   'zbirenbaum/copilot.lua',
   cmd = 'Copilot',
   event = 'InsertEnter',
+
   config = function()
     require('copilot').setup {
       suggestion = {
@@ -10,11 +11,11 @@ return {
         hide_during_completion = true,
         debounce = 75,
         keymap = {
-          accept = '<C-y>',
+          accept = '<S-Tab>',
           accept_word = false,
           accept_line = false,
-          next = '<C-.>',
-          prev = '<S-,>',
+          next = '<M-.>', -- Alt+. instead of Ctrl+. to avoid sidekick conflict
+          prev = '<M-,>', -- Alt+, for consistency
           dismiss = '<C-]>',
         },
       },
@@ -47,7 +48,7 @@ return {
         ['.'] = false,
       },
 
-      copilot_node_command = 'node', -- Node.js version must be > 18.x
+      copilot_node_command = '/opt/homebrew/bin/node', -- Node.js version must be > 18.x
       server_opts_overrides = {},
     }
   end,

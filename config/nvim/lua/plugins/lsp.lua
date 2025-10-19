@@ -16,8 +16,7 @@ return { -- LSP Configuration & Plugins
   },
 
   config = function()
-    local lspconfig = require 'lspconfig'
-    lspconfig.protols.setup {}
+    vim.lsp.config.protols = {}
 
     -- Configure LSP floating windows to use single borders
     vim.lsp.handlers['textDocument/hover'] = vim.lsp.with(
@@ -89,13 +88,8 @@ return { -- LSP Configuration & Plugins
     --  - settings (table): Override the default settings passed when initializing the server.
     --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
 
-    local util = require 'lspconfig.util'
     local servers = {
-      gopls = {
-        root_dir = function(fname)
-          return util.root_pattern 'go.work'(fname) or util.root_pattern('go.mod', '.git')(fname)
-        end,
-      },
+      gopls = {},
 
       pyright = {},
 
@@ -132,7 +126,7 @@ return { -- LSP Configuration & Plugins
           -- by the server configuration above. Useful when disabling
           -- certain features of an LSP (for example, turning off formatting for tsserver)
           server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
-          require('lspconfig')[server_name].setup(server)
+          vim.lsp.config[server_name] = server
         end,
       },
     }
