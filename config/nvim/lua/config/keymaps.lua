@@ -115,6 +115,32 @@ which.add {
 nmap('<leader>bd', '<cmd>bdelete<cr>', '[b]uffer [d]elete')
 nmap('<leader>bD', '<cmd>bdelete!<cr>', '[b]uffer [D]elete!')
 nmap('<leader>by', '<cmd>let @+=expand("%:p")<cr>', '[b]uffer [y]ank path')
+nmap('<leader>bo', function()
+  local filepath = vim.fn.expand('%:p')
+  if filepath == '' then
+    vim.notify('No file to open', vim.log.levels.WARN)
+    return
+  end
+
+  -- Detect OS and use appropriate command
+  local cmd
+  if vim.fn.has('mac') == 1 then
+    cmd = { 'open', filepath }
+  elseif vim.fn.has('unix') == 1 then
+    cmd = { 'xdg-open', filepath }
+  elseif vim.fn.has('win32') == 1 then
+    cmd = { 'cmd', '/c', 'start', '""', filepath }
+  else
+    vim.notify('Unsupported OS', vim.log.levels.ERROR)
+    return
+  end
+
+  vim.system(cmd, { detach = true }, function(result)
+    if result.code ~= 0 then
+      vim.notify('Failed to open file: ' .. (result.stderr or 'Unknown error'), vim.log.levels.ERROR)
+    end
+  end)
+end, '[b]uffer [o]pen with OS')
 nmap('<leader>br', function()
   local current_name = vim.fn.expand '%:t'
   vim.ui.input({ prompt = 'Rename buffer: ', default = current_name }, function(new_name)
@@ -150,7 +176,9 @@ nmap('<leader>cf', function()
 end, '[c]ode [f]ormat')
 
 -- Opens a popup that displays documentation about the word under your cursor
-nmap('K', function() vim.lsp.buf.hover({ border = 'single' }) end, 'Hover Documentation')
+nmap('K', function()
+  vim.lsp.buf.hover { border = 'single' }
+end, 'Hover Documentation')
 
 -- Outline
 nmap('<leader>co', '<cmd>AerialOpen float<cr>', '[c]ode [o]utline (float)')
@@ -308,8 +336,6 @@ nmap('<leader>mh', '<cmd>SCNvimHelp Home<cr>', '[h]elp')
 which.add {
   { '<leader>a', group = '[a]i' },
 }
-nvmap('<leader>aa', '<cmd>ClaudeCode<cr>', '[a]i [a]ssistant')
-nvmap('<leader>aA', '<cmd>ClaudeCodeContinue<cr>', '[a]i [A]ssistant (resume)')
 
 -- Notifications -----------------------------------------------------------------------------------
 nvmap('<leader>nc', function()
