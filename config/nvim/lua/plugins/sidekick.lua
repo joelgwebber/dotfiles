@@ -2,31 +2,44 @@ return {
   'folke/sidekick.nvim',
 
   opts = {
+    nes = {
+      enabled = false, -- Disable Next Edit Suggestions entirely
+    },
     cli = {
       mux = {
         backend = 'tmux',
         enabled = true,
       },
+      -- Performance optimizations
+      scrollback = 1000, -- Limit scrollback to prevent performance issues
+      timeout = 30000, -- 30 second timeout for model loading
+
+      -- Window management - make sidekick behave more like toggleterm
+      win = {
+        layout = "right", -- Keep default right side placement
+        split = {
+          width = 100,     -- Fixed width like your terminals
+          height = 0,      -- Use default height
+        },
+        wo = {
+          winfixwidth = true,  -- Prevent sidekick from being resized
+          number = false,      -- No line numbers in sidekick
+          relativenumber = false,
+        },
+      },
+
       tools = {
         claude = {
           cmd = { 'claude' },
-        },
-        ['claude-resume'] = {
-          cmd = { 'claude', '--resume' },
+          -- Cache model list to avoid repeated API calls
+          cache = true,
         },
       },
     },
   },
 
-  -- stylua: ignore
+  -- Simplified keybindings
   keys = {
-    -- {
-    --   "<tab>",
-    --   function() require("sidekick").nes_jump_or_apply() end,
-    --   mode = { "i", "n" },
-    --   expr = true,
-    --   desc = "Goto/Apply Next Edit Suggestion",
-    -- },
     {
       "<leader>aa",
       function() require("sidekick.cli").toggle() end,
@@ -35,9 +48,10 @@ return {
     },
     {
       "<leader>as",
-      function() require("sidekick.cli").select() end,
-      -- Or to select only installed tools:
-      -- require("sidekick.cli").select({ filter = { installed = true } })
+      function()
+        -- Use filter to only show installed tools for faster loading
+        require("sidekick.cli").select({ filter = { installed = true } })
+      end,
       desc = "Sidekick Select CLI",
     },
     {
@@ -47,40 +61,10 @@ return {
       desc = "Sidekick Send Visual Selection",
     },
     {
-      "<leader>ap",
-      function() require("sidekick.cli").prompt() end,
-      mode = { "n", "v" },
-      desc = "Sidekick Select Prompt",
-    },
-    {
       "<c-.>",
       function() require("sidekick.cli").focus() end,
       mode = { "n", "x", "i", "t" },
       desc = "Sidekick Switch Focus",
     },
-    {
-      "<leader>ac",
-      function() require("sidekick.cli").toggle({ name = "claude", focus = true }) end,
-      desc = "Sidekick Claude Toggle",
-      mode = { "n", "v" },
-    },
-    {
-      "<leader>ar",
-      function() require("sidekick.cli").toggle({ name = "claude-resume", focus = true }) end,
-      desc = "Sidekick Claude Resume",
-      mode = { "n", "v" },
-    },
-    -- {
-    --   "<leader>an",
-    --   function() require("sidekick.nes").update() end,
-    --   desc = "Manually trigger NES suggestions",
-    --   mode = { "n", "v" },
-    -- },
-    -- {
-    --   "<C-a>",
-    --   function() require("sidekick.nes").update() end,
-    --   desc = "Manually trigger NES suggestions (insert mode)",
-    --   mode = { "i" },
-    -- },
   },
 }

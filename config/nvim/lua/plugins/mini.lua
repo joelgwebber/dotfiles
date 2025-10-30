@@ -62,6 +62,22 @@ return { -- Collection of various small independent plugins/modules
       },
     }
 
+    -- Add custom mapping for opening with system default application
+    vim.api.nvim_create_autocmd('User', {
+      pattern = 'MiniFilesBufferCreate',
+      callback = function(args)
+        local buf_id = args.data.buf_id
+        vim.keymap.set('n', 'o', function()
+          local entry = require('mini.files').get_fs_entry()
+          if not entry then
+            vim.notify('No file or directory under cursor', vim.log.levels.WARN)
+            return
+          end
+          require('config.utils').open_with_system(entry.path)
+        end, { buffer = buf_id, desc = 'Open with system default app' })
+      end,
+    })
+
     -- Simple and easy statusline.
     local statusline = require 'mini.statusline'
     statusline.setup { use_icons = vim.g.have_nerd_font }

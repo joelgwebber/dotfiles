@@ -121,25 +121,7 @@ nmap('<leader>bo', function()
     vim.notify('No file to open', vim.log.levels.WARN)
     return
   end
-
-  -- Detect OS and use appropriate command
-  local cmd
-  if vim.fn.has('mac') == 1 then
-    cmd = { 'open', filepath }
-  elseif vim.fn.has('unix') == 1 then
-    cmd = { 'xdg-open', filepath }
-  elseif vim.fn.has('win32') == 1 then
-    cmd = { 'cmd', '/c', 'start', '""', filepath }
-  else
-    vim.notify('Unsupported OS', vim.log.levels.ERROR)
-    return
-  end
-
-  vim.system(cmd, { detach = true }, function(result)
-    if result.code ~= 0 then
-      vim.notify('Failed to open file: ' .. (result.stderr or 'Unknown error'), vim.log.levels.ERROR)
-    end
-  end)
+  require('config.utils').open_with_system(filepath)
 end, '[b]uffer [o]pen with OS')
 nmap('<leader>br', function()
   local current_name = vim.fn.expand '%:t'
@@ -283,11 +265,16 @@ vmap('<Leader>r', '<cmd>REPLSendVisual<cr>', '[r]epl send')
 
 -- Testing -----------------------------------------------------------------------------------------
 which.add {
-  { '<leader>t', group = '[t]est' },
+  { '<leader>T', group = '[T]est' },
 }
-nmap('<Leader>tt', '<cmd>Neotest summary<cr>', '[t]est show [t]ests')
-nmap('<Leader>tr', '<cmd>Neotest run<cr>', '[t]est [r]un')
-nmap('<Leader>to', '<cmd>Neotest output-panel<cr>', '[t]est [o]utput')
+
+-- Terminal -----------------------------------------------------------------------------------------
+which.add {
+  { '<leader>t', group = '[t]erminal' },
+}
+nmap('<Leader>TT', '<cmd>Neotest summary<cr>', '[T]est show [T]ests')
+nmap('<Leader>TR', '<cmd>Neotest run<cr>', '[T]est [R]un')
+nmap('<Leader>TO', '<cmd>Neotest output-panel<cr>', '[T]est [O]utput')
 
 -- Debugger ----------------------------------------------------------------------------------------
 which.add {
@@ -336,6 +323,53 @@ nmap('<leader>mh', '<cmd>SCNvimHelp Home<cr>', '[h]elp')
 which.add {
   { '<leader>a', group = '[a]i' },
 }
+
+-- Custom Copilot accept with debugging
+vim.keymap.set('i', '<C-Enter>', function()
+  require('config.utils').debug_log('C-Enter pressed in insert mode')
+  local suggestion = require('copilot.suggestion')
+  if suggestion.is_visible() then
+    require('config.utils').debug_log('Suggestion is visible, accepting')
+    suggestion.accept()
+  else
+    require('config.utils').debug_log('No suggestion visible to accept')
+    -- Fallback to normal Enter behavior
+    return '<Enter>'
+  end
+end, { expr = true, desc = 'Accept Copilot suggestion (with debug)' })
+
+-- Debug commands for Copilot troubleshooting
+vim.api.nvim_create_user_command('CopilotDebug', function()
+  require('config.utils').debug_copilot()
+end, { desc = 'Show Copilot debug information' })
+
+vim.api.nvim_create_user_command('CopilotCheckKeymap', function()
+  local utils = require('config.utils')
+  local keymap = utils.check_keymap('i', '<C-Enter>')
+  if keymap then
+    local info = {
+      'C-Enter keymap found:',
+      '  RHS: ' .. (keymap.rhs or 'function'),
+      '  Description: ' .. (keymap.desc or 'none'),
+      '  Buffer: ' .. (keymap.buffer and 'local' or 'global'),
+      '  Silent: ' .. tostring(keymap.silent or false),
+    }
+    vim.notify(table.concat(info, '\n'), vim.log.levels.INFO)
+  else
+    vim.notify('No C-Enter keymap found in insert mode!', vim.log.levels.WARN)
+  end
+end, { desc = 'Check if C-Enter keymap exists' })
+
+vim.api.nvim_create_user_command('CopilotTestAccept', function()
+  require('config.utils').debug_log('Manual test of Copilot accept triggered')
+  local suggestion = require('copilot.suggestion')
+  if suggestion.is_visible() then
+    vim.notify('Suggestion visible - accepting', vim.log.levels.INFO)
+    suggestion.accept()
+  else
+    vim.notify('No suggestion visible', vim.log.levels.WARN)
+  end
+end, { desc = 'Manually test Copilot accept function' })
 
 -- Notifications -----------------------------------------------------------------------------------
 nvmap('<leader>nc', function()

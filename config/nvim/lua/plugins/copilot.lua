@@ -11,11 +11,11 @@ return {
         hide_during_completion = true,
         debounce = 75,
         keymap = {
-          accept = '<S-Tab>',
+          accept = false, -- Disable default accept to create our own
           accept_word = false,
           accept_line = false,
-          next = '<M-.>', -- Alt+. instead of Ctrl+. to avoid sidekick conflict
-          prev = '<M-,>', -- Alt+, for consistency
+          next = '<C-=>', -- Ctrl+= for next suggestion
+          prev = '<C-->', -- Ctrl+- for previous suggestion
           dismiss = '<C-]>',
         },
       },
