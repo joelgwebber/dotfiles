@@ -61,6 +61,12 @@ return {
       desc = "Sidekick Send Visual Selection",
     },
     {
+      "<leader>ap",
+      function() require("sidekick.cli").prompt() end,
+      mode = { "n", "v" },
+      desc = "Sidekick Select Prompt",
+    },
+    {
       "<c-.>",
       function() require("sidekick.cli").focus() end,
       mode = { "n", "x", "i", "t" },
