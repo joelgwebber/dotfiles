@@ -133,6 +133,8 @@ require('lazy').setup {
     opts = {},
   },
 
+  { 'norcalli/nvim-colorizer.lua' },
+
   { 'jbyuki/venn.nvim' },
   { 'Apeiros-46B/qalc.nvim' },
 
