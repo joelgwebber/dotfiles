@@ -1,108 +1,108 @@
 require('colors').apply('j15r-dark', {
   -- Editor chrome (backgrounds, borders, UI elements)
   editor = {
-    bg_primary = '#080808', -- Main editor background (very dark)
-    bg_secondary = '#202020', -- Elevated elements (popups, floats)
-    bg_tertiary = '#303030', -- Further elevated (selections)
-    bg_highlight = '#262626', -- Highlighted elements
-    bg_accent = '#303030', -- Special backgrounds (cursor line)
-    bg_gutter = '#080808', -- Gutter/sign column background
-    border = '#767676', -- All borders
-    border_accent = '#9e9e9e', -- Active/focused borders
+    bg_primary = '#0f0f0f', -- Main editor background (slightly brighter)
+    bg_secondary = '#2a2a2a', -- Elevated elements (popups, floats)
+    bg_tertiary = '#3c3c3c', -- Further elevated (selections)
+    bg_highlight = '#2f2f2f', -- Highlighted elements
+    bg_accent = '#3c3c3c', -- Special backgrounds (cursor line)
+    bg_gutter = '#0f0f0f', -- Gutter/sign column background
+    border = '#8a8a8a', -- All borders (brighter)
+    border_accent = '#b5b5b5', -- Active/focused borders (brighter)
   },
 
   -- Text hierarchy
   text = {
-    primary = '#bcbcbc', -- Main content text
-    secondary = '#767676', -- Comments, less important text
-    tertiary = '#585858', -- UI text, line numbers
-    disabled = '#585858', -- Disabled/ignored text
-    emphasis = '#d7d787', -- Emphasized text
-    strong = '#ffaf5f', -- Strongest emphasis
-    inverse = '#080808', -- Text on colored backgrounds
+    primary = '#d0d0d0', -- Main content text (brighter)
+    secondary = '#8a8a8a', -- Comments, less important text (brighter)
+    tertiary = '#6a6a6a', -- UI text, line numbers (brighter)
+    disabled = '#6a6a6a', -- Disabled/ignored text (brighter)
+    emphasis = '#e5e595', -- Emphasized text (brighter yellow)
+    strong = '#ffb875', -- Strongest emphasis (brighter orange)
+    inverse = '#0f0f0f', -- Text on colored backgrounds
   },
 
   -- Syntax categories
   syntax = {
-    variable = '#bcbcbc', -- Variables, normal identifiers
-    constant = '#d7875f', -- Constants, numbers, booleans
-    string = '#87af87', -- Strings, character literals
-    keyword = '#af87af', -- Keywords, control flow
-    func = '#87afaf', -- Functions, methods (cyan)
-    type = '#87afd7', -- Types, classes (light blue)
-    operator = '#af87af', -- Operators
-    preproc = '#afaf87', -- Preprocessor, macros (tan/yellow)
-    special = '#5f8787', -- Special characters, regex (darkcyan)
-    namespace = '#afaf87', -- Namespaces, modules
-    parameter = '#d7875f', -- Parameters, arguments
-    field = '#87af87', -- Object fields, properties
-    constructor = '#87afd7', -- Constructors
+    variable = '#d0d0d0', -- Variables, normal identifiers (brighter)
+    constant = '#e59570', -- Constants, numbers, booleans (brighter orange)
+    string = '#95c095', -- Strings, character literals (brighter green)
+    keyword = '#c295c2', -- Keywords, control flow (brighter purple)
+    func = '#95c2c2', -- Functions, methods (brighter cyan)
+    type = '#95c2e5', -- Types, classes (brighter blue)
+    operator = '#c295c2', -- Operators (brighter purple)
+    preproc = '#c2c295', -- Preprocessor, macros (brighter tan)
+    special = '#70a0a0', -- Special characters, regex (brighter darkcyan)
+    namespace = '#c2c295', -- Namespaces, modules (brighter tan)
+    parameter = '#e59570', -- Parameters, arguments (brighter orange)
+    field = '#95c095', -- Object fields, properties (brighter green)
+    constructor = '#95c2e5', -- Constructors (brighter blue)
   },
 
   -- Semantic highlights (LSP, diagnostics, git, etc)
   diagnostic = {
-    error = '#d75f5f', -- Errors
-    error_bg = '#3a1f1f', -- Error backgrounds
-    error_muted = '#9a5858', -- Muted errors (virtual text)
+    error = '#e57070', -- Errors (brighter red)
+    error_bg = '#4a2525', -- Error backgrounds (slightly brighter)
+    error_muted = '#b56565', -- Muted errors (virtual text)
 
-    warning = '#d7875f', -- Warnings
-    warning_bg = '#3a2a1f', -- Warning backgrounds
-    warning_muted = '#9a7558', -- Muted warnings (virtual text)
+    warning = '#e59570', -- Warnings (brighter orange)
+    warning_bg = '#4a3525', -- Warning backgrounds (slightly brighter)
+    warning_muted = '#b5826a', -- Muted warnings (virtual text)
 
-    info = '#87afd7', -- Information
-    info_bg = '#1f2a3a', -- Info backgrounds
-    info_muted = '#5a7a9a', -- Muted info (virtual text)
+    info = '#95c2e5', -- Information (brighter blue)
+    info_bg = '#253a4a', -- Info backgrounds (slightly brighter)
+    info_muted = '#6a8ab5', -- Muted info (virtual text)
 
-    hint = '#d7afd7', -- Hints, suggestions
-    hint_bg = '#2a1f3a', -- Hint backgrounds
-    hint_muted = '#8a6a9a', -- Muted hints (virtual text)
+    hint = '#e5c2e5', -- Hints, suggestions (brighter magenta)
+    hint_bg = '#3a254a', -- Hint backgrounds (slightly brighter)
+    hint_muted = '#a575b5', -- Muted hints (virtual text)
 
-    ok = '#87af87', -- Success, valid
-    ok_bg = '#1f3a1f', -- Success backgrounds
+    ok = '#95c095', -- Success, valid (brighter green)
+    ok_bg = '#254a25', -- Success backgrounds (slightly brighter)
   },
 
   -- Version control
   git = {
-    added = '#87af87', -- Added lines/text
-    added_bg = '#5f875f', -- Added backgrounds (diff)
-    modified = '#5f8787', -- Modified lines/text
-    modified_bg = '#5f5f5f', -- Modified backgrounds (diff)
-    removed = '#d75f5f', -- Deleted lines/text
-    removed_bg = '#af875f', -- Deleted backgrounds (diff)
-    conflict = '#af87af', -- Merge conflicts
+    added = '#95c095', -- Added lines/text (brighter green)
+    added_bg = '#709570', -- Added backgrounds (diff) (brighter)
+    modified = '#70a0a0', -- Modified lines/text (brighter cyan)
+    modified_bg = '#707070', -- Modified backgrounds (diff) (brighter)
+    removed = '#e57070', -- Deleted lines/text (brighter red)
+    removed_bg = '#c29570', -- Deleted backgrounds (diff) (brighter)
+    conflict = '#c295c2', -- Merge conflicts (brighter purple)
   },
 
   -- Interactive elements
   ui = {
-    selection = '#204020', -- Visual selections (greenish)
-    match = '#ff00af', -- Search matches, matching brackets (magenta)
-    search = '#87af87', -- Active search (green)
-    search_current = '#afaf87', -- Current search result (tan)
-    cursor = '#ffaf5f', -- Cursor (orange)
-    cursor_insert = '#5fff00', -- Insert mode cursor (bright green)
-    cursor_replace = '#d75f5f', -- Replace mode cursor
-    cursor_visual = '#d7afd7', -- Visual mode cursor
+    selection = '#305030', -- Visual selections (brighter greenish)
+    match = '#ff20c2', -- Search matches, matching brackets (brighter magenta)
+    search = '#95c095', -- Active search (brighter green)
+    search_current = '#c2c295', -- Current search result (brighter tan)
+    cursor = '#ffb875', -- Cursor (brighter orange)
+    cursor_insert = '#70ff20', -- Insert mode cursor (brighter green)
+    cursor_replace = '#e57070', -- Replace mode cursor (brighter red)
+    cursor_visual = '#e5c2e5', -- Visual mode cursor (brighter magenta)
   },
 
   -- Terminal colors (keeping ANSI color semantics)
   -- These need to stay somewhat traditional for terminal apps
   term = {
-    black = '#141414',
-    red = '#d75f5f',
-    green = '#87af87',
-    yellow = '#afaf87',
-    blue = '#5f87af',
-    magenta = '#af87af',
-    cyan = '#5f8787',
-    white = '#9e9e9e',
-    bright_black = '#767676',
-    bright_red = '#d7875f',
-    bright_green = '#afd7af',
-    bright_yellow = '#d7d787',
-    bright_blue = '#87afd7',
-    bright_magenta = '#d7afd7',
-    bright_cyan = '#87afaf',
-    bright_white = '#bcbcbc',
+    black = '#1c1c1c',
+    red = '#e57070',
+    green = '#95c095',
+    yellow = '#c2c295',
+    blue = '#7095c2',
+    magenta = '#c295c2',
+    cyan = '#70a0a0',
+    white = '#b5b5b5',
+    bright_black = '#8a8a8a',
+    bright_red = '#e59570',
+    bright_green = '#c2e5c2',
+    bright_yellow = '#e5e595',
+    bright_blue = '#95c2e5',
+    bright_magenta = '#e5c2e5',
+    bright_cyan = '#95c2c2',
+    bright_white = '#d0d0d0',
   },
 
   -- Special
