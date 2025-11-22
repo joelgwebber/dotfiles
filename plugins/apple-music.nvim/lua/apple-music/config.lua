@@ -4,11 +4,9 @@ M.defaults = {
   update_interval = 2000,
   window = {
     width = 70,
-    height = 15,
-    border = 'rounded',
   },
   artwork = {
-    enabled = false,  -- Disabled by default - experimental feature
+    enabled = true,  -- Enabled with docked window (more stable than floating)
     max_width = 300,
     max_height = 300,
   },

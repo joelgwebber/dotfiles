@@ -24,11 +24,9 @@ return {
       update_interval = 2000,
       window = {
         width = 70,
-        height = 15,
-        border = 'rounded',
       },
       artwork = {
-        enabled = false,  -- EXPERIMENTAL: Enable at your own risk (works in Kitty but can be buggy)
+        enabled = true,  -- Enabled with docked window (more stable than floating)
         max_width = 300,
         max_height = 300,
       },
