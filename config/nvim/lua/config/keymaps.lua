@@ -306,18 +306,23 @@ tmap('<C-j>', '<C-\\><C-n><C-w>j', 'focus lower window (terminal)')
 tmap('<C-k>', '<C-\\><C-n><C-w>k', 'focus upper window (terminal)')
 tmap('<C-l>', '<C-\\><C-n><C-w>l', 'focus right window (terminal)')
 
--- SuperCollider -----------------------------------------------------------------------------------
+-- Music -------------------------------------------------------------------------------------------
 which.add {
   { '<leader>m', group = '[m]usic' },
 }
+
+-- SuperCollider
+which.add {
+  { '<leader>mS', group = '[S]uperCollider' },
+}
 local sc = require 'scnvim'
-nmap('<leader>ms', sc.start, '[s]tart')
-nmap('<leader>mp', sc.stop, 'sto[p]')
-nmap('<leader>mk', sc.recompile, 're[k]ompile')
-nmap('<leader>mg', function()
+nmap('<leader>mSs', sc.start, '[s]tart')
+nmap('<leader>mSp', sc.stop, 'sto[p]')
+nmap('<leader>mSk', sc.recompile, 're[k]ompile')
+nmap('<leader>mSg', function()
   vim.cmd [[ SCNvimGenerateAssets ]]
 end, '[g]enerate')
-nmap('<leader>mh', '<cmd>SCNvimHelp Home<cr>', '[h]elp')
+nmap('<leader>mSh', '<cmd>SCNvimHelp Home<cr>', '[h]elp')
 
 -- AI Tools ----------------------------------------------------------------------------------------
 which.add {
