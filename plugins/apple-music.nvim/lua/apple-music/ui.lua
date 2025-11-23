@@ -8,6 +8,7 @@ M.buf = nil
 M.win = nil
 M.timer = nil
 M.last_state = {} -- Cache state for volume controls
+M.resize_group = nil -- Autocmd group for resize handling
 
 local function format_time(seconds)
 	if not seconds then
@@ -86,6 +87,143 @@ local function format_stats_line(state)
 	return table.concat(parts, " • ")
 end
 
+-- Helper function to center text within a given width
+local function center_text(text, width)
+	local text_len = vim.fn.strdisplaywidth(text)
+	if text_len >= width then
+		-- Truncate on the right if too long (keep left edge visible)
+		return vim.fn.strcharpart(text, 0, width)
+	end
+	local padding = math.floor((width - text_len) / 2)
+	return string.rep(" ", padding) .. text
+end
+
+-- Helper function to create a centered line with 2ch margins
+local function centered_line(text, width)
+	local usable_width = width - 4 -- 2ch margin on each side
+	local centered = center_text(text, usable_width)
+	return "  " .. centered
+end
+
+-- Render the UI with the given state (no AppleScript call)
+local function render_with_state(state)
+	if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
+		return
+	end
+
+	-- Check if window still exists (user might have closed it)
+	if not M.win or not vim.api.nvim_win_is_valid(M.win) then
+		return
+	end
+
+	-- Get current window width dynamically
+	local win_width = vim.api.nvim_win_get_width(M.win)
+	local usable_width = win_width - 4 -- 2ch margin on each side
+
+	-- Calculate dynamic artwork size (do this early so we can reserve space)
+	-- Use 80% of window width, clamped to configured max size
+	local artwork_width_chars = math.floor(win_width * 0.8)
+	artwork_width_chars = math.max(10, math.min(artwork_width_chars, config.options.artwork.max_width_chars))
+
+	-- Character cells are typically ~2:1 (height:width), so use half as many rows as columns
+	-- to get a square image in pixels (e.g., 40 cols x 20 rows ≈ 320x320 pixels)
+	local artwork_height_chars = math.floor(artwork_width_chars / 2)
+	artwork_height_chars = math.min(artwork_height_chars, config.options.artwork.max_height_chars)
+
+	local lines = {}
+
+	-- Reserve space at the TOP for artwork (if enabled and available)
+	if state.artwork_count and state.artwork_count > 0 and config.options.artwork.enabled then
+		for i = 1, artwork_height_chars + 1 do -- +1 for spacing
+			table.insert(lines, "")
+		end
+	end
+
+	if state.player_state == "stopped" or not state.track_name then
+		table.insert(lines, "")
+		table.insert(lines, centered_line("Apple Music", win_width))
+		table.insert(lines, "")
+		table.insert(lines, centered_line("No track playing", win_width))
+		table.insert(lines, "")
+	else
+		local player_icon = state.player_state == "playing" and "▶" or "⏸"
+
+		-- Track name with player icon
+		table.insert(lines, "")
+		table.insert(lines, centered_line(string.format("%s  %s", player_icon, state.track_name or "Unknown"), win_width))
+
+		-- Artist
+		local artist_display = state.artist or "Unknown"
+		if state.album_artist and state.album_artist ~= state.artist then
+			artist_display = string.format("%s (Album: %s)", state.artist, state.album_artist)
+		end
+		table.insert(lines, centered_line(artist_display, win_width))
+
+		-- Album
+		table.insert(lines, centered_line(state.album or "Unknown Album", win_width))
+
+		-- Metadata line (genre, year, track/disc numbers)
+		local metadata = format_metadata_line(state)
+		if metadata ~= "" then
+			table.insert(lines, centered_line(metadata, win_width))
+		end
+
+		table.insert(lines, "")
+
+		-- Progress bar (scales with window width)
+		local progress_bar = format_progress_bar(state.position, state.duration, usable_width)
+		table.insert(lines, "  " .. progress_bar)
+
+		-- Time display
+		local time_display = string.format("%s / %s", format_time(state.position), format_time(state.duration))
+		table.insert(lines, centered_line(time_display, win_width))
+
+		-- Stats line (favorite, play count, bit rate)
+		local stats = format_stats_line(state)
+		if stats ~= "" then
+			table.insert(lines, centered_line(stats, win_width))
+		end
+
+		table.insert(lines, "")
+
+		-- Volume
+		if state.volume then
+			local volume_width = math.min(20, usable_width - 12) -- Leave space for "Volume: " and " XX%"
+			local volume_filled = math.floor((state.volume / 100) * volume_width)
+			local volume_bar = string.rep("━", volume_filled) .. string.rep("─", volume_width - volume_filled)
+			local volume_display = string.format("Volume: %s %d%%", volume_bar, state.volume)
+			table.insert(lines, centered_line(volume_display, win_width))
+		end
+
+		table.insert(lines, "")
+	end
+
+	-- IMPORTANT: Clear artwork cache before nvim_buf_set_lines
+	-- nvim_buf_set_lines(0, -1) destroys all extmarks, so we need to force recreation
+	local kitty = require('apple-music.kitty')
+	kitty.last_display = {}
+
+	vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
+	vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, lines)
+	vim.api.nvim_buf_set_option(M.buf, "modifiable", false)
+
+	-- Display artwork if enabled and available (at the TOP)
+	if config.options.artwork.enabled then
+		if state.artwork_count and state.artwork_count > 0 then
+			local current_track_id = (state.track_name or "") .. "::" .. (state.album or "")
+
+			-- Calculate centered column position (size already calculated above)
+			local centered_col = math.floor((win_width - artwork_width_chars) / 2) + 1 -- 1-indexed
+
+			artwork.display(M.buf, 2, centered_col, current_track_id, artwork_width_chars, artwork_height_chars)
+		end
+		-- Note: Don't clear artwork here when artwork_count is 0!
+		-- That can happen during brief player state queries.
+		-- Let artwork.lua manage its own state. Only clear when window closes.
+	end
+end
+
+-- Fetch state from AppleScript and render
 local function render_ui()
 	if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
 		return
@@ -93,99 +231,9 @@ local function render_ui()
 
 	-- Async call - doesn't block the UI!
 	player.get_state_async(function(state)
-		-- Cache state for volume controls
+		-- Cache state for volume controls and resize handling
 		M.last_state = state
-
-		-- Check if window still exists (user might have closed it)
-		if not M.win or not vim.api.nvim_win_is_valid(M.win) then
-			return
-		end
-
-		local lines = {}
-
-		-- Reserve space at the TOP for artwork (if enabled and available)
-		if state.artwork_count and state.artwork_count > 0 and config.options.artwork.enabled then
-			for i = 1, 21 do -- 22 total lines for artwork area
-				table.insert(lines, "")
-			end
-		end
-
-		if state.player_state == "stopped" or not state.track_name then
-			table.insert(lines, "")
-			table.insert(lines, "  Apple Music")
-			table.insert(lines, "")
-			table.insert(lines, "  No track playing")
-			table.insert(lines, "")
-		else
-			local player_icon = state.player_state == "playing" and "▶" or "⏸"
-
-			-- Track name
-			table.insert(lines, "")
-			table.insert(lines, string.format("  %s  %s", player_icon, state.track_name or "Unknown"))
-
-			-- Artist
-			local artist_display = state.artist or "Unknown"
-			if state.album_artist and state.album_artist ~= state.artist then
-				artist_display = string.format("%s (Album: %s)", state.artist, state.album_artist)
-			end
-			table.insert(lines, string.format("  %s", artist_display))
-
-			-- Album
-			table.insert(lines, string.format("  %s", state.album or "Unknown Album"))
-
-			-- Metadata line (genre, year, track/disc numbers)
-			local metadata = format_metadata_line(state)
-			if metadata ~= "" then
-				table.insert(lines, string.format("  %s", metadata))
-			end
-
-			table.insert(lines, "")
-
-			-- Progress bar
-			local progress_width = config.options.window.width - 4
-			local progress_bar = format_progress_bar(state.position, state.duration, progress_width)
-			table.insert(lines, "  " .. progress_bar)
-			table.insert(lines, string.format("  %s / %s", format_time(state.position), format_time(state.duration)))
-
-			-- Stats line (favorite, play count, bit rate)
-			local stats = format_stats_line(state)
-			if stats ~= "" then
-				table.insert(lines, string.format("  %s", stats))
-			end
-
-			table.insert(lines, "")
-
-			-- Volume
-			if state.volume then
-				local volume_width = 20
-				local volume_filled = math.floor((state.volume / 100) * volume_width)
-				local volume_bar = string.rep("━", volume_filled) .. string.rep("─", volume_width - volume_filled)
-				table.insert(lines, string.format("  Volume: %s %d%%", volume_bar, state.volume))
-			end
-
-			table.insert(lines, "")
-		end
-
-		-- IMPORTANT: Clear artwork cache before nvim_buf_set_lines
-		-- nvim_buf_set_lines(0, -1) destroys all extmarks, so we need to force recreation
-		local kitty = require('apple-music.kitty')
-		kitty.last_display = {}
-
-		vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
-		vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, lines)
-		vim.api.nvim_buf_set_option(M.buf, "modifiable", false)
-
-		-- Display artwork if enabled and available (at the TOP)
-		if config.options.artwork.enabled then
-			if state.artwork_count and state.artwork_count > 0 then
-				local current_track_id = (state.track_name or "") .. "::" .. (state.album or "")
-				-- Display artwork at row 2, col 1 (0-indexed column after conversion)
-				artwork.display(M.buf, 2, 1, current_track_id)
-			end
-			-- Note: Don't clear artwork here when artwork_count is 0!
-			-- That can happen during brief player state queries.
-			-- Let artwork.lua manage its own state. Only clear when window closes.
-		end
+		render_with_state(state)
 	end)
 end
 
@@ -225,6 +273,7 @@ function M.open()
 	vim.api.nvim_win_set_option(M.win, "signcolumn", "no")
 	vim.api.nvim_win_set_option(M.win, "wrap", false)
 	vim.api.nvim_win_set_option(M.win, "conceallevel", 0)  -- Don't conceal placeholders!
+	vim.api.nvim_win_set_option(M.win, "winfixwidth", true)  -- Dock behavior - don't resize when balancing splits
 
 	vim.api.nvim_buf_set_keymap(M.buf, "n", "q", ':lua require("apple-music.ui").close()<CR>', { silent = true })
 	vim.api.nvim_buf_set_keymap(M.buf, "n", "<Esc>", ':lua require("apple-music.ui").close()<CR>', { silent = true })
@@ -271,6 +320,23 @@ function M.open()
 		{ silent = true }
 	)
 
+	-- Set up resize handler (instant visual feedback without AppleScript)
+	if not M.resize_group then
+		M.resize_group = vim.api.nvim_create_augroup("AppleMusicResize", { clear = true })
+	end
+	vim.api.nvim_create_autocmd("WinResized", {
+		group = M.resize_group,
+		callback = function()
+			-- Only re-render if our window was resized
+			if M.win and vim.api.nvim_win_is_valid(M.win) and vim.tbl_contains(vim.v.event.windows, M.win) then
+				-- Re-render with cached state (no AppleScript call)
+				if M.last_state and M.last_state.track_name then
+					render_with_state(M.last_state)
+				end
+			end
+		end,
+	})
+
 	render_ui()
 
 	if not M.timer then
@@ -292,6 +358,12 @@ function M.close()
 		M.timer:stop()
 		M.timer:close()
 		M.timer = nil
+	end
+
+	-- Clear resize handler
+	if M.resize_group then
+		vim.api.nvim_del_augroup_by_id(M.resize_group)
+		M.resize_group = nil
 	end
 
 	-- Clear artwork when closing

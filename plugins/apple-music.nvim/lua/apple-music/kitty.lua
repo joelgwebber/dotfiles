@@ -7,9 +7,10 @@ local M = {}
 -- This allows images to move with buffer content instead of absolute positioning
 local PLACEHOLDER = vim.fn.nr2char(0x10EEEE)
 
--- Diacritics from snacks.nvim (first 50 should be enough for any reasonable image size)
+-- Diacritics from snacks.nvim (full list - supports images up to 300+ cells)
+-- stylua: ignore
 local diacritics_hex = vim.split(
-	"0305,030D,030E,0310,0312,033D,033E,033F,0346,034A,034B,034C,0350,0351,0352,0357,035B,0363,0364,0365,0366,0367,0368,0369,036A,036B,036C,036D,036E,036F,0483,0484,0485,0486,0487,0592,0593,0594,0595,0597,0598,0599,059C,059D,059E,059F,05A0,05A1,05A8,05A9",
+	"0305,030D,030E,0310,0312,033D,033E,033F,0346,034A,034B,034C,0350,0351,0352,0357,035B,0363,0364,0365,0366,0367,0368,0369,036A,036B,036C,036D,036E,036F,0483,0484,0485,0486,0487,0592,0593,0594,0595,0597,0598,0599,059C,059D,059E,059F,05A0,05A1,05A8,05A9,05AB,05AC,05AF,05C4,0610,0611,0612,0613,0614,0615,0616,0617,0657,0658,0659,065A,065B,065D,065E,06D6,06D7,06D8,06D9,06DA,06DB,06DC,06DF,06E0,06E1,06E2,06E4,06E7,06E8,06EB,06EC,0730,0732,0733,0735,0736,073A,073D,073F,0740,0741,0743,0745,0747,0749,074A,07EB,07EC,07ED,07EE,07EF,07F0,07F1,07F3,0816,0817,0818,0819,081B,081C,081D,081E,081F,0820,0821,0822,0823,0825,0826,0827,0829,082A,082B,082C,082D,0951,0953,0954,0F82,0F83,0F86,0F87,135D,135E,135F,17DD,193A,1A17,1A75,1A76,1A77,1A78,1A79,1A7A,1A7B,1A7C,1B6B,1B6D,1B6E,1B6F,1B70,1B71,1B72,1B73,1CD0,1CD1,1CD2,1CDA,1CDB,1CE0,1DC0,1DC1,1DC3,1DC4,1DC5,1DC6,1DC7,1DC8,1DC9,1DCB,1DCC,1DD1,1DD2,1DD3,1DD4,1DD5,1DD6,1DD7,1DD8,1DD9,1DDA,1DDB,1DDC,1DDD,1DDE,1DDF,1DE0,1DE1,1DE2,1DE3,1DE4,1DE5,1DE6,1DFE,20D0,20D1,20D4,20D5,20D6,20D7,20DB,20DC,20E1,20E7,20E9,20F0,2CEF,2CF0,2CF1,2DE0,2DE1,2DE2,2DE3,2DE4,2DE5,2DE6,2DE7,2DE8,2DE9,2DEA,2DEB,2DEC,2DED,2DEE,2DEF,2DF0,2DF1,2DF2,2DF3,2DF4,2DF5,2DF6,2DF7,2DF8,2DF9,2DFA,2DFB,2DFC,2DFD,2DFE,2DFF,A66F,A67C,A67D,A6F0,A6F1,A8E0,A8E1,A8E2,A8E3,A8E4,A8E5,A8E6,A8E7,A8E8,A8E9,A8EA,A8EB,A8EC,A8ED,A8EE,A8EF,A8F0,A8F1,AAB0,AAB2,AAB3,AAB7,AAB8,AABE,AABF,AAC1,FE20,FE21,FE22,FE23,FE24,FE25,FE26,10A0F,10A38,1D185,1D186,1D187,1D188,1D189,1D1AA,1D1AB,1D1AC,1D1AD,1D242,1D243,1D244",
 	","
 )
 
@@ -33,6 +34,9 @@ M.last_display = {}
 
 -- Counter for unique placement IDs
 M.placement_counter = 0
+
+-- Track current placement ID per buffer for cleanup
+M.current_placements = {}
 
 -- Debug logging (write to file to avoid tty corruption)
 -- Set to true to enable debug logging to /tmp/apple-music-debug.log
@@ -207,10 +211,24 @@ function M.display_image(image, buf_row, buf_col, width, height, buf)
 	end
 	M.last_display[buf] = display_key
 
+	-- Generate a NEW placement ID for each unique size/position combo
+	-- This tells Kitty to create a new scaled placement of the same image
+	M.placement_counter = M.placement_counter + 1
+	local placement_id = M.placement_counter
+
 	debug_log("=== DISPLAY_IMAGE (Virtual Text Extmarks) ===")
-	debug_log("Image ID:", image.id, "Placement:", image.placement_id)
+	debug_log("Image ID:", image.id, "Placement:", placement_id)
 	debug_log("Buffer position: row", buf_row, "col", buf_col)
 	debug_log("Size:", w, "x", h, "cells")
+
+	-- Delete old placement if it exists (by placement ID, not image ID)
+	if M.current_placements[buf] then
+		local old_placement_id = M.current_placements[buf]
+		debug_log("[DELETE] Deleting old placement:", old_placement_id)
+		-- a=d: delete, d=i: by ID, i=image_id, p=placement_id
+		local control = string.format("a=d,d=i,i=%d,p=%d", image.id, old_placement_id)
+		send_command(control)
+	end
 
 	-- Clear any existing extmarks for this buffer
 	if M.current_extmarks[buf] then
@@ -220,16 +238,19 @@ function M.display_image(image, buf_row, buf_col, width, height, buf)
 	end
 	M.current_extmarks[buf] = {}
 
+	-- Track this placement for future cleanup
+	M.current_placements[buf] = placement_id
+
 	-- Create a highlight group with foreground = image_id (NOT a color!)
 	-- This is how Kitty associates placeholders with images
-	local hl_name = "AppleMusicImage" .. image.id
+	local hl_name = "AppleMusicImage" .. image.id .. "_" .. placement_id
 	vim.api.nvim_set_hl(0, hl_name, {
 		fg = image.id, -- CRITICAL: Just the number, not a hex color!
-		sp = image.placement_id, -- Placement ID (matching snacks.nvim)
+		sp = placement_id, -- Placement ID (matching snacks.nvim)
 		bg = "none",
 		nocombine = true, -- Don't combine with other highlights
 	})
-	debug_log("[HIGHLIGHT] Created", hl_name, "with fg =", image.id, "sp =", image.placement_id)
+	debug_log("[HIGHLIGHT] Created", hl_name, "with fg =", image.id, "sp =", placement_id)
 
 	-- Create extmarks FIRST, THEN send Kitty display command (timing matters!)
 	vim.schedule(function()
@@ -320,11 +341,11 @@ function M.display_image(image, buf_row, buf_col, width, height, buf)
 			)
 
 			-- NOW send Kitty display command AFTER extmarks are created and rendered
-			-- U=1: Use unicode placeholders (auto-detects size from placeholders!)
+			-- U=1: Use unicode placeholders (positions with virtual text)
+			-- c,r: Specify the display rectangle size (image scales to fit this)
 			-- C=1: Don't move cursor
 			-- q=1: Suppress OK responses, show errors
-			-- NOTE: Do NOT send c/r (columns/rows) when using U=1 - Kitty auto-detects from placeholders
-			local control = string.format("a=p,i=%d,p=%d,U=1,C=1,q=1", image.id, image.placement_id)
+			local control = string.format("a=p,i=%d,p=%d,c=%d,r=%d,U=1,C=1,q=1", image.id, placement_id, w, h)
 			debug_log("[KITTY] Sending display command:", control)
 			send_command(control)
 		end) -- end of pcall
@@ -337,7 +358,7 @@ end
 
 -- Delete a specific image by ID and clear its extmarks
 function M.delete_image(image, buf)
-	-- Delete the image from Kitty
+	-- Delete the image from Kitty (deletes all placements of this image)
 	local control = string.format("a=d,d=i,i=%d", image.id)
 	debug_log("=== DELETE_IMAGE ===")
 	debug_log("Deleting image ID:", image.id)
@@ -350,6 +371,7 @@ function M.delete_image(image, buf)
 		end
 		M.current_extmarks[buf] = nil
 		M.last_display[buf] = nil
+		M.current_placements[buf] = nil
 		debug_log("Cleared extmarks for buffer")
 	end
 end
@@ -372,6 +394,7 @@ function M.delete_all_images()
 	end
 	M.current_extmarks = {}
 	M.last_display = {}
+	M.current_placements = {}
 	debug_log("Cleared all extmarks and caches")
 end
 

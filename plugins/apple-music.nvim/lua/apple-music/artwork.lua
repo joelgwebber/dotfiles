@@ -35,7 +35,8 @@ function M.clear()
 end
 
 -- Display artwork in the buffer
-function M.display(buf, row, col, track_id)
+-- width_chars and height_chars are optional - if not provided, use config defaults
+function M.display(buf, row, col, track_id, width_chars, height_chars)
   if not config.options.artwork.enabled then
     return
   end
@@ -43,9 +44,9 @@ function M.display(buf, row, col, track_id)
   -- Save the buffer reference for cleanup
   M.current_buf = buf
 
-  -- Calculate dimensions in characters (approx 8px per char width, 16px per char height)
-  local max_width_chars = math.floor(config.options.artwork.max_width / 8)
-  local max_height_chars = math.floor(config.options.artwork.max_height / 16)
+  -- Use provided dimensions or fall back to config defaults (now cell-based)
+  local max_width_chars = width_chars or config.options.artwork.max_width_chars
+  local max_height_chars = height_chars or config.options.artwork.max_height_chars
 
   -- If this is the same track and image exists, just reposition it
   -- This is the key optimization: Kitty can reposition without re-transmitting!
