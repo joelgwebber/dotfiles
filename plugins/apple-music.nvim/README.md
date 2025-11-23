@@ -4,8 +4,8 @@ A performant, feature-rich Apple Music controller for Neovim with album artwork 
 
 ## Features
 
-- **Floating UI** with comprehensive track information
-- **Album artwork** display (Kitty terminal protocol) - EXPERIMENTAL
+- **Docked UI** with comprehensive track information
+- **Album artwork** display (direct Kitty graphics protocol implementation)
 - **Extended metadata**:
   - Genre, Year, Composer
   - Track/Disc numbers
@@ -30,6 +30,7 @@ This plugin uses:
 - **Batched AppleScript execution** - One script call instead of 7+ per refresh
 - **Async I/O** via `vim.system()` - Never blocks the editor
 - **Smart caching** - Reduces redundant queries
+- **Direct Kitty protocol** - Efficient image repositioning without re-transmission
 
 ## Installation
 
@@ -39,9 +40,7 @@ This plugin uses:
 {
   dir = vim.fn.expand('~/dotfiles/plugins/apple-music.nvim'),
   name = 'apple-music.nvim',
-  dependencies = {
-    '3rd/image.nvim',  -- For album artwork (Kitty terminal only)
-  },
+  -- No dependencies - direct Kitty graphics protocol implementation
   config = function()
     require('apple-music').setup({
       update_interval = 2000,  -- UI refresh rate in ms
@@ -121,8 +120,9 @@ lua/apple-music/
 ├── init.lua      # Public API
 ├── config.lua    # Configuration management
 ├── player.lua    # AppleScript interface (async)
-├── ui.lua        # Floating window UI
-└── artwork.lua   # Album artwork display (image.nvim)
+├── ui.lua        # Docked window UI
+├── artwork.lua   # Album artwork management
+└── kitty.lua     # Direct Kitty graphics protocol implementation
 ```
 
 ## Metadata Available
@@ -137,25 +137,13 @@ The plugin fetches all available track metadata from Apple Music:
 
 ## Troubleshooting
 
-### Album artwork (EXPERIMENTAL)
-
-**Note**: Artwork support is experimental and disabled by default due to issues with image.nvim and floating windows.
-
-**Known issues**:
-- Images may persist as "ghosts" when closing the UI
-- Window may jump/flicker when loading artwork
-- Images may not render in the correct position
-
-**To enable (at your own risk)**:
-```lua
-artwork = { enabled = true }
-```
+### Album artwork
 
 **Requirements**:
 1. Verify you're using **Kitty terminal**: `echo $TERM` should show `xterm-kitty`
-2. Check if image.nvim is installed: `:lua print(require('image'))`
+2. Artwork is enabled by default with the docked window layout
 
-**If you experience issues**, disable it: `artwork = { enabled = false }`
+The plugin uses a custom, lightweight Kitty graphics protocol implementation that avoids the flickering and positioning issues found in image.nvim.
 
 ### UI not updating
 

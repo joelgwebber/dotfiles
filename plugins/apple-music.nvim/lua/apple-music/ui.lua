@@ -265,21 +265,6 @@ function M.open()
 		{ silent = true }
 	)
 
-	-- Workaround for image.nvim issue #307: Force redraw on window events
-	-- This fixes images jumping position when window is focused
-	if config.options.artwork.enabled then
-		vim.api.nvim_create_autocmd({ "WinEnter", "BufEnter" }, {
-			buffer = M.buf,
-			callback = function()
-				vim.defer_fn(function()
-					if M.win and vim.api.nvim_win_is_valid(M.win) then
-						vim.cmd("redraw!")
-					end
-				end, 50)
-			end,
-		})
-	end
-
 	render_ui()
 
 	if not M.timer then

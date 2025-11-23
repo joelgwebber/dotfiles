@@ -1,24 +1,7 @@
 return {
   dir = vim.fn.expand('~/dotfiles/plugins/apple-music.nvim'),
   name = 'apple-music.nvim',
-  dependencies = {
-    {
-      '3rd/image.nvim',
-      opts = {
-        backend = 'kitty',
-        integrations = {},
-        max_width = nil,
-        max_height = nil,
-        max_width_window_percentage = nil,
-        max_height_window_percentage = nil,
-        window_overlap_clear_enabled = false,
-        window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', '' },
-        editor_only_render_when_focused = false,
-        tmux_show_only_in_active_window = false,
-        hijack_file_patterns = {},
-      },
-    },
-  },
+  -- No dependencies - we implement Kitty graphics protocol directly!
   config = function()
     require('apple-music').setup({
       update_interval = 2000,
