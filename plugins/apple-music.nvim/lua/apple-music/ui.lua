@@ -166,6 +166,11 @@ local function render_ui()
 			table.insert(lines, "")
 		end
 
+		-- IMPORTANT: Clear artwork cache before nvim_buf_set_lines
+		-- nvim_buf_set_lines(0, -1) destroys all extmarks, so we need to force recreation
+		local kitty = require('apple-music.kitty')
+		kitty.last_display = {}
+
 		vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
 		vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, lines)
 		vim.api.nvim_buf_set_option(M.buf, "modifiable", false)
@@ -174,8 +179,8 @@ local function render_ui()
 		if config.options.artwork.enabled then
 			if state.artwork_count and state.artwork_count > 0 then
 				local current_track_id = (state.track_name or "") .. "::" .. (state.album or "")
-				-- Display artwork at row 2 (after "[Album Artwork]" label), col 2
-				artwork.display(M.buf, 2, 2, current_track_id)
+				-- Display artwork at row 2, col 1 (0-indexed column after conversion)
+				artwork.display(M.buf, 2, 1, current_track_id)
 			end
 			-- Note: Don't clear artwork here when artwork_count is 0!
 			-- That can happen during brief player state queries.
@@ -219,6 +224,7 @@ function M.open()
 	vim.api.nvim_win_set_option(M.win, "relativenumber", false)
 	vim.api.nvim_win_set_option(M.win, "signcolumn", "no")
 	vim.api.nvim_win_set_option(M.win, "wrap", false)
+	vim.api.nvim_win_set_option(M.win, "conceallevel", 0)  -- Don't conceal placeholders!
 
 	vim.api.nvim_buf_set_keymap(M.buf, "n", "q", ':lua require("apple-music.ui").close()<CR>', { silent = true })
 	vim.api.nvim_buf_set_keymap(M.buf, "n", "<Esc>", ':lua require("apple-music.ui").close()<CR>', { silent = true })

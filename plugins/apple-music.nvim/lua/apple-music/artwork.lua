@@ -8,11 +8,12 @@ M.current_image = nil
 M.current_track_id = nil
 M.is_loading = false
 M.temp_file = nil
+M.current_buf = nil
 
 -- Clear current artwork
 function M.clear()
   if M.current_image then
-    kitty.delete_image(M.current_image)
+    kitty.delete_image(M.current_image, M.current_buf)
     M.current_image = nil
   end
 
@@ -38,6 +39,9 @@ function M.display(buf, row, col, track_id)
   if not config.options.artwork.enabled then
     return
   end
+
+  -- Save the buffer reference for cleanup
+  M.current_buf = buf
 
   -- Calculate dimensions in characters (approx 8px per char width, 16px per char height)
   local max_width_chars = math.floor(config.options.artwork.max_width / 8)
