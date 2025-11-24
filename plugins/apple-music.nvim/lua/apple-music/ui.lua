@@ -105,6 +105,29 @@ local function centered_line(text, width)
 	return "  " .. centered
 end
 
+-- Helper function to create a centered placeholder box
+local function create_placeholder_box(win_width, box_width, box_height)
+	local lines = {}
+	local centered_col_offset = math.floor((win_width - box_width) / 2)
+	local padding = string.rep(" ", centered_col_offset)
+
+	-- Top border
+	table.insert(lines, padding .. "┌" .. string.rep("─", box_width - 2) .. "┐")
+
+	-- Middle rows (empty)
+	for i = 2, box_height - 1 do
+		table.insert(lines, padding .. "│" .. string.rep(" ", box_width - 2) .. "│")
+	end
+
+	-- Bottom border
+	table.insert(lines, padding .. "└" .. string.rep("─", box_width - 2) .. "┘")
+
+	-- Add spacing line after box
+	table.insert(lines, "")
+
+	return lines
+end
+
 -- Render the UI with the given state (no AppleScript call)
 local function render_with_state(state)
 	if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
@@ -132,10 +155,20 @@ local function render_with_state(state)
 
 	local lines = {}
 
-	-- Reserve space at the TOP for artwork (if enabled and available)
-	if state.artwork_count and state.artwork_count > 0 and config.options.artwork.enabled then
-		for i = 1, artwork_height_chars + 1 do -- +1 for spacing
-			table.insert(lines, "")
+	-- Reserve space at the TOP for artwork (if enabled)
+	-- Always reserve space to prevent text jumping when loading/changing tracks
+	if config.options.artwork.enabled then
+		if state.artwork_count and state.artwork_count > 0 then
+			-- Reserve empty space for actual artwork (will be displayed via extmarks)
+			for i = 1, artwork_height_chars + 1 do -- +1 for spacing
+				table.insert(lines, "")
+			end
+		else
+			-- Show placeholder box when no artwork available
+			local box_lines = create_placeholder_box(win_width, artwork_width_chars, artwork_height_chars)
+			for _, line in ipairs(box_lines) do
+				table.insert(lines, line)
+			end
 		end
 	end
 
@@ -281,42 +314,70 @@ function M.open()
 		M.buf,
 		"n",
 		"p",
-		':lua require("apple-music.player").play_pause()<CR>',
+		':lua require("apple-music.ui").action_play_pause()<CR>',
 		{ silent = true }
 	)
 	vim.api.nvim_buf_set_keymap(
 		M.buf,
 		"n",
 		"n",
-		':lua require("apple-music.player").next_track()<CR>',
+		':lua require("apple-music.ui").action_next_track()<CR>',
 		{ silent = true }
 	)
 	vim.api.nvim_buf_set_keymap(
 		M.buf,
 		"n",
 		"N",
-		':lua require("apple-music.player").previous_track()<CR>',
+		':lua require("apple-music.ui").action_previous_track()<CR>',
 		{ silent = true }
 	)
 	vim.api.nvim_buf_set_keymap(
 		M.buf,
 		"n",
 		"=",
-		':lua require("apple-music.player").increase_volume()<CR>',
+		':lua require("apple-music.ui").action_increase_volume()<CR>',
 		{ silent = true }
 	)
 	vim.api.nvim_buf_set_keymap(
 		M.buf,
 		"n",
 		"-",
-		':lua require("apple-music.player").decrease_volume()<CR>',
+		':lua require("apple-music.ui").action_decrease_volume()<CR>',
 		{ silent = true }
 	)
 	vim.api.nvim_buf_set_keymap(
 		M.buf,
 		"n",
 		"s",
-		':lua require("apple-music.player").toggle_shuffle()<CR>',
+		':lua require("apple-music.ui").action_toggle_shuffle()<CR>',
+		{ silent = true }
+	)
+	vim.api.nvim_buf_set_keymap(
+		M.buf,
+		"n",
+		"h",
+		':lua require("apple-music.ui").action_seek_backward(5)<CR>',
+		{ silent = true }
+	)
+	vim.api.nvim_buf_set_keymap(
+		M.buf,
+		"n",
+		"l",
+		':lua require("apple-music.ui").action_seek_forward(5)<CR>',
+		{ silent = true }
+	)
+	vim.api.nvim_buf_set_keymap(
+		M.buf,
+		"n",
+		"H",
+		':lua require("apple-music.ui").action_seek_backward(30)<CR>',
+		{ silent = true }
+	)
+	vim.api.nvim_buf_set_keymap(
+		M.buf,
+		"n",
+		"L",
+		':lua require("apple-music.ui").action_seek_forward(30)<CR>',
 		{ silent = true }
 	)
 
@@ -378,6 +439,155 @@ function M.close()
 		vim.api.nvim_win_close(M.win, true)
 		M.win = nil
 	end
+end
+
+-- Action wrappers that provide immediate visual feedback before calling player functions
+-- This makes the UI feel much more responsive
+
+function M.action_play_pause()
+	if not M.last_state or not M.last_state.player_state then
+		player.play_pause()
+		render_ui()
+		return
+	end
+
+	-- Optimistically toggle the player state for instant visual feedback
+	if M.last_state.player_state == "playing" then
+		M.last_state.player_state = "paused"
+	elseif M.last_state.player_state == "paused" then
+		M.last_state.player_state = "playing"
+	end
+
+	-- Re-render with optimistic state (instant!)
+	render_with_state(M.last_state)
+
+	-- Execute the actual action
+	player.play_pause()
+
+	-- Trigger immediate refresh to get accurate state (reduces perceived latency to just AppleScript round-trip)
+	render_ui()
+end
+
+function M.action_next_track()
+	-- Clear artwork and show loading state
+	artwork.clear()
+
+	-- Show loading placeholder
+	if M.last_state then
+		local loading_state = vim.tbl_deep_extend("force", M.last_state, {
+			track_name = "Loading...",
+			artist = "",
+			album = "",
+			artwork_count = 0,
+		})
+		render_with_state(loading_state)
+	end
+
+	-- Execute the actual action
+	player.next_track()
+
+	-- Trigger immediate refresh to get new track info
+	render_ui()
+end
+
+function M.action_previous_track()
+	-- Clear artwork and show loading state
+	artwork.clear()
+
+	-- Show loading placeholder
+	if M.last_state then
+		local loading_state = vim.tbl_deep_extend("force", M.last_state, {
+			track_name = "Loading...",
+			artist = "",
+			album = "",
+			artwork_count = 0,
+		})
+		render_with_state(loading_state)
+	end
+
+	-- Execute the actual action
+	player.previous_track()
+
+	-- Trigger immediate refresh to get new track info
+	render_ui()
+end
+
+function M.action_increase_volume()
+	if not M.last_state or not M.last_state.volume then
+		player.increase_volume()
+		render_ui()
+		return
+	end
+
+	-- Optimistically update volume for instant visual feedback
+	M.last_state.volume = math.min(100, M.last_state.volume + 10)
+	render_with_state(M.last_state)
+
+	-- Execute the actual action
+	player.increase_volume()
+
+	-- Trigger immediate refresh to get accurate volume
+	render_ui()
+end
+
+function M.action_decrease_volume()
+	if not M.last_state or not M.last_state.volume then
+		player.decrease_volume()
+		render_ui()
+		return
+	end
+
+	-- Optimistically update volume for instant visual feedback
+	M.last_state.volume = math.max(0, M.last_state.volume - 10)
+	render_with_state(M.last_state)
+
+	-- Execute the actual action
+	player.decrease_volume()
+
+	-- Trigger immediate refresh to get accurate volume
+	render_ui()
+end
+
+function M.action_toggle_shuffle()
+	-- No visual feedback for shuffle in current UI, but still trigger immediate refresh
+	player.toggle_shuffle()
+	render_ui()
+end
+
+function M.action_seek_forward(seconds)
+	if not M.last_state or not M.last_state.position or not M.last_state.duration then
+		player.seek_forward(seconds)
+		render_ui()
+		return
+	end
+
+	-- Optimistically update position for instant visual feedback
+	M.last_state.position = math.min(M.last_state.duration, M.last_state.position + seconds)
+	render_with_state(M.last_state)
+
+	-- Execute the actual action
+	player.seek_forward(seconds)
+
+	-- Trigger immediate refresh to get accurate position
+	render_ui()
+end
+
+function M.action_seek_backward(seconds)
+	if not M.last_state or not M.last_state.position then
+		player.seek_backward(seconds)
+		render_ui()
+		return
+	end
+
+	-- Optimistically update position for instant visual feedback
+	M.last_state.position = math.max(0, M.last_state.position - seconds)
+	render_with_state(M.last_state)
+
+	-- Execute the actual action
+	player.seek_backward(seconds)
+
+	-- Trigger immediate refresh to get accurate position
+	render_ui()
 end
 
 return M

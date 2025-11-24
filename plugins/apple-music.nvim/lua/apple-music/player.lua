@@ -289,4 +289,25 @@ function M.toggle_shuffle()
   ]])
 end
 
+function M.set_position(position)
+  execute_applescript(string.format('tell application "Music" to set player position to %f', position))
+end
+
+function M.seek_forward(seconds)
+  -- Use cached position from UI state instead of querying
+  local ui = require('apple-music.ui')
+  if ui.last_state and ui.last_state.position and ui.last_state.duration then
+    local new_position = math.min(ui.last_state.duration, ui.last_state.position + seconds)
+    M.set_position(new_position)
+  end
+end
+
+function M.seek_backward(seconds)
+  local ui = require('apple-music.ui')
+  if ui.last_state and ui.last_state.position then
+    local new_position = math.max(0, ui.last_state.position - seconds)
+    M.set_position(new_position)
+  end
+end
+
 return M
