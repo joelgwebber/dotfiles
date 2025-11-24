@@ -243,14 +243,15 @@ function M.display_image(image, buf_row, buf_col, width, height, buf)
 
 	-- Create a highlight group with foreground = image_id (NOT a color!)
 	-- This is how Kitty associates placeholders with images
-	local hl_name = "AppleMusicImage" .. image.id .. "_" .. placement_id
+	-- Reuse the same highlight name to avoid accumulating hundreds of highlight groups
+	local hl_name = "AppleMusicImageDisplay"
 	vim.api.nvim_set_hl(0, hl_name, {
 		fg = image.id, -- CRITICAL: Just the number, not a hex color!
 		sp = placement_id, -- Placement ID (matching snacks.nvim)
 		bg = "none",
 		nocombine = true, -- Don't combine with other highlights
 	})
-	debug_log("[HIGHLIGHT] Created", hl_name, "with fg =", image.id, "sp =", placement_id)
+	debug_log("[HIGHLIGHT] Set", hl_name, "with fg =", image.id, "sp =", placement_id)
 
 	-- Create extmarks FIRST, THEN send Kitty display command (timing matters!)
 	vim.schedule(function()
