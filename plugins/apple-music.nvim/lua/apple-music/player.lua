@@ -30,6 +30,7 @@ end
 
 -- Get upcoming tracks from the current playlist queue
 -- Returns: { current_index, total_tracks, shuffle_enabled, upcoming_tracks[] }
+-- Each track has: name, artist, album
 function M.get_queue_async(callback)
   local script = [[
     tell application "Music"
@@ -57,7 +58,7 @@ function M.get_queue_async(callback)
         return "notfound"
       end if
 
-      -- Build output: current_index, total_count, shuffle_status, then upcoming tracks (name, artist pairs)
+      -- Build output: current_index, total_count, shuffle_status, then upcoming tracks (name, artist, album triples)
       set output to currentIndex as string
       set output to output & tab & (count of allTracks) as string
       set output to output & tab & (shuffleOn as string)
@@ -75,6 +76,7 @@ function M.get_queue_async(callback)
           set t to item i of allTracks
           set output to output & tab & (name of t)
           set output to output & tab & (artist of t)
+          set output to output & tab & (album of t)
         end repeat
       end if
 
@@ -101,12 +103,13 @@ function M.get_queue_async(callback)
     queue.shuffle_enabled = (parts[3] == "true")
     queue.upcoming_tracks = {}
 
-    -- Parse upcoming tracks (pairs of name, artist) - only present if shuffle is off
-    for i = 4, #parts, 2 do
-      if parts[i] and parts[i+1] then
+    -- Parse upcoming tracks (triples of name, artist, album) - only present if shuffle is off
+    for i = 4, #parts, 3 do
+      if parts[i] and parts[i+1] and parts[i+2] then
         table.insert(queue.upcoming_tracks, {
           name = parts[i],
           artist = parts[i+1],
+          album = parts[i+2],
         })
       end
     end
@@ -284,6 +287,68 @@ function M.get_state_async(callback)
     end
 
     callback(state)
+  end)
+end
+
+-- Extract artwork for a specific album (from any track with that album name)
+-- Returns: { path, format } or (nil, error)
+function M.get_album_artwork_async(album_name, callback)
+  local script = string.format([[
+    tell application "Music"
+      if player state is stopped then
+        return "stopped" & tab & ""
+      end if
+
+      set currentPL to current playlist
+      set allTracks to every track of currentPL
+
+      -- Find first track with this album
+      repeat with t in allTracks
+        if album of t = "%s" then
+          if (count of artworks of t) > 0 then
+            set artData to raw data of artwork 1 of t
+            set artFormat to format of artwork 1 of t
+            -- Use album name in temp file to enable caching
+            set safeAlbumName to do shell script "echo " & quoted form of "%s" & " | sed 's/[^a-zA-Z0-9]/-/g'"
+            set tempFile to "/tmp/apple-music-queue-" & safeAlbumName & ".jpg"
+
+            try
+              set fileRef to open for access tempFile with write permission
+              set eof fileRef to 0
+              write artData to fileRef
+              close access fileRef
+              return tempFile & tab & artFormat
+            on error errMsg
+              try
+                close access tempFile
+              end try
+              return "error" & tab & errMsg
+            end try
+          else
+            return "noartwork" & tab & ""
+          end if
+        end if
+      end repeat
+
+      return "notfound" & tab & ""
+    end tell
+  ]], album_name, album_name)
+
+  execute_applescript_async(script, function(result, err)
+    if err or not result then
+      callback(nil, err)
+      return
+    end
+
+    local parts = vim.split(result, '\t')
+    local status = parts[1]
+
+    if status == 'error' or status == 'noartwork' or status == 'stopped' or status == 'notfound' then
+      callback(nil, parts[2] or status)
+    else
+      -- Success - parts[1] is file path, parts[2] is format
+      callback({ path = parts[1], format = parts[2] })
+    end
   end)
 end
 

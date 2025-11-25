@@ -1,6 +1,7 @@
 local player = require("apple-music.player")
 local config = require("apple-music.config")
 local artwork = require("apple-music.artwork")
+local queue_artwork = require("apple-music.queue_artwork")
 
 local M = {}
 
@@ -105,6 +106,19 @@ local function centered_line(text, width)
 	local usable_width = width - 4 -- 2ch margin on each side
 	local centered = center_text(text, usable_width)
 	return "  " .. centered
+end
+
+-- Helper function for queue items with space for 4x2 artwork on the left
+-- Text starts at column 7 (2ch margin + 4ch image + 1ch spacing)
+local function queue_line_with_artwork(text, width)
+	local text_len = vim.fn.strdisplaywidth(text)
+	local available_width = width - 7 -- Space after image area
+
+	if text_len > available_width then
+		text = vim.fn.strcharpart(text, 0, available_width)
+	end
+
+	return "  " .. "    " .. " " .. text  -- 2ch margin + 4ch image placeholder + 1ch spacing
 end
 
 -- Helper function to create a centered placeholder box
@@ -235,6 +249,8 @@ local function render_with_state(state, queue)
 	end
 
 	-- Queue section (upcoming tracks)
+	local queue_tracks_to_render = {}  -- Track which tracks need artwork
+
 	if queue then
 		table.insert(lines, "")
 		table.insert(lines, centered_line("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", win_width))
@@ -253,10 +269,17 @@ local function render_with_state(state, queue)
 			table.insert(lines, centered_line("🔀 Shuffle enabled", win_width))
 			table.insert(lines, "")
 		elseif queue.upcoming_tracks and #queue.upcoming_tracks > 0 then
-			-- Render upcoming tracks (2 lines per track + blank line)
+			-- Render upcoming tracks (2 lines per track with artwork + blank line)
 			for i, track in ipairs(queue.upcoming_tracks) do
-				table.insert(lines, centered_line(track.name, win_width))
-				table.insert(lines, centered_line(track.artist, win_width))
+				-- Save the 1-indexed line number where track name will be inserted
+				-- This aligns the top of the 4x2 thumbnail with the track name
+				table.insert(queue_tracks_to_render, {
+					album = track.album,
+					line = #lines + 1,  -- 1-indexed line number for display_image
+				})
+
+				table.insert(lines, queue_line_with_artwork(track.name, win_width))
+				table.insert(lines, queue_line_with_artwork(track.artist, win_width))
 
 				-- Blank line between tracks (but not after the last one)
 				if i < #queue.upcoming_tracks then
@@ -271,7 +294,7 @@ local function render_with_state(state, queue)
 	-- IMPORTANT: Clear artwork cache before nvim_buf_set_lines
 	-- nvim_buf_set_lines(0, -1) destroys all extmarks, so we need to force recreation
 	local kitty = require('apple-music.kitty')
-	kitty.last_display = {}
+	kitty.last_display[M.buf] = {}  -- Clear display cache for this buffer
 
 	vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
 	vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, lines)
@@ -279,17 +302,33 @@ local function render_with_state(state, queue)
 
 	-- Display artwork if enabled and available (at the TOP)
 	if config.options.artwork.enabled then
-		if state.artwork_count and state.artwork_count > 0 then
-			local current_track_id = (state.track_name or "") .. "::" .. (state.album or "")
-
+		if state.artwork_count and state.artwork_count > 0 and state.album then
 			-- Calculate centered column position (size already calculated above)
 			local centered_col = math.floor((win_width - artwork_width_chars) / 2) + 1 -- 1-indexed
 
-			artwork.display(M.buf, 2, centered_col, current_track_id, artwork_width_chars, artwork_height_chars)
+			-- Use album name for caching (more efficient than per-track)
+			artwork.display(M.buf, 2, centered_col, state.album, artwork_width_chars, artwork_height_chars)
 		end
 		-- Note: Don't clear artwork here when artwork_count is 0!
 		-- That can happen during brief player state queries.
 		-- Let artwork.lua manage its own state. Only clear when window closes.
+
+		-- Display queue artwork (4x2 images on the left, top-aligned with track names)
+		if queue_tracks_to_render and #queue_tracks_to_render > 0 then
+			for _, track_info in ipairs(queue_tracks_to_render) do
+				if track_info.album and track_info.album ~= '' then
+					-- Display 4x2 artwork at column 2, with 2ch left margin
+					-- track_info.line is 1-indexed (line number in editor)
+					queue_artwork.display_album_artwork(
+						track_info.album,
+						M.buf,
+						track_info.line,  -- 1-indexed row where track name starts
+						2,                -- Column (0-indexed, after 2ch margin)
+						nil               -- No callback needed
+					)
+				end
+			end
+		end
 	end
 end
 
@@ -491,8 +530,9 @@ function M.close()
 		M.resize_group = nil
 	end
 
-	-- Clear artwork when closing
-	artwork.clear()
+	-- Clear all artwork when closing UI
+	artwork.clear_all()
+	queue_artwork.clear()
 
 	-- Clear queue cache
 	M.last_queue = nil
@@ -537,10 +577,11 @@ function M.action_play_pause()
 end
 
 function M.action_next_track()
-	-- Clear artwork and show loading state
+	-- Clear main artwork and show loading state
 	artwork.clear()
+	-- NOTE: Don't clear queue_artwork - keep it cached for reuse!
 
-	-- Clear queue cache to force refresh
+	-- Clear queue data cache to force refresh
 	M.last_queue = nil
 	M.last_track_id = nil
 
@@ -563,10 +604,11 @@ function M.action_next_track()
 end
 
 function M.action_previous_track()
-	-- Clear artwork and show loading state
+	-- Clear main artwork and show loading state
 	artwork.clear()
+	-- NOTE: Don't clear queue_artwork - keep it cached for reuse!
 
-	-- Clear queue cache to force refresh
+	-- Clear queue data cache to force refresh
 	M.last_queue = nil
 	M.last_track_id = nil
 

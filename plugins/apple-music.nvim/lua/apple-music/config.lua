@@ -3,7 +3,7 @@ local M = {}
 M.defaults = {
 	update_interval = 2000,
 	window = {
-		width = 48,
+		width = 56,  -- Increased to accommodate queue artwork (4x2) + text
 	},
 	artwork = {
 		enabled = true, -- Enabled with docked window (more stable than floating)

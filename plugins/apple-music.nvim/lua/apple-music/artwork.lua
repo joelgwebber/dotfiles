@@ -1,43 +1,62 @@
 local player = require('apple-music.player')
 local config = require('apple-music.config')
 local kitty = require('apple-music.kitty')
+local cache = require('apple-music.cache')
 
 local M = {}
 
+-- Album-based cache: { [album_name] = { image, cache_file } }
+M.album_cache = {}
+
 M.current_image = nil
-M.current_track_id = nil
+M.current_album = nil  -- Track by album instead of track_id
 M.is_loading = false
-M.temp_file = nil
 M.current_buf = nil
 
--- Clear current artwork
-function M.clear()
-  if M.current_image then
-    kitty.delete_image(M.current_image, M.current_buf)
-    M.current_image = nil
-  end
+-- Counter for unique image IDs (starts at 1000000, separate from queue artwork)
+M.image_id_counter = 1000000
 
-  -- Delete the old temp file
-  if M.temp_file then
-    pcall(function()
-      vim.fn.delete(M.temp_file)
-    end)
-    M.temp_file = nil
-  end
+-- Initialize cache directory
+cache.init()
+
+-- Clear currently displayed artwork (but keep cache)
+function M.clear()
+  -- Just hide the current image, don't delete from Kitty memory
+  -- The image stays loaded and can be quickly repositioned if needed
+  M.current_image = nil
+  M.current_album = nil
+  M.is_loading = false
 
   -- Force a redraw to ensure terminal updates
   vim.schedule(function()
     vim.cmd('redraw!')
   end)
+end
 
-  M.current_track_id = nil
+-- Clear all cached artwork (called on UI close)
+function M.clear_all()
+  for album_name, data in pairs(M.album_cache) do
+    if data.image then
+      kitty.delete_image(data.image, M.current_buf)
+    end
+    -- NOTE: Keep persistent cache files
+  end
+
+  if M.current_image and not M.album_cache[M.current_album] then
+    kitty.delete_image(M.current_image, M.current_buf)
+  end
+
+  M.album_cache = {}
+  M.current_image = nil
+  M.current_album = nil
   M.is_loading = false
 end
 
 -- Display artwork in the buffer
 -- width_chars and height_chars are optional - if not provided, use config defaults
-function M.display(buf, row, col, track_id, width_chars, height_chars)
-  if not config.options.artwork.enabled then
+-- album_name is used for caching (more efficient than per-track caching)
+function M.display(buf, row, col, album_name, width_chars, height_chars)
+  if not config.options.artwork.enabled or not album_name then
     return
   end
 
@@ -48,77 +67,99 @@ function M.display(buf, row, col, track_id, width_chars, height_chars)
   local max_width_chars = width_chars or config.options.artwork.max_width_chars
   local max_height_chars = height_chars or config.options.artwork.max_height_chars
 
-  -- If this is the same track and image exists, just reposition it
+  -- If this is the same album and image exists, just reposition it
   -- This is the key optimization: Kitty can reposition without re-transmitting!
-  if track_id and M.current_track_id == track_id and M.current_image then
+  if album_name == M.current_album and M.current_image then
     kitty.display_image(M.current_image, row, col, max_width_chars, max_height_chars, buf)
     return
   end
 
-  -- If already loading this track, skip
+  -- Check album cache (already loaded in Kitty)
+  if M.album_cache[album_name] and M.album_cache[album_name].image then
+    local cached = M.album_cache[album_name]
+    M.current_image = cached.image
+    M.current_album = album_name
+    kitty.display_image(cached.image, row, col, max_width_chars, max_height_chars, buf)
+    return
+  end
+
+  -- Check persistent file cache
+  local has_cached, cached_path = cache.has_cached_artwork(album_name)
+  if has_cached then
+    M.load_from_file(album_name, cached_path, buf, row, col, max_width_chars, max_height_chars)
+    return
+  end
+
+  -- If already loading, skip
   if M.is_loading then
     return
   end
 
-  -- Clear old image FIRST, before fetching new one
+  -- Clear old image display reference
   M.clear()
 
-  -- Mark as loading AFTER clear so clear() doesn't reset the flag
+  -- Mark as loading
   M.is_loading = true
 
-  -- Get artwork asynchronously
+  -- Fetch artwork from Apple Music
   player.get_artwork_async(function(artwork, err)
     if err or not artwork then
       M.is_loading = false
       return
     end
 
-    -- Create a unique file path for this track to avoid caching
-    local track_hash = (track_id or 'unknown'):gsub('[^%w]', '-')
-    local unique_path = string.format('/tmp/apple-music-%s.png', track_hash)  -- Use .png extension
+    -- Convert to PNG and store in persistent cache
+    local png_path = cache.get_album_cache_path(album_name, 'png')
 
-    -- Convert JPEG to PNG using ImageMagick (Kitty needs PNG for direct transmission)
-    local convert_result = vim.fn.system(string.format('convert "%s" "%s"', artwork.path, unique_path))
+    local convert_result = vim.fn.system(string.format('convert "%s" "%s"', artwork.path, png_path))
     if vim.v.shell_error ~= 0 then
       M.is_loading = false
       return
     end
 
-    -- Verify the PNG is valid before sending
-    local verify_result = vim.fn.system(string.format('file "%s"', unique_path))
+    -- Verify PNG is valid
+    local verify_result = vim.fn.system(string.format('file "%s"', png_path))
     if not verify_result:match('PNG image data') then
       M.is_loading = false
       return
     end
 
-    -- Save the temp file for cleanup
-    M.temp_file = unique_path
-
-    -- Small delay to ensure file copy completes
+    -- Load and display
     vim.defer_fn(function()
-      -- Load the image into Kitty
-      local img, load_err = kitty.load_image(unique_path, {
-        id = math.random(1000000)  -- Unique ID per track
-      })
-
-      if not img then
-        M.is_loading = false
-        return
-      end
-
-      -- Display at the specified position
-      kitty.display_image(img, row, col, max_width_chars, max_height_chars, buf)
-
-      -- Save state
-      M.current_image = img
-      M.current_track_id = track_id
-      M.is_loading = false
-
-      -- Force a redraw
-      vim.schedule(function()
-        vim.cmd('redraw')
-      end)
+      M.load_from_file(album_name, png_path, buf, row, col, max_width_chars, max_height_chars)
     end, 100)
+  end)
+end
+
+-- Load artwork from file into Kitty and cache it
+function M.load_from_file(album_name, png_path, buf, row, col, width, height)
+  M.image_id_counter = M.image_id_counter + 1
+  local img, load_err = kitty.load_image(png_path, {
+    id = M.image_id_counter
+  })
+
+  if not img then
+    M.is_loading = false
+    return
+  end
+
+  -- Cache in memory
+  M.album_cache[album_name] = {
+    image = img,
+    cache_file = png_path,
+  }
+
+  -- Display
+  kitty.display_image(img, row, col, width, height, buf)
+
+  -- Save current state
+  M.current_image = img
+  M.current_album = album_name
+  M.is_loading = false
+
+  -- Force redraw
+  vim.schedule(function()
+    vim.cmd('redraw')
   end)
 end
 

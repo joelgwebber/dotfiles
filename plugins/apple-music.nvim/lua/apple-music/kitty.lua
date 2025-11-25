@@ -30,12 +30,14 @@ local NS = vim.api.nvim_create_namespace("apple-music-artwork")
 M.current_extmarks = {}
 
 -- Track last display parameters to avoid unnecessary redraws
+-- Now per-image per-buffer: M.last_display[buf][image_id] = display_key
 M.last_display = {}
 
 -- Counter for unique placement IDs
 M.placement_counter = 0
 
--- Track current placement ID per buffer for cleanup
+-- Track current placement ID per image per buffer for cleanup
+-- Structure: M.current_placements[buf][image_id] = placement_id
 M.current_placements = {}
 
 -- Debug logging (write to file to avoid tty corruption)
@@ -203,13 +205,24 @@ function M.display_image(image, buf_row, buf_col, width, height, buf)
 		return
 	end
 
+	-- Initialize tracking structures for this buffer if needed
+	if not M.last_display[buf] then
+		M.last_display[buf] = {}
+	end
+	if not M.current_placements[buf] then
+		M.current_placements[buf] = {}
+	end
+	if not M.current_extmarks[buf] then
+		M.current_extmarks[buf] = {}
+	end
+
 	-- Check if we've already displayed this exact same image at this position
 	local display_key = string.format("%d:%d:%d:%d:%d", image.id, buf_row, buf_col, w, h)
-	if M.last_display[buf] == display_key then
+	if M.last_display[buf][image.id] == display_key then
 		debug_log("[SKIP] Already displayed:", display_key)
 		return
 	end
-	M.last_display[buf] = display_key
+	M.last_display[buf][image.id] = display_key
 
 	-- Generate a NEW placement ID for each unique size/position combo
 	-- This tells Kitty to create a new scaled placement of the same image
@@ -221,30 +234,31 @@ function M.display_image(image, buf_row, buf_col, width, height, buf)
 	debug_log("Buffer position: row", buf_row, "col", buf_col)
 	debug_log("Size:", w, "x", h, "cells")
 
-	-- Delete old placement if it exists (by placement ID, not image ID)
-	if M.current_placements[buf] then
-		local old_placement_id = M.current_placements[buf]
-		debug_log("[DELETE] Deleting old placement:", old_placement_id)
+	-- Delete old placement for THIS IMAGE if it exists (by placement ID, not image ID)
+	if M.current_placements[buf][image.id] then
+		local old_placement_id = M.current_placements[buf][image.id]
+		debug_log("[DELETE] Deleting old placement for image", image.id, ":", old_placement_id)
 		-- a=d: delete, d=i: by ID, i=image_id, p=placement_id
 		local control = string.format("a=d,d=i,i=%d,p=%d", image.id, old_placement_id)
 		send_command(control)
 	end
 
-	-- Clear any existing extmarks for this buffer
-	if M.current_extmarks[buf] then
-		for _, mark_id in ipairs(M.current_extmarks[buf]) do
+	-- Clear any existing extmarks for this image in this buffer
+	local extmark_key = string.format("%d:%d", buf, image.id)
+	if M.current_extmarks[extmark_key] then
+		for _, mark_id in ipairs(M.current_extmarks[extmark_key]) do
 			pcall(vim.api.nvim_buf_del_extmark, buf, NS, mark_id)
 		end
 	end
-	M.current_extmarks[buf] = {}
+	M.current_extmarks[extmark_key] = {}
 
 	-- Track this placement for future cleanup
-	M.current_placements[buf] = placement_id
+	M.current_placements[buf][image.id] = placement_id
 
-	-- Create a highlight group with foreground = image_id (NOT a color!)
+	-- Create a UNIQUE highlight group per image (using image ID in the name)
 	-- This is how Kitty associates placeholders with images
-	-- Reuse the same highlight name to avoid accumulating hundreds of highlight groups
-	local hl_name = "AppleMusicImageDisplay"
+	-- Each image needs its own highlight group so the fg (image ID) doesn't get overwritten
+	local hl_name = string.format("AppleMusicImage%d", image.id)
 	vim.api.nvim_set_hl(0, hl_name, {
 		fg = image.id, -- CRITICAL: Just the number, not a hex color!
 		sp = placement_id, -- Placement ID (matching snacks.nvim)
@@ -327,7 +341,7 @@ function M.display_image(image, buf_row, buf_col, width, height, buf)
 				})
 
 				if ok then
-					table.insert(M.current_extmarks[buf], result)
+					table.insert(M.current_extmarks[extmark_key], result)
 					debug_log("[EXTMARK] Created extmark", result, "at row", target_row)
 				else
 					debug_log("[EXTMARK] ERROR creating extmark:", result)
