@@ -8,6 +8,8 @@ M.buf = nil
 M.win = nil
 M.timer = nil
 M.last_state = {} -- Cache state for volume controls
+M.last_queue = nil -- Cache queue data
+M.last_track_id = nil -- Track ID to detect track changes
 M.resize_group = nil -- Autocmd group for resize handling
 
 local function format_time(seconds)
@@ -129,7 +131,8 @@ local function create_placeholder_box(win_width, box_width, box_height)
 end
 
 -- Render the UI with the given state (no AppleScript call)
-local function render_with_state(state)
+-- Optional queue parameter to render queue section
+local function render_with_state(state, queue)
 	if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
 		return
 	end
@@ -231,6 +234,40 @@ local function render_with_state(state)
 		table.insert(lines, "")
 	end
 
+	-- Queue section (upcoming tracks)
+	if queue then
+		table.insert(lines, "")
+		table.insert(lines, centered_line("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", win_width))
+		table.insert(lines, "")
+
+		-- Show queue position
+		if queue.current_index and queue.total_tracks then
+			local position_text = string.format("Queue: %d/%d", queue.current_index, queue.total_tracks)
+			table.insert(lines, centered_line(position_text, win_width))
+			table.insert(lines, "")
+		end
+
+		-- Check if shuffle is enabled
+		if queue.shuffle_enabled then
+			-- Shuffle is on - can't show queue order
+			table.insert(lines, centered_line("🔀 Shuffle enabled", win_width))
+			table.insert(lines, "")
+		elseif queue.upcoming_tracks and #queue.upcoming_tracks > 0 then
+			-- Render upcoming tracks (2 lines per track + blank line)
+			for i, track in ipairs(queue.upcoming_tracks) do
+				table.insert(lines, centered_line(track.name, win_width))
+				table.insert(lines, centered_line(track.artist, win_width))
+
+				-- Blank line between tracks (but not after the last one)
+				if i < #queue.upcoming_tracks then
+					table.insert(lines, "")
+				end
+			end
+
+			table.insert(lines, "")
+		end
+	end
+
 	-- IMPORTANT: Clear artwork cache before nvim_buf_set_lines
 	-- nvim_buf_set_lines(0, -1) destroys all extmarks, so we need to force recreation
 	local kitty = require('apple-music.kitty')
@@ -266,7 +303,34 @@ local function render_ui()
 	player.get_state_async(function(state)
 		-- Cache state for volume controls and resize handling
 		M.last_state = state
-		render_with_state(state)
+
+		-- Detect track changes to fetch queue efficiently
+		local current_track_id = (state.track_name or "") .. "::" .. (state.album or "")
+		local track_changed = (M.last_track_id ~= current_track_id)
+		local queue_missing = (M.last_queue == nil)
+
+		-- Fetch queue if track changed OR if queue cache is missing (e.g., after shuffle toggle)
+		if track_changed or queue_missing then
+			if track_changed then
+				M.last_track_id = current_track_id
+			end
+
+			-- Fetch queue asynchronously
+			player.get_queue_async(function(queue, err)
+				if queue then
+					M.last_queue = queue
+					-- Re-render with new queue data
+					render_with_state(state, queue)
+				else
+					-- No queue available, render without it
+					M.last_queue = nil
+					render_with_state(state, nil)
+				end
+			end)
+		else
+			-- Track hasn't changed and queue exists, use cached queue
+			render_with_state(state, M.last_queue)
+		end
 	end)
 end
 
@@ -392,7 +456,7 @@ function M.open()
 			if M.win and vim.api.nvim_win_is_valid(M.win) and vim.tbl_contains(vim.v.event.windows, M.win) then
 				-- Re-render with cached state (no AppleScript call)
 				if M.last_state and M.last_state.track_name then
-					render_with_state(M.last_state)
+					render_with_state(M.last_state, M.last_queue)
 				end
 			end
 		end,
@@ -430,6 +494,10 @@ function M.close()
 	-- Clear artwork when closing
 	artwork.clear()
 
+	-- Clear queue cache
+	M.last_queue = nil
+	M.last_track_id = nil
+
 	-- Clear autocmds for this buffer
 	if M.buf and vim.api.nvim_buf_is_valid(M.buf) then
 		vim.api.nvim_clear_autocmds({ buffer = M.buf })
@@ -459,7 +527,7 @@ function M.action_play_pause()
 	end
 
 	-- Re-render with optimistic state (instant!)
-	render_with_state(M.last_state)
+	render_with_state(M.last_state, M.last_queue)
 
 	-- Execute the actual action
 	player.play_pause()
@@ -472,6 +540,10 @@ function M.action_next_track()
 	-- Clear artwork and show loading state
 	artwork.clear()
 
+	-- Clear queue cache to force refresh
+	M.last_queue = nil
+	M.last_track_id = nil
+
 	-- Show loading placeholder
 	if M.last_state then
 		local loading_state = vim.tbl_deep_extend("force", M.last_state, {
@@ -480,7 +552,7 @@ function M.action_next_track()
 			album = "",
 			artwork_count = 0,
 		})
-		render_with_state(loading_state)
+		render_with_state(loading_state, nil)
 	end
 
 	-- Execute the actual action
@@ -494,6 +566,10 @@ function M.action_previous_track()
 	-- Clear artwork and show loading state
 	artwork.clear()
 
+	-- Clear queue cache to force refresh
+	M.last_queue = nil
+	M.last_track_id = nil
+
 	-- Show loading placeholder
 	if M.last_state then
 		local loading_state = vim.tbl_deep_extend("force", M.last_state, {
@@ -502,7 +578,7 @@ function M.action_previous_track()
 			album = "",
 			artwork_count = 0,
 		})
-		render_with_state(loading_state)
+		render_with_state(loading_state, nil)
 	end
 
 	-- Execute the actual action
@@ -521,7 +597,7 @@ function M.action_increase_volume()
 
 	-- Optimistically update volume for instant visual feedback
 	M.last_state.volume = math.min(100, M.last_state.volume + 10)
-	render_with_state(M.last_state)
+	render_with_state(M.last_state, M.last_queue)
 
 	-- Execute the actual action
 	player.increase_volume()
@@ -539,7 +615,7 @@ function M.action_decrease_volume()
 
 	-- Optimistically update volume for instant visual feedback
 	M.last_state.volume = math.max(0, M.last_state.volume - 10)
-	render_with_state(M.last_state)
+	render_with_state(M.last_state, M.last_queue)
 
 	-- Execute the actual action
 	player.decrease_volume()
@@ -549,6 +625,9 @@ function M.action_decrease_volume()
 end
 
 function M.action_toggle_shuffle()
+	-- Clear queue cache since shuffle state affects queue display
+	M.last_queue = nil
+
 	-- No visual feedback for shuffle in current UI, but still trigger immediate refresh
 	player.toggle_shuffle()
 	render_ui()
@@ -563,7 +642,7 @@ function M.action_seek_forward(seconds)
 
 	-- Optimistically update position for instant visual feedback
 	M.last_state.position = math.min(M.last_state.duration, M.last_state.position + seconds)
-	render_with_state(M.last_state)
+	render_with_state(M.last_state, M.last_queue)
 
 	-- Execute the actual action
 	player.seek_forward(seconds)
@@ -581,7 +660,7 @@ function M.action_seek_backward(seconds)
 
 	-- Optimistically update position for instant visual feedback
 	M.last_state.position = math.max(0, M.last_state.position - seconds)
-	render_with_state(M.last_state)
+	render_with_state(M.last_state, M.last_queue)
 
 	-- Execute the actual action
 	player.seek_backward(seconds)

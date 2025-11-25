@@ -28,6 +28,93 @@ local function execute_applescript(script)
   return nil, result.stderr
 end
 
+-- Get upcoming tracks from the current playlist queue
+-- Returns: { current_index, total_tracks, shuffle_enabled, upcoming_tracks[] }
+function M.get_queue_async(callback)
+  local script = [[
+    tell application "Music"
+      if player state is stopped then
+        return "stopped"
+      end if
+
+      -- Check shuffle status first
+      set shuffleOn to shuffle enabled
+
+      set currentPL to current playlist
+      set allTracks to every track of currentPL
+      set currentTrack to current track
+
+      -- Find current track index
+      set currentIndex to 0
+      repeat with i from 1 to count of allTracks
+        if id of (item i of allTracks) = id of currentTrack then
+          set currentIndex to i
+          exit repeat
+        end if
+      end repeat
+
+      if currentIndex = 0 then
+        return "notfound"
+      end if
+
+      -- Build output: current_index, total_count, shuffle_status, then upcoming tracks (name, artist pairs)
+      set output to currentIndex as string
+      set output to output & tab & (count of allTracks) as string
+      set output to output & tab & (shuffleOn as string)
+
+      -- Only get upcoming tracks if shuffle is OFF
+      -- When shuffle is on, Music.app's internal queue order isn't exposed via AppleScript
+      if not shuffleOn then
+        -- Get next 5 tracks (or until end of playlist)
+        set endIndex to currentIndex + 5
+        if endIndex > (count of allTracks) then
+          set endIndex to count of allTracks
+        end if
+
+        repeat with i from (currentIndex + 1) to endIndex
+          set t to item i of allTracks
+          set output to output & tab & (name of t)
+          set output to output & tab & (artist of t)
+        end repeat
+      end if
+
+      return output
+    end tell
+  ]]
+
+  execute_applescript_async(script, function(result, err)
+    if err or not result then
+      callback(nil, err)
+      return
+    end
+
+    if result == "stopped" or result == "notfound" then
+      callback(nil, result)
+      return
+    end
+
+    local parts = vim.split(result, '\t')
+    local queue = {}
+
+    queue.current_index = tonumber(parts[1])
+    queue.total_tracks = tonumber(parts[2])
+    queue.shuffle_enabled = (parts[3] == "true")
+    queue.upcoming_tracks = {}
+
+    -- Parse upcoming tracks (pairs of name, artist) - only present if shuffle is off
+    for i = 4, #parts, 2 do
+      if parts[i] and parts[i+1] then
+        table.insert(queue.upcoming_tracks, {
+          name = parts[i],
+          artist = parts[i+1],
+        })
+      end
+    end
+
+    callback(queue)
+  end)
+end
+
 -- Batched state query - ONE AppleScript call returns all data
 -- Returns tab-delimited with extended metadata
 function M.get_state_async(callback)
