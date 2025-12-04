@@ -2,6 +2,7 @@ local player = require("apple-music.player")
 local config = require("apple-music.config")
 local artwork = require("apple-music.artwork")
 local queue_artwork = require("apple-music.queue_artwork")
+local hl = require("apple-music.highlights")
 
 local M = {}
 
@@ -171,6 +172,7 @@ local function render_with_state(state, queue)
 	artwork_height_chars = math.min(artwork_height_chars, config.options.artwork.max_height_chars)
 
 	local lines = {}
+	local highlights = {}  -- Track { line, col_start, col_end, hl_group }
 
 	-- Reserve space at the TOP for artwork (if enabled)
 	-- Always reserve space to prevent text jumping when loading/changing tracks
@@ -201,6 +203,7 @@ local function render_with_state(state, queue)
 		-- Track name with player icon
 		table.insert(lines, "")
 		table.insert(lines, centered_line(string.format("%s  %s", player_icon, state.track_name or "Unknown"), win_width))
+		table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get('Title') })
 
 		-- Artist
 		local artist_display = state.artist or "Unknown"
@@ -208,14 +211,17 @@ local function render_with_state(state, queue)
 			artist_display = string.format("%s (Album: %s)", state.artist, state.album_artist)
 		end
 		table.insert(lines, centered_line(artist_display, win_width))
+		table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get('Artist') })
 
 		-- Album
 		table.insert(lines, centered_line(state.album or "Unknown Album", win_width))
+		table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get('Album') })
 
 		-- Metadata line (genre, year, track/disc numbers)
 		local metadata = format_metadata_line(state)
 		if metadata ~= "" then
 			table.insert(lines, centered_line(metadata, win_width))
+			table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get('Label') })
 		end
 
 		table.insert(lines, "")
@@ -227,6 +233,7 @@ local function render_with_state(state, queue)
 		-- Time display
 		local time_display = string.format("%s / %s", format_time(state.position), format_time(state.duration))
 		table.insert(lines, centered_line(time_display, win_width))
+		table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get('Time') })
 
 		-- Stats line (favorite, play count, bit rate)
 		local stats = format_stats_line(state)
@@ -243,6 +250,7 @@ local function render_with_state(state, queue)
 			local volume_bar = string.rep("━", volume_filled) .. string.rep("─", volume_width - volume_filled)
 			local volume_display = string.format("Volume: %s %d%%", volume_bar, state.volume)
 			table.insert(lines, centered_line(volume_display, win_width))
+			table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get('Volume') })
 		end
 
 		table.insert(lines, "")
@@ -267,6 +275,7 @@ local function render_with_state(state, queue)
 		if queue.shuffle_enabled then
 			-- Shuffle is on - can't show queue order
 			table.insert(lines, centered_line("🔀 Shuffle enabled", win_width))
+			table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get('Shuffle') })
 			table.insert(lines, "")
 		elseif queue.upcoming_tracks and #queue.upcoming_tracks > 0 then
 			-- Render upcoming tracks (2 lines per track with artwork + blank line)
@@ -279,7 +288,9 @@ local function render_with_state(state, queue)
 				})
 
 				table.insert(lines, queue_line_with_artwork(track.name, win_width))
+				table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get('QueueTrack') })
 				table.insert(lines, queue_line_with_artwork(track.artist, win_width))
+				table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get('QueueArtist') })
 
 				-- Blank line between tracks (but not after the last one)
 				if i < #queue.upcoming_tracks then
@@ -298,6 +309,19 @@ local function render_with_state(state, queue)
 
 	vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
 	vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, lines)
+
+	-- Apply syntax highlighting (do this before making buffer non-modifiable)
+	for _, hl_info in ipairs(highlights) do
+		vim.api.nvim_buf_add_highlight(
+			M.buf,
+			-1,  -- namespace (0 = default, -1 = no namespace)
+			hl_info.group,
+			hl_info.line,
+			hl_info.col_start,
+			hl_info.col_end
+		)
+	end
+
 	vim.api.nvim_buf_set_option(M.buf, "modifiable", false)
 
 	-- Display artwork if enabled and available (at the TOP)

@@ -6,6 +6,11 @@ A performant, feature-rich Apple Music controller for Neovim with album artwork 
 
 - **Docked UI** with comprehensive track information
 - **Album artwork** display (direct Kitty graphics protocol implementation)
+- **Library browsing** with Telescope/fzf-lua integration:
+  - Browse and play tracks
+  - Browse and play albums
+  - Browse and play by artist
+  - Browse and play playlists
 - **Extended metadata**:
   - Genre, Year, Composer
   - Track/Disc numbers
@@ -65,6 +70,11 @@ This plugin uses:
     { '<leader>ms', function() require('apple-music').toggle_shuffle() end, desc = 'Toggle [s]huffle' },
     { '<leader>m=', function() require('apple-music').increase_volume() end, desc = 'Volume up' },
     { '<leader>m-', function() require('apple-music').decrease_volume() end, desc = 'Volume down' },
+    -- Library browsing
+    { '<leader>mt', function() require('apple-music').browse_tracks() end, desc = 'Browse [t]racks' },
+    { '<leader>ma', function() require('apple-music').browse_albums() end, desc = 'Browse [a]lbums' },
+    { '<leader>mA', function() require('apple-music').browse_artists() end, desc = 'Browse [A]rtists' },
+    { '<leader>ml', function() require('apple-music').browse_playlists() end, desc = 'Browse p[l]aylists' },
   },
 }
 ```
@@ -73,6 +83,7 @@ This plugin uses:
 
 ### Global Keybindings
 
+**Playback controls:**
 - `<leader>mu` - Toggle UI
 - `<leader>mp` - Play/pause
 - `<leader>mn` - Next track
@@ -80,6 +91,12 @@ This plugin uses:
 - `<leader>ms` - Toggle shuffle
 - `<leader>m=` - Volume up
 - `<leader>m-` - Volume down
+
+**Library browsing:**
+- `<leader>mt` - Browse tracks
+- `<leader>ma` - Browse albums
+- `<leader>mA` - Browse artists
+- `<leader>ml` - Browse playlists
 
 ### UI Keybindings (when window is open)
 
@@ -93,6 +110,33 @@ This plugin uses:
 - `-` - Volume down
 - `s` - Toggle shuffle
 
+### Library Browsing
+
+The plugin provides fuzzy-searchable browsers for your entire Apple Music library. The plugin automatically detects and uses:
+1. **Telescope** (if available) - full-featured fuzzy finder
+2. **fzf-lua** (if available) - fast alternative
+3. **vim.ui.select** - built-in fallback
+
+**Browse tracks** (`<leader>mt`):
+- Displays all tracks in your library with artist and album info
+- Fuzzy search by track name, artist, or album
+- Press Enter to play selected track
+
+**Browse albums** (`<leader>ma`):
+- Shows all unique albums in your library
+- Fuzzy search by album name or artist
+- Press Enter to play the album (starts from first track)
+
+**Browse artists** (`<leader>mA`):
+- Lists all artists in your library
+- Fuzzy search by artist name
+- Press Enter to play tracks by that artist
+
+**Browse playlists** (`<leader>ml`):
+- Shows all your user playlists
+- Fuzzy search by playlist name
+- Press Enter to play the playlist
+
 ## Configuration
 
 ```lua
@@ -102,7 +146,7 @@ require('apple-music').setup({
 
   -- Window configuration
   window = {
-    width = 48,  -- Docked window width in columns
+    width = 56,  -- Docked window width in columns
   },
 
   -- Album artwork (requires Kitty terminal)
@@ -114,16 +158,60 @@ require('apple-music').setup({
 })
 ```
 
+### Theming
+
+The plugin uses standard Neovim highlight groups by default, so it automatically works with any colorscheme. You can customize the colors by overriding the highlight groups in your config:
+
+```lua
+-- Customize highlights (set these AFTER your colorscheme)
+vim.api.nvim_set_hl(0, 'AppleMusicTitle', { fg = '#ff79c6', bold = true })      -- Track name
+vim.api.nvim_set_hl(0, 'AppleMusicArtist', { fg = '#8be9fd' })                  -- Artist name
+vim.api.nvim_set_hl(0, 'AppleMusicAlbum', { fg = '#6272a4', italic = true })    -- Album name
+vim.api.nvim_set_hl(0, 'AppleMusicTime', { fg = '#f1fa8c' })                    -- Time display
+vim.api.nvim_set_hl(0, 'AppleMusicVolume', { fg = '#50fa7b' })                  -- Volume display
+vim.api.nvim_set_hl(0, 'AppleMusicQueueTrack', { fg = '#f8f8f2' })              -- Queue track names
+vim.api.nvim_set_hl(0, 'AppleMusicQueueArtist', { fg = '#6272a4' })             -- Queue artists (dimmed)
+vim.api.nvim_set_hl(0, 'AppleMusicShuffle', { fg = '#bd93f9' })                 -- Shuffle indicator
+```
+
+#### Available Highlight Groups
+
+| Group | Default Link | Description |
+|-------|--------------|-------------|
+| `AppleMusicTitle` | `Title` | Track name (bold, prominent) |
+| `AppleMusicArtist` | `Directory` | Artist name (secondary focus) |
+| `AppleMusicAlbum` | `Comment` | Album name (tertiary) |
+| `AppleMusicProgress` | `String` | Filled portion of progress bar |
+| `AppleMusicProgressEmpty` | `Comment` | Empty portion of progress bar |
+| `AppleMusicTime` | `Number` | Time display (3:24 / 4:30) |
+| `AppleMusicLabel` | `Comment` | Metadata labels (Genre:, Year:) |
+| `AppleMusicValue` | `Normal` | Metadata values |
+| `AppleMusicMetaSpecial` | `Special` | Special metadata (bit rate, play count) |
+| `AppleMusicShuffle` | `Function` | Shuffle indicator |
+| `AppleMusicFavorite` | `String` | ❤ Favorited status |
+| `AppleMusicDislike` | `WarningMsg` | 💔 Disliked status |
+| `AppleMusicVolume` | `Number` | Volume percentage |
+| `AppleMusicVolumeIcon` | `Special` | Volume icon |
+| `AppleMusicQueueTrack` | `Normal` | Queue track name |
+| `AppleMusicQueueArtist` | `Comment` | Queue artist name (dimmed) |
+| `AppleMusicQueueHeader` | `Title` | "Up Next" header |
+| `AppleMusicBorder` | `FloatBorder` | Window border |
+| `AppleMusicNormal` | `Normal` | Normal text / background |
+
 ## Architecture
 
 ```
 lua/apple-music/
-├── init.lua      # Public API
-├── config.lua    # Configuration management
-├── player.lua    # AppleScript interface (async)
-├── ui.lua        # Docked window UI
-├── artwork.lua   # Album artwork management
-└── kitty.lua     # Direct Kitty graphics protocol implementation
+├── init.lua          # Public API
+├── config.lua        # Configuration management
+├── player.lua        # AppleScript interface (async)
+├── ui.lua            # Docked window UI
+├── search.lua        # Library browsing and search
+├── highlights.lua    # Theming and highlight groups
+├── artwork.lua       # Album artwork management
+├── cache.lua         # Persistent artwork cache
+├── queue_artwork.lua # Queue thumbnails
+└── kitty.lua         # Direct Kitty graphics protocol implementation
 ```
 
 ## Metadata Available
@@ -182,13 +270,13 @@ Test individual components:
 - [ ] Display in existing docked UI (scrollable list below current track)
 - [ ] Navigate queue (jump to track, see position X/Y)
 
-### Phase 2: Library Browsing
-- [ ] **Track browser** - Searchable list of all library tracks
-- [ ] **Album browser** - Browse and play albums from library
-- [ ] **Artist browser** - Filter by artist
-- [ ] **Playlist browser** - Select and play existing playlists
-- [ ] Integration with Telescope/fzf-lua (with fallback to `vim.ui.select`)
-- [ ] Use AppleScript `-s s` flag + `loadstring()` for efficient parsing
+### Phase 2: Library Browsing ✅
+- [x] **Track browser** - Searchable list of all library tracks
+- [x] **Album browser** - Browse and play albums from library
+- [x] **Artist browser** - Filter by artist
+- [x] **Playlist browser** - Select and play existing playlists
+- [x] Integration with Telescope/fzf-lua (with fallback to `vim.ui.select`)
+- [ ] Use AppleScript `-s s` flag + `loadstring()` for efficient parsing (future optimization)
 
 ### Phase 3: Playlist Management
 - [ ] **Create playlists** - New playlist from selection

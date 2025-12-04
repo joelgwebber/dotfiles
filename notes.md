@@ -7,4 +7,5 @@
 - Tweak terminal shortcuts:
   - Make it easier to show/hide existing terminals without changing their dock location.
   - Figure out why h/v behave oddly in terminal mode
+  - <leader>t[123]t: toggle existing placement
 

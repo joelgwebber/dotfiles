@@ -70,5 +70,35 @@ return {
       end,
       desc = 'Volume down',
     },
+
+    -- Library browsing
+    {
+      '<leader>mt',
+      function()
+        require('apple-music').browse_tracks()
+      end,
+      desc = 'Browse [t]racks',
+    },
+    {
+      '<leader>ma',
+      function()
+        require('apple-music').browse_albums()
+      end,
+      desc = 'Browse [a]lbums',
+    },
+    {
+      '<leader>mA',
+      function()
+        require('apple-music').browse_artists()
+      end,
+      desc = 'Browse [A]rtists',
+    },
+    {
+      '<leader>ml',
+      function()
+        require('apple-music').browse_playlists()
+      end,
+      desc = 'Browse p[l]aylists',
+    },
   },
 }
