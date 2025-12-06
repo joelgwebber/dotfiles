@@ -64,18 +64,18 @@ This plugin uses:
     })
   end,
   keys = {
-    { '<leader>m<Space>', '<cmd>MusicPlay<CR>', desc = 'Music: Play/pause' },
-    { '<leader>mm', '<cmd>Music<CR>', desc = 'Music: Toggle UI' },
-    { '<leader>mn', '<cmd>MusicNext<CR>', desc = 'Music: Next track' },
-    { '<leader>mN', '<cmd>MusicPrev<CR>', desc = 'Music: Previous track' },
-    { '<leader>ms', '<cmd>MusicShuffle<CR>', desc = 'Music: Toggle shuffle' },
+    { '<leader>m<Space>', '<cmd>Vinyl play<CR>', desc = 'Music: Play/pause' },
+    { '<leader>mm', '<cmd>Vinyl toggle<CR>', desc = 'Music: Toggle UI' },
+    { '<leader>mn', '<cmd>Vinyl next<CR>', desc = 'Music: Next track' },
+    { '<leader>mN', '<cmd>Vinyl prev<CR>', desc = 'Music: Previous track' },
+    { '<leader>ms', '<cmd>Vinyl shuffle<CR>', desc = 'Music: Toggle shuffle' },
     -- Library browsing
-    { '<leader>mp', '<cmd>MusicPlaylists<CR>', desc = 'Music: Browse playlists' },
-    { '<leader>ma', '<cmd>MusicAlbums<CR>', desc = 'Music: Browse albums' },
-    { '<leader>mt', '<cmd>MusicTracks<CR>', desc = 'Music: Browse tracks' },
-    { '<leader>mr', '<cmd>MusicArtists<CR>', desc = 'Music: Browse artists' },
+    { '<leader>mp', '<cmd>Vinyl playlists<CR>', desc = 'Music: Browse playlists' },
+    { '<leader>ma', '<cmd>Vinyl albums<CR>', desc = 'Music: Browse albums' },
+    { '<leader>mt', '<cmd>Vinyl tracks<CR>', desc = 'Music: Browse tracks' },
+    { '<leader>mr', '<cmd>Vinyl artists<CR>', desc = 'Music: Browse artists' },
     -- Backend management
-    { '<leader>mb', '<cmd>MusicBackend<CR>', desc = 'Music: Show backend' },
+    { '<leader>mb', '<cmd>Vinyl backend<CR>', desc = 'Music: Show backend' },
   },
 }
 ```
@@ -98,7 +98,7 @@ No setup required! If you're on macOS with Apple Music installed, the plugin wil
 
 1. **Run the login command:**
    ```vim
-   :MusicSpotifyLogin
+   :Vinyl spotify-login
    ```
 
 2. **Create a Spotify App:**
@@ -126,20 +126,20 @@ No setup required! If you're on macOS with Apple Music installed, the plugin wil
 
 **Logout:**
 ```vim
-:MusicSpotifyLogout
+:Vinyl spotify-logout
 ```
 
 **Check Authentication:**
 ```vim
-:MusicSpotifyStatus
+:Vinyl spotify-status
 ```
 
 **Switching Backends:**
 
 If you have both Apple Music and Spotify configured, you can manually switch:
 ```vim
-:MusicBackend spotify
-:MusicBackend apple_music
+:Vinyl backend spotify
+:Vinyl backend apple_music
 ```
 
 **Rate Limiting:**
@@ -154,34 +154,38 @@ The Spotify backend implements smart rate limiting:
 
 ### Commands
 
-All functionality is available via vim commands:
+All functionality is available via the `:Vinyl` command with subcommand autocompletion:
 
 **Main:**
-- `:Music` - Toggle UI
-- `:MusicPlay` - Play/pause
+- `:Vinyl` or `:Vinyl toggle` - Toggle UI
+- `:Vinyl play` / `:Vinyl pause` - Play/pause
 
 **Playback:**
-- `:MusicNext` - Next track
-- `:MusicPrev` - Previous track
-- `:MusicShuffle` - Toggle shuffle
+- `:Vinyl next` - Next track
+- `:Vinyl prev` - Previous track
+- `:Vinyl shuffle` - Toggle shuffle
 
 **Library browsing:**
-- `:MusicPlaylists` - Browse playlists
-- `:MusicAlbums` - Browse albums
-- `:MusicTracks` - Browse tracks
-- `:MusicArtists` - Browse artists
+- `:Vinyl playlists` - Browse playlists
+- `:Vinyl albums` - Browse albums
+- `:Vinyl tracks` - Browse tracks
+- `:Vinyl artists` - Browse artists
 
 **Backend management:**
-- `:MusicBackend` - Show current backend
-- `:MusicBackend spotify` - Switch to Spotify
-- `:MusicBackend apple_music` - Switch to Apple Music
-- `:MusicSpotifyLogin` - Login to Spotify
-- `:MusicSpotifyLogout` - Logout from Spotify
-- `:MusicSpotifyStatus` - Show Spotify auth status
+- `:Vinyl backend` - Show current backend
+- `:Vinyl backend spotify` - Switch to Spotify
+- `:Vinyl backend apple_music` - Switch to Apple Music
+
+**Spotify authentication:**
+- `:Vinyl spotify-login` - Login to Spotify
+- `:Vinyl spotify-logout` - Logout from Spotify
+- `:Vinyl spotify-status` - Show Spotify auth status
 
 **Debug:**
-- `:MusicDebugBackend` - Show backend capabilities
-- `:MusicDebugQueue` - Show queue debug info
+- `:Vinyl debug-backend` - Show backend capabilities
+- `:Vinyl debug-queue` - Show queue debug info
+
+**Tip:** Type `:Vinyl <Tab>` to see all available subcommands with autocompletion!
 
 ### Default Keymaps
 
@@ -378,85 +382,47 @@ Test individual components:
 
 ## Roadmap
 
-### Phase 1: Queue & History (Current Focus)
-- [ ] **Next tracks viewer** - Show upcoming tracks in current playlist/queue
+### Completed ✅
+- [x] **Spotify backend support** - Full Spotify Web API integration with OAuth 2.0
+- [x] **Backend abstraction** - Unified interface supporting multiple music services
+- [x] **Queue display** - Show upcoming tracks with backend-specific capabilities
+  - Apple Music: Shows playlist order (shuffle limitations)
+  - Spotify: Shows actual playback queue (accurate with shuffle)
+- [x] **Artwork support** - Album art display for both backends
+  - Apple Music: File-based extraction via AppleScript
+  - Spotify: URL-based download with format detection
+- [x] **Library browsing** - Searchable track/album/artist/playlist browsers
+  - Integration with Telescope/fzf-lua (with fallback to `vim.ui.select`)
+  - Works with both Apple Music library and Spotify saved content
+- [x] **Unified command structure** - `:Vinyl` command with subcommand autocompletion
+- [x] **Backend capabilities system** - Declarative feature support per backend
+
+### Phase 1: Playback Features
 - [ ] **Play history** - Show recently played tracks from current session
-- [ ] Display in existing docked UI (scrollable list below current track)
-- [ ] Navigate queue (jump to track, see position X/Y)
+- [ ] **Repeat mode control** - Toggle repeat modes (off/context/track)
+- [ ] **Queue navigation** - Jump to specific track in queue
+- [ ] **Queue position display** - Show current position (X/Y) in context
 
-### Phase 2: Library Browsing ✅
-- [x] **Track browser** - Searchable list of all library tracks
-- [x] **Album browser** - Browse and play albums from library
-- [x] **Artist browser** - Filter by artist
-- [x] **Playlist browser** - Select and play existing playlists
-- [x] Integration with Telescope/fzf-lua (with fallback to `vim.ui.select`)
-- [ ] Use AppleScript `-s s` flag + `loadstring()` for efficient parsing (future optimization)
-
-### Phase 3: Playlist Management
+### Phase 2: Playlist Management (Apple Music only)
 - [ ] **Create playlists** - New playlist from selection
 - [ ] **Add to playlist** - Add current track or selection to playlist
 - [ ] **Remove from playlist** - Delete tracks from playlists
-- [ ] **Reorder tracks** - Drag/move tracks within playlists
+- [ ] **Reorder tracks** - Move tracks within playlists
 - [ ] **Delete playlists** - Remove playlists from library
 
-### Phase 4: Advanced Features
+### Phase 3: Advanced Features
 - [ ] **Search within library** - Filter by genre, year, composer, etc.
-- [ ] **Queue builder** - Create temporary "up next" queue
 - [ ] **Smart filters** - "Most played", "Recently added", "Favorited", etc.
 - [ ] **Batch operations** - Favorite multiple tracks, add album to playlist
-- [ ] **Playlist export** - Save playlists to file
+- [ ] **Lyrics display** - Show lyrics if available in track metadata
+- [ ] **Rating support** - Star ratings (Apple Music)
 
 ### Potential Future Enhancements
-- [ ] Mini mode (statusline/lualine integration)
-- [ ] Lyrics display (if available in track metadata)
-- [ ] Rating support (star ratings)
-- [ ] Cross-fade settings
-- [ ] Repeat mode control
-- [ ] AppleScript command caching for offline query building
-
-## Technical Notes
-
-### Discovered Capabilities (from exploring p5quared/apple-music.nvim)
-
-Music.app's AppleScript API supports:
-
-**Library querying**:
-```applescript
--- Returns Lua-compatible table format with -s s flag
-osascript -e 'tell application "Music" to get name of playlists' -s s
-osascript -e 'tell application "Music" to get album of every track' -s s
-```
-
-**Current playlist/queue**:
-```applescript
-tell application "Music"
-  set currentPL to current playlist
-  set allTracks to every track of currentPL
-  -- Find current track index for next/previous tracks
-end tell
-```
-
-**Playlist management**:
-```applescript
--- Create
-make new playlist with properties {name: "My Playlist"}
-
--- Add tracks
-duplicate someTrack to targetPlaylist
-
--- Reorder
-move track 1 of playlist "X" to end of playlist "X"
-
--- Delete
-delete playlist "My Playlist"
-delete track 2 of playlist "My Playlist"
-```
-
-**Search**:
-```applescript
-search playlist "Library" for "query" only artists
--- Search areas: all, artists, albums, composers, visible
-```
+- [ ] **Additional backends** - Support for more music services (YouTube Music, etc.)
+- [ ] **Mini mode** - Statusline/lualine integration
+- [ ] **Playlist export** - Save playlists to file (M3U, etc.)
+- [ ] **Cross-platform improvements** - Better Linux/Windows support where possible
+- [ ] **Performance optimizations** - AppleScript caching, parallel requests
 
 ## License
 
