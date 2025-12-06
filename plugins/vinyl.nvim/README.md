@@ -1,6 +1,6 @@
-# apple-music.nvim
+# vinyl.nvim
 
-A performant, feature-rich music controller for Neovim with support for **Apple Music** and **Spotify**.
+A music controller for Neovim with support for **Apple Music** and **Spotify**.
 
 ## Features
 
@@ -47,11 +47,11 @@ This plugin uses:
 
 ```lua
 {
-  dir = vim.fn.expand('~/dotfiles/plugins/apple-music.nvim'),
-  name = 'apple-music.nvim',
+  dir = vim.fn.expand('~/dotfiles/plugins/vinyl.nvim'),
+  name = 'vinyl.nvim',
   -- No dependencies - direct Kitty graphics protocol implementation
   config = function()
-    require('apple-music').setup({
+    require('vinyl').setup({
       update_interval = 2000,  -- UI refresh rate in ms
       window = {
         width = 48,  -- Docked window width
@@ -139,7 +139,7 @@ No setup required! If you're on macOS with Apple Music installed, the plugin wil
 If you have both Apple Music and Spotify configured, you can manually switch:
 ```vim
 :Vinyl backend spotify
-:Vinyl backend apple_music
+:Vinyl backend apple
 ```
 
 **Rate Limiting:**
@@ -174,7 +174,7 @@ All functionality is available via the `:Vinyl` command with subcommand autocomp
 **Backend management:**
 - `:Vinyl backend` - Show current backend
 - `:Vinyl backend spotify` - Switch to Spotify
-- `:Vinyl backend apple_music` - Switch to Apple Music
+- `:Vinyl backend apple` - Switch to Apple Music
 
 **Spotify authentication:**
 - `:Vinyl spotify-login` - Login to Spotify
@@ -189,7 +189,7 @@ All functionality is available via the `:Vinyl` command with subcommand autocomp
 
 ### Default Keymaps
 
-Default keymaps are provided (disable with `vim.g.apple_music_no_default_keymaps = true`):
+Default keymaps are provided (disable with `vim.g.vinyl_no_default_keymaps = true`):
 
 **Playback controls:**
 - `<leader>m<Space>` - Play/pause
@@ -249,7 +249,7 @@ The plugin provides fuzzy-searchable browsers for your entire Apple Music librar
 ## Configuration
 
 ```lua
-require('apple-music').setup({
+require('vinyl').setup({
   -- UI refresh interval in milliseconds
   update_interval = 2000,
 
@@ -310,12 +310,12 @@ vim.api.nvim_set_hl(0, 'AppleMusicShuffle', { fg = '#bd93f9' })                 
 ## Architecture
 
 ```
-lua/apple-music/
+lua/vinyl/
 ├── init.lua              # Public API & backend selection
 ├── config.lua            # Configuration management
 ├── backends/
 │   ├── backend.lua       # Backend interface/abstract class
-│   ├── apple_music.lua   # Apple Music backend implementation
+│   ├── apple.lua         # Apple Music backend implementation
 │   └── spotify.lua       # Spotify backend implementation
 ├── spotify/
 │   ├── auth.lua          # OAuth 2.0 flow
@@ -364,8 +364,8 @@ This is a local plugin under active development.
 
 ### Reload Changes
 
-1. Edit files in `plugins/apple-music.nvim/lua/apple-music/`
-2. Reload: `:Lazy reload apple-music.nvim`
+1. Edit files in `plugins/vinyl.nvim/lua/vinyl/`
+2. Reload: `:Lazy reload vinyl.nvim`
 3. Reopen UI: `<leader>mu`
 
 ### Testing
@@ -374,10 +374,10 @@ Test individual components:
 
 ```lua
 -- Test player state
-:lua vim.print(require('apple-music.player').get_state_async(vim.print))
+:lua vim.print(require('vinyl.player').get_state_async(vim.print))
 
 -- Test artwork extraction
-:lua require('apple-music.player').get_artwork_async(vim.print)
+:lua require('vinyl.player').get_artwork_async(vim.print)
 ```
 
 ## Roadmap

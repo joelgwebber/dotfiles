@@ -24,7 +24,7 @@ setmetatable(diacritics, {
 })
 
 -- Namespace for extmarks
-local NS = vim.api.nvim_create_namespace("apple-music-artwork")
+local NS = vim.api.nvim_create_namespace("vinyl-artwork")
 
 -- Track extmarks for cleanup
 M.current_extmarks = {}
@@ -41,13 +41,13 @@ M.placement_counter = 0
 M.current_placements = {}
 
 -- Debug logging (write to file to avoid tty corruption)
--- Set to true to enable debug logging to /tmp/apple-music-debug.log
+-- Set to true to enable debug logging to /tmp/vinyl-debug.log
 local DEBUG = false
 local function debug_log(...)
 	if not DEBUG then
 		return
 	end
-	local log = io.open("/tmp/apple-music-debug.log", "a")
+	local log = io.open("/tmp/vinyl-debug.log", "a")
 	if log then
 		-- Convert all args to strings (handles booleans, numbers, etc)
 		local args = { ... }

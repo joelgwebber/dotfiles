@@ -2,37 +2,33 @@ local M = {}
 
 -- Async AppleScript execution using vim.system (Neovim 0.8+)
 local function execute_applescript_async(script, callback)
-  vim.system(
-    { 'osascript', '-e', script },
-    { text = true },
-    function(result)
-      if result.code == 0 then
-        vim.schedule(function()
-          callback(vim.trim(result.stdout))
-        end)
-      else
-        vim.schedule(function()
-          callback(nil, result.stderr)
-        end)
-      end
-    end
-  )
+	vim.system({ "osascript", "-e", script }, { text = true }, function(result)
+		if result.code == 0 then
+			vim.schedule(function()
+				callback(vim.trim(result.stdout))
+			end)
+		else
+			vim.schedule(function()
+				callback(nil, result.stderr)
+			end)
+		end
+	end)
 end
 
 -- Synchronous version for simple commands (play/pause, etc.)
 local function execute_applescript(script)
-  local result = vim.system({ 'osascript', '-e', script }, { text = true }):wait()
-  if result.code == 0 then
-    return vim.trim(result.stdout)
-  end
-  return nil, result.stderr
+	local result = vim.system({ "osascript", "-e", script }, { text = true }):wait()
+	if result.code == 0 then
+		return vim.trim(result.stdout)
+	end
+	return nil, result.stderr
 end
 
 -- Get upcoming tracks from current playlist or album
 -- Returns: { current_index, total_tracks, shuffle_enabled, upcoming_tracks[] }
 -- Each track has: name, artist, album
 function M.get_queue_async(callback)
-  local script = [[
+	local script = [[
     tell application "Music"
       if player state is stopped then
         return "stopped"
@@ -135,59 +131,62 @@ function M.get_queue_async(callback)
     end tell
   ]]
 
-  execute_applescript_async(script, function(result, err)
-    if err or not result then
-      callback(nil, "AppleScript error: " .. tostring(err))
-      return
-    end
+	execute_applescript_async(script, function(result, err)
+		if err or not result then
+			callback(nil, "AppleScript error: " .. tostring(err))
+			return
+		end
 
-    -- Check for error conditions
-    if result:match("^stopped") then
-      callback(nil, "Player is stopped")
-      return
-    end
+		-- Check for error conditions
+		if result:match("^stopped") then
+			callback(nil, "Player is stopped")
+			return
+		end
 
-    if result:match("^notfound") then
-      local parts = vim.split(result, '|')
-      local playlist_name = parts[2] or "unknown"
-      local track_count = parts[3] or "unknown"
-      callback(nil, string.format("Current track not found in playlist '%s' (%s tracks)", playlist_name, track_count))
-      return
-    end
+		if result:match("^notfound") then
+			local parts = vim.split(result, "|")
+			local playlist_name = parts[2] or "unknown"
+			local track_count = parts[3] or "unknown"
+			callback(
+				nil,
+				string.format("Current track not found in playlist '%s' (%s tracks)", playlist_name, track_count)
+			)
+			return
+		end
 
-    if result:match("^error") then
-      local parts = vim.split(result, '|')
-      callback(nil, "Queue fetch error: " .. (parts[2] or "unknown"))
-      return
-    end
+		if result:match("^error") then
+			local parts = vim.split(result, "|")
+			callback(nil, "Queue fetch error: " .. (parts[2] or "unknown"))
+			return
+		end
 
-    local parts = vim.split(result, '\t')
-    local queue = {}
+		local parts = vim.split(result, "\t")
+		local queue = {}
 
-    queue.current_index = tonumber(parts[1])
-    queue.total_tracks = tonumber(parts[2])
-    queue.shuffle_enabled = (parts[3] == "true")
-    queue.upcoming_tracks = {}
+		queue.current_index = tonumber(parts[1])
+		queue.total_tracks = tonumber(parts[2])
+		queue.shuffle_enabled = (parts[3] == "true")
+		queue.upcoming_tracks = {}
 
-    -- Parse upcoming tracks (triples of name, artist, album) - only present if shuffle is off
-    for i = 4, #parts, 3 do
-      if parts[i] and parts[i+1] and parts[i+2] then
-        table.insert(queue.upcoming_tracks, {
-          name = parts[i],
-          artist = parts[i+1],
-          album = parts[i+2],
-        })
-      end
-    end
+		-- Parse upcoming tracks (triples of name, artist, album) - only present if shuffle is off
+		for i = 4, #parts, 3 do
+			if parts[i] and parts[i + 1] and parts[i + 2] then
+				table.insert(queue.upcoming_tracks, {
+					name = parts[i],
+					artist = parts[i + 1],
+					album = parts[i + 2],
+				})
+			end
+		end
 
-    callback(queue)
-  end)
+		callback(queue)
+	end)
 end
 
 -- Batched state query - ONE AppleScript call returns all data
 -- Returns tab-delimited with extended metadata
 function M.get_state_async(callback)
-  local script = [[
+	local script = [[
     tell application "Music"
       if it is not running then
         return "stopped"
@@ -314,52 +313,53 @@ function M.get_state_async(callback)
     end tell
   ]]
 
-  execute_applescript_async(script, function(result, err)
-    if err or not result then
-      callback({})
-      return
-    end
+	execute_applescript_async(script, function(result, err)
+		if err or not result then
+			callback({})
+			return
+		end
 
-    local parts = vim.split(result, '\t')
-    local state = {}
+		local parts = vim.split(result, "\t")
+		local state = {}
 
-    state.player_state = parts[1]
+		state.player_state = parts[1]
 
-    if state.player_state ~= 'stopped' and #parts >= 21 then
-      state.track_name = parts[2] ~= '' and parts[2] or nil
-      state.artist = parts[3] ~= '' and parts[3] or nil
-      state.album = parts[4] ~= '' and parts[4] or nil
-      state.duration = tonumber(parts[5])
-      state.position = tonumber(parts[6])
+		if state.player_state ~= "stopped" and #parts >= 21 then
+			state.track_name = parts[2] ~= "" and parts[2] or nil
+			state.artist = parts[3] ~= "" and parts[3] or nil
+			state.album = parts[4] ~= "" and parts[4] or nil
+			state.duration = tonumber(parts[5])
+			state.position = tonumber(parts[6])
 
-      -- Extended metadata
-      state.genre = parts[7] ~= '' and parts[7] or nil
-      state.year = tonumber(parts[8]) or nil
-      state.rating = tonumber(parts[9]) or 0
-      state.track_number = tonumber(parts[10]) or 0
-      state.track_count = tonumber(parts[11]) or 0
-      state.disc_number = tonumber(parts[12]) or 0
-      state.disc_count = tonumber(parts[13]) or 0
-      state.played_count = tonumber(parts[14]) or 0
-      state.bit_rate = tonumber(parts[15]) or 0
-      state.favorited = parts[16] == 'true'
-      state.disliked = parts[17] == 'true'
-      state.composer = parts[18] ~= '' and parts[18] or nil
-      state.album_artist = parts[19] ~= '' and parts[19] or nil
-      state.artwork_count = tonumber(parts[20]) or 0
-      state.volume = tonumber(parts[21])
-    else
-      state.volume = tonumber(parts[21] or parts[2])
-    end
+			-- Extended metadata
+			state.genre = parts[7] ~= "" and parts[7] or nil
+			state.year = tonumber(parts[8]) or nil
+			state.rating = tonumber(parts[9]) or 0
+			state.track_number = tonumber(parts[10]) or 0
+			state.track_count = tonumber(parts[11]) or 0
+			state.disc_number = tonumber(parts[12]) or 0
+			state.disc_count = tonumber(parts[13]) or 0
+			state.played_count = tonumber(parts[14]) or 0
+			state.bit_rate = tonumber(parts[15]) or 0
+			state.favorited = parts[16] == "true"
+			state.disliked = parts[17] == "true"
+			state.composer = parts[18] ~= "" and parts[18] or nil
+			state.album_artist = parts[19] ~= "" and parts[19] or nil
+			state.artwork_count = tonumber(parts[20]) or 0
+			state.volume = tonumber(parts[21])
+		else
+			state.volume = tonumber(parts[21] or parts[2])
+		end
 
-    callback(state)
-  end)
+		callback(state)
+	end)
 end
 
 -- Extract artwork for a specific album (from any track with that album name)
 -- Returns: { path, format } or (nil, error)
 function M.get_album_artwork_async(album_name, callback)
-  local script = string.format([[
+	local script = string.format(
+		[[
     tell application "Music"
       if player state is stopped then
         return "stopped" & tab & ""
@@ -376,7 +376,7 @@ function M.get_album_artwork_async(album_name, callback)
             set artFormat to format of artwork 1 of t
             -- Use album name in temp file to enable caching
             set safeAlbumName to do shell script "echo " & quoted form of "%s" & " | sed 's/[^a-zA-Z0-9]/-/g'"
-            set tempFile to "/tmp/apple-music-queue-" & safeAlbumName & ".jpg"
+            set tempFile to "/tmp/vinyl-queue-" & safeAlbumName & ".jpg"
 
             try
               set fileRef to open for access tempFile with write permission
@@ -398,36 +398,39 @@ function M.get_album_artwork_async(album_name, callback)
 
       return "notfound" & tab & ""
     end tell
-  ]], album_name, album_name)
+  ]],
+		album_name,
+		album_name
+	)
 
-  execute_applescript_async(script, function(result, err)
-    if err or not result then
-      callback(nil, err)
-      return
-    end
+	execute_applescript_async(script, function(result, err)
+		if err or not result then
+			callback(nil, err)
+			return
+		end
 
-    local parts = vim.split(result, '\t')
-    local status = parts[1]
+		local parts = vim.split(result, "\t")
+		local status = parts[1]
 
-    if status == 'error' or status == 'noartwork' or status == 'stopped' or status == 'notfound' then
-      callback(nil, parts[2] or status)
-    else
-      -- Success - parts[1] is file path, parts[2] is format
-      callback({ path = parts[1], format = parts[2] })
-    end
-  end)
+		if status == "error" or status == "noartwork" or status == "stopped" or status == "notfound" then
+			callback(nil, parts[2] or status)
+		else
+			-- Success - parts[1] is file path, parts[2] is format
+			callback({ path = parts[1], format = parts[2] })
+		end
+	end)
 end
 
 -- Extract artwork to a temp file
 function M.get_artwork_async(callback)
-  local script = [[
+	local script = [[
     tell application "Music"
       if player state is not stopped then
         set t to current track
         if (count of artworks of t) > 0 then
           set artData to raw data of artwork 1 of t
           set artFormat to format of artwork 1 of t
-          set tempFile to "/tmp/apple-music-artwork.jpg"
+          set tempFile to "/tmp/vinyl-artwork.jpg"
 
           try
             set fileRef to open for access tempFile with write permission
@@ -450,57 +453,57 @@ function M.get_artwork_async(callback)
     end tell
   ]]
 
-  execute_applescript_async(script, function(result, err)
-    if err or not result then
-      callback(nil, err)
-      return
-    end
+	execute_applescript_async(script, function(result, err)
+		if err or not result then
+			callback(nil, err)
+			return
+		end
 
-    local parts = vim.split(result, '\t')
-    local status = parts[1]
+		local parts = vim.split(result, "\t")
+		local status = parts[1]
 
-    if status == 'error' or status == 'noartwork' or status == 'stopped' then
-      callback(nil, parts[2])
-    else
-      -- Success - parts[1] is file path, parts[2] is format
-      callback({ path = parts[1], format = parts[2] })
-    end
-  end)
+		if status == "error" or status == "noartwork" or status == "stopped" then
+			callback(nil, parts[2])
+		else
+			-- Success - parts[1] is file path, parts[2] is format
+			callback({ path = parts[1], format = parts[2] })
+		end
+	end)
 end
 
 function M.play_pause()
-  execute_applescript('tell application "Music" to playpause')
+	execute_applescript('tell application "Music" to playpause')
 end
 
 function M.next_track()
-  execute_applescript('tell application "Music" to next track')
+	execute_applescript('tell application "Music" to next track')
 end
 
 function M.previous_track()
-  execute_applescript('tell application "Music" to previous track')
+	execute_applescript('tell application "Music" to previous track')
 end
 
 function M.set_volume(volume)
-  execute_applescript(string.format('tell application "Music" to set sound volume to %d', volume))
+	execute_applescript(string.format('tell application "Music" to set sound volume to %d', volume))
 end
 
 function M.increase_volume()
-  -- Use cached volume from UI state instead of querying
-  local ui = require('apple-music.ui')
-  if ui.last_state and ui.last_state.volume then
-    M.set_volume(math.min(100, ui.last_state.volume + 10))
-  end
+	-- Use cached volume from UI state instead of querying
+	local ui = require("vinyl.ui")
+	if ui.last_state and ui.last_state.volume then
+		M.set_volume(math.min(100, ui.last_state.volume + 10))
+	end
 end
 
 function M.decrease_volume()
-  local ui = require('apple-music.ui')
-  if ui.last_state and ui.last_state.volume then
-    M.set_volume(math.max(0, ui.last_state.volume - 10))
-  end
+	local ui = require("vinyl.ui")
+	if ui.last_state and ui.last_state.volume then
+		M.set_volume(math.max(0, ui.last_state.volume - 10))
+	end
 end
 
 function M.toggle_shuffle()
-  execute_applescript([[
+	execute_applescript([[
     tell application "Music"
       set shuffle enabled to not shuffle enabled
     end tell
@@ -508,24 +511,24 @@ function M.toggle_shuffle()
 end
 
 function M.set_position(position)
-  execute_applescript(string.format('tell application "Music" to set player position to %f', position))
+	execute_applescript(string.format('tell application "Music" to set player position to %f', position))
 end
 
 function M.seek_forward(seconds)
-  -- Use cached position from UI state instead of querying
-  local ui = require('apple-music.ui')
-  if ui.last_state and ui.last_state.position and ui.last_state.duration then
-    local new_position = math.min(ui.last_state.duration, ui.last_state.position + seconds)
-    M.set_position(new_position)
-  end
+	-- Use cached position from UI state instead of querying
+	local ui = require("vinyl.ui")
+	if ui.last_state and ui.last_state.position and ui.last_state.duration then
+		local new_position = math.min(ui.last_state.duration, ui.last_state.position + seconds)
+		M.set_position(new_position)
+	end
 end
 
 function M.seek_backward(seconds)
-  local ui = require('apple-music.ui')
-  if ui.last_state and ui.last_state.position then
-    local new_position = math.max(0, ui.last_state.position - seconds)
-    M.set_position(new_position)
-  end
+	local ui = require("vinyl.ui")
+	if ui.last_state and ui.last_state.position then
+		local new_position = math.max(0, ui.last_state.position - seconds)
+		M.set_position(new_position)
+	end
 end
 
 return M

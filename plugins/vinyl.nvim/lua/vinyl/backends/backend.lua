@@ -74,7 +74,7 @@ local M = {}
 ---@field streaming_queue boolean Can show queue for streaming (non-library) tracks
 
 ---@class Backend
----@field name string Backend name (e.g., "apple_music", "spotify")
+---@field name string Backend name (e.g., "apple", "spotify")
 ---@field display_name string Human-readable name (e.g., "Apple Music", "Spotify")
 ---@field capabilities BackendCapabilities? Optional capabilities declaration
 ---@field available fun(): boolean Check if backend is available
@@ -110,111 +110,111 @@ local M = {}
 --- Backends should override these methods with their implementations
 ---@return Backend
 function M.new()
-  local backend = {
-    name = "base",
-    display_name = "Base Backend",
-  }
+	local backend = {
+		name = "base",
+		display_name = "Base Backend",
+	}
 
-  -- Check if backend is available (e.g., Apple Music on macOS, Spotify with auth)
-  function backend.available()
-    error("Backend.available() must be implemented")
-  end
+	-- Check if backend is available (e.g., Apple Music on macOS, Spotify with auth)
+	function backend.available()
+		error("Backend.available() must be implemented")
+	end
 
-  -- Initialize backend with configuration
-  function backend.init(config)
-    error("Backend.init() must be implemented")
-  end
+	-- Initialize backend with configuration
+	function backend.init(config)
+		error("Backend.init() must be implemented")
+	end
 
-  -- Playback state
-  function backend.get_state_async(callback)
-    error("Backend.get_state_async() must be implemented")
-  end
+	-- Playback state
+	function backend.get_state_async(callback)
+		error("Backend.get_state_async() must be implemented")
+	end
 
-  -- Playback controls
-  function backend.play_pause(callback)
-    error("Backend.play_pause() must be implemented")
-  end
+	-- Playback controls
+	function backend.play_pause(callback)
+		error("Backend.play_pause() must be implemented")
+	end
 
-  function backend.next_track(callback)
-    error("Backend.next_track() must be implemented")
-  end
+	function backend.next_track(callback)
+		error("Backend.next_track() must be implemented")
+	end
 
-  function backend.previous_track(callback)
-    error("Backend.previous_track() must be implemented")
-  end
+	function backend.previous_track(callback)
+		error("Backend.previous_track() must be implemented")
+	end
 
-  function backend.seek(position_ms, callback)
-    error("Backend.seek() must be implemented")
-  end
+	function backend.seek(position_ms, callback)
+		error("Backend.seek() must be implemented")
+	end
 
-  function backend.set_volume(volume, callback)
-    error("Backend.set_volume() must be implemented")
-  end
+	function backend.set_volume(volume, callback)
+		error("Backend.set_volume() must be implemented")
+	end
 
-  function backend.increase_volume(callback)
-    error("Backend.increase_volume() must be implemented")
-  end
+	function backend.increase_volume(callback)
+		error("Backend.increase_volume() must be implemented")
+	end
 
-  function backend.decrease_volume(callback)
-    error("Backend.decrease_volume() must be implemented")
-  end
+	function backend.decrease_volume(callback)
+		error("Backend.decrease_volume() must be implemented")
+	end
 
-  function backend.toggle_shuffle(callback)
-    error("Backend.toggle_shuffle() must be implemented")
-  end
+	function backend.toggle_shuffle(callback)
+		error("Backend.toggle_shuffle() must be implemented")
+	end
 
-  function backend.toggle_repeat(callback)
-    error("Backend.toggle_repeat() must be implemented")
-  end
+	function backend.toggle_repeat(callback)
+		error("Backend.toggle_repeat() must be implemented")
+	end
 
-  -- Library browsing
-  function backend.get_library_tracks_async(callback)
-    error("Backend.get_library_tracks_async() must be implemented")
-  end
+	-- Library browsing
+	function backend.get_library_tracks_async(callback)
+		error("Backend.get_library_tracks_async() must be implemented")
+	end
 
-  function backend.get_library_albums_async(callback)
-    error("Backend.get_library_albums_async() must be implemented")
-  end
+	function backend.get_library_albums_async(callback)
+		error("Backend.get_library_albums_async() must be implemented")
+	end
 
-  function backend.get_library_artists_async(callback)
-    error("Backend.get_library_artists_async() must be implemented")
-  end
+	function backend.get_library_artists_async(callback)
+		error("Backend.get_library_artists_async() must be implemented")
+	end
 
-  function backend.get_playlists_async(callback)
-    error("Backend.get_playlists_async() must be implemented")
-  end
+	function backend.get_playlists_async(callback)
+		error("Backend.get_playlists_async() must be implemented")
+	end
 
-  -- Playback start
-  function backend.play_track(track_id, callback)
-    error("Backend.play_track() must be implemented")
-  end
+	-- Playback start
+	function backend.play_track(track_id, callback)
+		error("Backend.play_track() must be implemented")
+	end
 
-  function backend.play_album(album_id, callback)
-    error("Backend.play_album() must be implemented")
-  end
+	function backend.play_album(album_id, callback)
+		error("Backend.play_album() must be implemented")
+	end
 
-  function backend.play_artist(artist_id, callback)
-    error("Backend.play_artist() must be implemented")
-  end
+	function backend.play_artist(artist_id, callback)
+		error("Backend.play_artist() must be implemented")
+	end
 
-  function backend.play_playlist(playlist_id, callback)
-    error("Backend.play_playlist() must be implemented")
-  end
+	function backend.play_playlist(playlist_id, callback)
+		error("Backend.play_playlist() must be implemented")
+	end
 
-  -- Artwork
-  function backend.get_artwork_async(callback)
-    error("Backend.get_artwork_async() must be implemented")
-  end
+	-- Artwork
+	function backend.get_artwork_async(callback)
+		error("Backend.get_artwork_async() must be implemented")
+	end
 
-  -- Queue
-  function backend.get_queue_async(callback)
-    -- Optional - some backends may not support queue
-    if callback then
-      callback(nil, "Queue not supported by this backend")
-    end
-  end
+	-- Queue
+	function backend.get_queue_async(callback)
+		-- Optional - some backends may not support queue
+		if callback then
+			callback(nil, "Queue not supported by this backend")
+		end
+	end
 
-  return backend
+	return backend
 end
 
 return M

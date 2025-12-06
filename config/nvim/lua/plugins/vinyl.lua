@@ -1,9 +1,9 @@
 return {
-  dir = vim.fn.expand '~/dotfiles/plugins/apple-music.nvim',
-  name = 'apple-music.nvim',
+  dir = vim.fn.expand '~/dotfiles/plugins/vinyl.nvim',
+  name = 'vinyl.nvim',
   -- No dependencies - we implement Kitty graphics protocol directly!
   config = function()
-    require('apple-music').setup {
+    require('vinyl').setup {
       update_interval = 2000,
       window = {
         width = 48,

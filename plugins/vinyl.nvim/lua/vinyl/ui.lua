@@ -1,14 +1,14 @@
-local config = require("apple-music.config")
-local artwork = require("apple-music.artwork")
-local queue_artwork = require("apple-music.queue_artwork")
-local hl = require("apple-music.highlights")
+local config = require("vinyl.config")
+local artwork = require("vinyl.artwork")
+local queue_artwork = require("vinyl.queue_artwork")
+local hl = require("vinyl.highlights")
 
 local M = {}
 
 -- Get backend from main module
 local function get_backend()
-  local main = require("apple-music")
-  return main.get_backend()
+	local main = require("vinyl")
+	return main.get_backend()
 end
 
 M.buf = nil
@@ -124,7 +124,7 @@ local function queue_line_with_artwork(text, width)
 		text = vim.fn.strcharpart(text, 0, available_width)
 	end
 
-	return "  " .. "    " .. " " .. text  -- 2ch margin + 4ch image placeholder + 1ch spacing
+	return "  " .. "    " .. " " .. text -- 2ch margin + 4ch image placeholder + 1ch spacing
 end
 
 -- Helper function to create a centered placeholder box
@@ -177,7 +177,7 @@ local function render_with_state(state, queue)
 	artwork_height_chars = math.min(artwork_height_chars, config.options.artwork.max_height_chars)
 
 	local lines = {}
-	local highlights = {}  -- Track { line, col_start, col_end, hl_group }
+	local highlights = {} -- Track { line, col_start, col_end, hl_group }
 
 	-- Reserve space at the TOP for artwork (if enabled)
 	-- Always reserve space to prevent text jumping when loading/changing tracks
@@ -209,8 +209,11 @@ local function render_with_state(state, queue)
 
 		-- Track name with player icon
 		table.insert(lines, "")
-		table.insert(lines, centered_line(string.format("%s  %s", player_icon, state.track_name or "Unknown"), win_width))
-		table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get('Title') })
+		table.insert(
+			lines,
+			centered_line(string.format("%s  %s", player_icon, state.track_name or "Unknown"), win_width)
+		)
+		table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get("Title") })
 
 		-- Artist
 		local artist_display = state.artist or "Unknown"
@@ -218,17 +221,17 @@ local function render_with_state(state, queue)
 			artist_display = string.format("%s (Album: %s)", state.artist, state.album_artist)
 		end
 		table.insert(lines, centered_line(artist_display, win_width))
-		table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get('Artist') })
+		table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get("Artist") })
 
 		-- Album
 		table.insert(lines, centered_line(state.album or "Unknown Album", win_width))
-		table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get('Album') })
+		table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get("Album") })
 
 		-- Metadata line (genre, year, track/disc numbers)
 		local metadata = format_metadata_line(state)
 		if metadata ~= "" then
 			table.insert(lines, centered_line(metadata, win_width))
-			table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get('Label') })
+			table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get("Label") })
 		end
 
 		table.insert(lines, "")
@@ -240,7 +243,7 @@ local function render_with_state(state, queue)
 		-- Time display
 		local time_display = string.format("%s / %s", format_time(state.position), format_time(state.duration))
 		table.insert(lines, centered_line(time_display, win_width))
-		table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get('Time') })
+		table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get("Time") })
 
 		-- Stats line (favorite, play count, bit rate)
 		local stats = format_stats_line(state)
@@ -257,18 +260,24 @@ local function render_with_state(state, queue)
 			local volume_bar = string.rep("━", volume_filled) .. string.rep("─", volume_width - volume_filled)
 			local volume_display = string.format("Volume: %s %d%%", volume_bar, state.volume)
 			table.insert(lines, centered_line(volume_display, win_width))
-			table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get('Volume') })
+			table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get("Volume") })
 		end
 
 		table.insert(lines, "")
 	end
 
 	-- Queue section (upcoming tracks)
-	local queue_tracks_to_render = {}  -- Track which tracks need artwork
+	local queue_tracks_to_render = {} -- Track which tracks need artwork
 
 	if queue then
 		table.insert(lines, "")
-		table.insert(lines, centered_line("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", win_width))
+		table.insert(
+			lines,
+			centered_line(
+				"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+				win_width
+			)
+		)
 		table.insert(lines, "")
 
 		-- Show queue position
@@ -279,16 +288,16 @@ local function render_with_state(state, queue)
 		end
 
 		-- Check if shuffle is enabled and backend can't show accurate shuffle queue
-		local backend = require('apple-music').get_backend()
-		local show_shuffle_message = queue.shuffle_enabled and
-		                               backend and
-		                               backend.capabilities and
-		                               backend.capabilities.queue_shuffle_accurate == false
+		local backend = require("vinyl").get_backend()
+		local show_shuffle_message = queue.shuffle_enabled
+			and backend
+			and backend.capabilities
+			and backend.capabilities.queue_shuffle_accurate == false
 
 		if show_shuffle_message then
 			-- Shuffle is on and backend can't show accurate queue (Apple Music)
 			table.insert(lines, centered_line("🔀 Shuffle enabled", win_width))
-			table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get('Shuffle') })
+			table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get("Shuffle") })
 			table.insert(lines, "")
 		elseif queue.upcoming_tracks and #queue.upcoming_tracks > 0 then
 			-- Render upcoming tracks (2 lines per track with artwork + blank line)
@@ -297,13 +306,20 @@ local function render_with_state(state, queue)
 				-- This aligns the top of the 4x2 thumbnail with the track name
 				table.insert(queue_tracks_to_render, {
 					album = track.album,
-					line = #lines + 1,  -- 1-indexed line number for display_image
+					artwork_url = track.artwork_url, -- Spotify provides URLs, Apple Music does not
+					line = #lines + 1, -- 1-indexed line number for display_image
 				})
 
 				table.insert(lines, queue_line_with_artwork(track.name, win_width))
-				table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get('QueueTrack') })
+				table.insert(
+					highlights,
+					{ line = #lines - 1, col_start = 0, col_end = -1, group = hl.get("QueueTrack") }
+				)
 				table.insert(lines, queue_line_with_artwork(track.artist, win_width))
-				table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get('QueueArtist') })
+				table.insert(
+					highlights,
+					{ line = #lines - 1, col_start = 0, col_end = -1, group = hl.get("QueueArtist") }
+				)
 
 				-- Blank line between tracks (but not after the last one)
 				if i < #queue.upcoming_tracks then
@@ -317,8 +333,8 @@ local function render_with_state(state, queue)
 
 	-- IMPORTANT: Clear artwork cache before nvim_buf_set_lines
 	-- nvim_buf_set_lines(0, -1) destroys all extmarks, so we need to force recreation
-	local kitty = require('apple-music.kitty')
-	kitty.last_display[M.buf] = {}  -- Clear display cache for this buffer
+	local kitty = require("vinyl.kitty")
+	kitty.last_display[M.buf] = {} -- Clear display cache for this buffer
 
 	vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
 	vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, lines)
@@ -327,7 +343,7 @@ local function render_with_state(state, queue)
 	for _, hl_info in ipairs(highlights) do
 		vim.api.nvim_buf_add_highlight(
 			M.buf,
-			-1,  -- namespace (0 = default, -1 = no namespace)
+			-1, -- namespace (0 = default, -1 = no namespace)
 			hl_info.group,
 			hl_info.line,
 			hl_info.col_start,
@@ -340,14 +356,33 @@ local function render_with_state(state, queue)
 	-- Display artwork if enabled and available (at the TOP)
 	if config.options.artwork.enabled then
 		-- Check if artwork is available (Apple Music has artwork_count, Spotify has artwork_url)
-		local has_artwork = (state.artwork_count and state.artwork_count > 0) or state.artwork_url
+		-- IMPORTANT: Check for vim.NIL which is truthy but represents JSON null
+		local has_artwork = (state.artwork_count and state.artwork_count > 0)
+			or (state.artwork_url and state.artwork_url ~= vim.NIL)
 		if has_artwork and state.album then
 			-- Calculate centered column position (size already calculated above)
 			local centered_col = math.floor((win_width - artwork_width_chars) / 2) + 1 -- 1-indexed
 
+			-- Prepare artwork data to pass to display function
+			-- This avoids redundant backend calls - we already have the URL/path from state!
+			local artwork_data = nil
+			if state.artwork_url and state.artwork_url ~= vim.NIL then
+				-- Spotify backend provides URL
+				artwork_data = { url = state.artwork_url }
+			end
+			-- For Apple Music, artwork_data is nil and display() will fetch via backend
+
 			-- Display artwork for both Apple Music and Spotify
 			-- Album name is used for caching (more efficient than per-track)
-			artwork.display(M.buf, 2, centered_col, state.album, artwork_width_chars, artwork_height_chars)
+			artwork.display(
+				M.buf,
+				2,
+				centered_col,
+				state.album,
+				artwork_width_chars,
+				artwork_height_chars,
+				artwork_data
+			)
 		end
 		-- Note: Don't clear artwork here when no artwork!
 		-- That can happen during brief player state queries.
@@ -356,15 +391,22 @@ local function render_with_state(state, queue)
 		-- Display queue artwork (4x2 images on the left, top-aligned with track names)
 		if queue_tracks_to_render and #queue_tracks_to_render > 0 then
 			for _, track_info in ipairs(queue_tracks_to_render) do
-				if track_info.album and track_info.album ~= '' then
+				if track_info.album and track_info.album ~= "" then
+					-- Prepare artwork data (Spotify provides URLs, Apple Music does not)
+					local artwork_data = nil
+					if track_info.artwork_url and track_info.artwork_url ~= vim.NIL then
+						artwork_data = { url = track_info.artwork_url }
+					end
+
 					-- Display 4x2 artwork at column 2, with 2ch left margin
 					-- track_info.line is 1-indexed (line number in editor)
 					queue_artwork.display_album_artwork(
 						track_info.album,
 						M.buf,
-						track_info.line,  -- 1-indexed row where track name starts
-						2,                -- Column (0-indexed, after 2ch margin)
-						nil               -- No callback needed
+						track_info.line, -- 1-indexed row where track name starts
+						2, -- Column (0-indexed, after 2ch margin)
+						artwork_data, -- Artwork data from queue
+						nil -- No callback needed
 					)
 				end
 			end
@@ -439,7 +481,7 @@ function M.open()
 	if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
 		M.buf = vim.api.nvim_create_buf(false, true)
 		vim.api.nvim_buf_set_option(M.buf, "bufhidden", "hide")
-		vim.api.nvim_buf_set_option(M.buf, "filetype", "apple-music")
+		vim.api.nvim_buf_set_option(M.buf, "filetype", "vinyl")
 	end
 
 	local width = config.options.window.width
@@ -457,79 +499,73 @@ function M.open()
 	vim.api.nvim_win_set_option(M.win, "relativenumber", false)
 	vim.api.nvim_win_set_option(M.win, "signcolumn", "no")
 	vim.api.nvim_win_set_option(M.win, "wrap", false)
-	vim.api.nvim_win_set_option(M.win, "conceallevel", 0)  -- Don't conceal placeholders!
-	vim.api.nvim_win_set_option(M.win, "winfixwidth", true)  -- Dock behavior - don't resize when balancing splits
+	vim.api.nvim_win_set_option(M.win, "conceallevel", 0) -- Don't conceal placeholders!
+	vim.api.nvim_win_set_option(M.win, "winfixwidth", true) -- Dock behavior - don't resize when balancing splits
 
-	vim.api.nvim_buf_set_keymap(M.buf, "n", "q", ':lua require("apple-music.ui").close()<CR>', { silent = true })
-	vim.api.nvim_buf_set_keymap(M.buf, "n", "<Esc>", ':lua require("apple-music.ui").close()<CR>', { silent = true })
+	vim.api.nvim_buf_set_keymap(M.buf, "n", "q", ':lua require("vinyl.ui").close()<CR>', { silent = true })
+	vim.api.nvim_buf_set_keymap(M.buf, "n", "<Esc>", ':lua require("vinyl.ui").close()<CR>', { silent = true })
 	vim.api.nvim_buf_set_keymap(
 		M.buf,
 		"n",
 		"<Space>",
-		':lua require("apple-music.ui").action_play_pause()<CR>',
+		':lua require("vinyl.ui").action_play_pause()<CR>',
 		{ silent = true }
 	)
-	vim.api.nvim_buf_set_keymap(
-		M.buf,
-		"n",
-		"n",
-		':lua require("apple-music.ui").action_next_track()<CR>',
-		{ silent = true }
-	)
+	vim.api.nvim_buf_set_keymap(M.buf, "n", "n", ':lua require("vinyl.ui").action_next_track()<CR>', { silent = true })
 	vim.api.nvim_buf_set_keymap(
 		M.buf,
 		"n",
 		"N",
-		':lua require("apple-music.ui").action_previous_track()<CR>',
+		':lua require("vinyl.ui").action_previous_track()<CR>',
 		{ silent = true }
 	)
 	vim.api.nvim_buf_set_keymap(
 		M.buf,
 		"n",
 		"=",
-		':lua require("apple-music.ui").action_increase_volume()<CR>',
+		':lua require("vinyl.ui").action_increase_volume()<CR>',
 		{ silent = true }
 	)
 	vim.api.nvim_buf_set_keymap(
 		M.buf,
 		"n",
 		"-",
-		':lua require("apple-music.ui").action_decrease_volume()<CR>',
+		':lua require("vinyl.ui").action_decrease_volume()<CR>',
 		{ silent = true }
 	)
 	vim.api.nvim_buf_set_keymap(
 		M.buf,
 		"n",
 		"s",
-		':lua require("apple-music.ui").action_toggle_shuffle()<CR>',
+		':lua require("vinyl.ui").action_toggle_shuffle()<CR>',
 		{ silent = true }
 	)
 	vim.api.nvim_buf_set_keymap(
 		M.buf,
 		"n",
 		"h",
-		':lua require("apple-music.ui").action_seek_backward(5)<CR>',
+		':lua require("vinyl.ui").action_seek_backward(5)<CR>',
 		{ silent = true }
 	)
 	vim.api.nvim_buf_set_keymap(
 		M.buf,
 		"n",
 		"l",
-		':lua require("apple-music.ui").action_seek_forward(5)<CR>',
+		':lua require("vinyl.ui").action_seek_forward(5)<CR>',
 		{ silent = true }
 	)
 	vim.api.nvim_buf_set_keymap(
 		M.buf,
 		"n",
 		"H",
-		':lua require("apple-music.ui").action_seek_backward(30)<CR>',
+		':lua require("vinyl.ui").action_seek_backward(30)<CR>',
 		{ silent = true }
 	)
 	vim.api.nvim_buf_set_keymap(
 		M.buf,
 		"n",
 		"L",
-		':lua require("apple-music.ui").action_seek_forward(30)<CR>',
+		':lua require("vinyl.ui").action_seek_forward(30)<CR>',
 		{ silent = true }
 	)
 
@@ -646,6 +682,9 @@ function M.action_next_track()
 			track_name = "Loading...",
 			artist = "",
 			album = "",
+			-- Clear artwork fields to prevent displaying cached artwork during loading
+			artwork_count = 0,
+			artwork_url = nil,
 		})
 		render_with_state(loading_state, nil)
 	end
@@ -677,6 +716,9 @@ function M.action_previous_track()
 			track_name = "Loading...",
 			artist = "",
 			album = "",
+			-- Clear artwork fields to prevent displaying cached artwork during loading
+			artwork_count = 0,
+			artwork_url = nil,
 		})
 		render_with_state(loading_state, nil)
 	end
