@@ -1,9 +1,10 @@
 # apple-music.nvim
 
-A performant, feature-rich Apple Music controller for Neovim with album artwork support.
+A performant, feature-rich music controller for Neovim with support for **Apple Music** and **Spotify**.
 
 ## Features
 
+- **Multiple backends**: Apple Music (macOS) and Spotify (cross-platform with Premium)
 - **Docked UI** with comprehensive track information
 - **Album artwork** display (direct Kitty graphics protocol implementation)
 - **Library browsing** with Telescope/fzf-lua integration:
@@ -12,10 +13,10 @@ A performant, feature-rich Apple Music controller for Neovim with album artwork 
   - Browse and play by artist
   - Browse and play playlists
 - **Extended metadata**:
-  - Genre, Year, Composer
+  - Genre, Year, Composer (Apple Music)
   - Track/Disc numbers
-  - Play count, Bit rate
-  - Favorited/Disliked status (❤/💔)
+  - Play count, Bit rate (Apple Music)
+  - Favorited/Disliked status (Apple Music: ❤/💔)
   - Album artist (when different from track artist)
 - **Real-time updates** with async I/O (non-blocking)
 - **Playback controls** (play/pause, next/previous, shuffle)
@@ -27,8 +28,8 @@ A performant, feature-rich Apple Music controller for Neovim with album artwork 
 ## Requirements
 
 - Neovim 0.8+
-- macOS
-- Apple Music
+- **Apple Music backend**: macOS + Apple Music.app
+- **Spotify backend**: Spotify Premium account + OAuth app credentials
 - **Kitty terminal** (for album artwork - optional)
 
 ## Performance
@@ -63,45 +64,149 @@ This plugin uses:
     })
   end,
   keys = {
-    { '<leader>mu', function() require('apple-music').toggle_ui() end, desc = 'Toggle [u]i' },
-    { '<leader>mp', function() require('apple-music').play_pause() end, desc = 'Toggle [p]lay/pause' },
-    { '<leader>mn', function() require('apple-music').next_track() end, desc = '[n]ext track' },
-    { '<leader>mN', function() require('apple-music').previous_track() end, desc = 'Previous track' },
-    { '<leader>ms', function() require('apple-music').toggle_shuffle() end, desc = 'Toggle [s]huffle' },
-    { '<leader>m=', function() require('apple-music').increase_volume() end, desc = 'Volume up' },
-    { '<leader>m-', function() require('apple-music').decrease_volume() end, desc = 'Volume down' },
+    { '<leader>m<Space>', '<cmd>MusicPlay<CR>', desc = 'Music: Play/pause' },
+    { '<leader>mm', '<cmd>Music<CR>', desc = 'Music: Toggle UI' },
+    { '<leader>mn', '<cmd>MusicNext<CR>', desc = 'Music: Next track' },
+    { '<leader>mN', '<cmd>MusicPrev<CR>', desc = 'Music: Previous track' },
+    { '<leader>ms', '<cmd>MusicShuffle<CR>', desc = 'Music: Toggle shuffle' },
     -- Library browsing
-    { '<leader>mt', function() require('apple-music').browse_tracks() end, desc = 'Browse [t]racks' },
-    { '<leader>ma', function() require('apple-music').browse_albums() end, desc = 'Browse [a]lbums' },
-    { '<leader>mA', function() require('apple-music').browse_artists() end, desc = 'Browse [A]rtists' },
-    { '<leader>ml', function() require('apple-music').browse_playlists() end, desc = 'Browse p[l]aylists' },
+    { '<leader>mp', '<cmd>MusicPlaylists<CR>', desc = 'Music: Browse playlists' },
+    { '<leader>ma', '<cmd>MusicAlbums<CR>', desc = 'Music: Browse albums' },
+    { '<leader>mt', '<cmd>MusicTracks<CR>', desc = 'Music: Browse tracks' },
+    { '<leader>mr', '<cmd>MusicArtists<CR>', desc = 'Music: Browse artists' },
+    -- Backend management
+    { '<leader>mb', '<cmd>MusicBackend<CR>', desc = 'Music: Show backend' },
   },
 }
 ```
 
+## Backend Setup
+
+The plugin supports two music backends and automatically detects which one to use based on availability. If both are available, Spotify takes precedence.
+
+### Apple Music (macOS only)
+
+No setup required! If you're on macOS with Apple Music installed, the plugin will work out of the box.
+
+### Spotify
+
+**Requirements:**
+- Spotify Premium account (required for playback control)
+- Spotify Developer App credentials
+
+**Setup:**
+
+1. **Run the login command:**
+   ```vim
+   :MusicSpotifyLogin
+   ```
+
+2. **Create a Spotify App:**
+   - Go to https://developer.spotify.com/dashboard
+   - Click "Create app"
+   - Fill in app details:
+     - App name: "Neovim Music Controller" (or whatever you prefer)
+     - App description: "Control Spotify from Neovim"
+     - Redirect URI: `http://127.0.0.1:8888/callback` (Spotify requires 127.0.0.1, not localhost)
+   - Check "Web API" in "Which API/SDKs are you planning to use?"
+   - Accept terms and create the app
+   - Note your **Client ID** and **Client Secret**
+
+3. **Enter your credentials:**
+   - Enter your Client ID when prompted
+   - Enter your Client Secret when prompted
+   - Enter your Redirect URI (default: `http://127.0.0.1:8888/callback`)
+   - A browser will open for Spotify authorization
+   - After authorizing, you'll be **automatically redirected back** - no manual copying needed!
+   - The OAuth callback server handles the redirect automatically
+
+4. **Done!** Your credentials are saved and the plugin will automatically use Spotify.
+
+**Note:** The plugin starts a temporary HTTP server on 127.0.0.1 to catch the OAuth callback. This eliminates the need to manually copy/paste URLs.
+
+**Logout:**
+```vim
+:MusicSpotifyLogout
+```
+
+**Check Authentication:**
+```vim
+:MusicSpotifyStatus
+```
+
+**Switching Backends:**
+
+If you have both Apple Music and Spotify configured, you can manually switch:
+```vim
+:MusicBackend spotify
+:MusicBackend apple_music
+```
+
+**Rate Limiting:**
+
+The Spotify backend implements smart rate limiting:
+- Minimum 100ms between requests
+- Automatic exponential backoff on 429 errors
+- Respects `Retry-After` headers
+- Adaptive polling (1-2 second intervals)
+
 ## Usage
 
-### Global Keybindings
+### Commands
+
+All functionality is available via vim commands:
+
+**Main:**
+- `:Music` - Toggle UI
+- `:MusicPlay` - Play/pause
+
+**Playback:**
+- `:MusicNext` - Next track
+- `:MusicPrev` - Previous track
+- `:MusicShuffle` - Toggle shuffle
+
+**Library browsing:**
+- `:MusicPlaylists` - Browse playlists
+- `:MusicAlbums` - Browse albums
+- `:MusicTracks` - Browse tracks
+- `:MusicArtists` - Browse artists
+
+**Backend management:**
+- `:MusicBackend` - Show current backend
+- `:MusicBackend spotify` - Switch to Spotify
+- `:MusicBackend apple_music` - Switch to Apple Music
+- `:MusicSpotifyLogin` - Login to Spotify
+- `:MusicSpotifyLogout` - Logout from Spotify
+- `:MusicSpotifyStatus` - Show Spotify auth status
+
+**Debug:**
+- `:MusicDebugBackend` - Show backend capabilities
+- `:MusicDebugQueue` - Show queue debug info
+
+### Default Keymaps
+
+Default keymaps are provided (disable with `vim.g.apple_music_no_default_keymaps = true`):
 
 **Playback controls:**
-- `<leader>mu` - Toggle UI
-- `<leader>mp` - Play/pause
+- `<leader>m<Space>` - Play/pause
+- `<leader>mm` - Toggle UI
 - `<leader>mn` - Next track
 - `<leader>mN` - Previous track
 - `<leader>ms` - Toggle shuffle
-- `<leader>m=` - Volume up
-- `<leader>m-` - Volume down
 
 **Library browsing:**
-- `<leader>mt` - Browse tracks
+- `<leader>mp` - Browse playlists
 - `<leader>ma` - Browse albums
-- `<leader>mA` - Browse artists
-- `<leader>ml` - Browse playlists
+- `<leader>mt` - Browse tracks
+- `<leader>mr` - Browse artists
 
-### UI Keybindings (when window is open)
+**Backend:**
+- `<leader>mb` - Show current backend
+
+### UI Keymaps (when window is open)
 
 - `q` / `<Esc>` - Close UI
-- `p` - Play/pause
+- `<Space>` - Play/pause
 - `n` - Next track
 - `N` - Previous track
 - `h` / `l` - Seek backward/forward 5 seconds
@@ -202,16 +307,25 @@ vim.api.nvim_set_hl(0, 'AppleMusicShuffle', { fg = '#bd93f9' })                 
 
 ```
 lua/apple-music/
-├── init.lua          # Public API
-├── config.lua        # Configuration management
-├── player.lua        # AppleScript interface (async)
-├── ui.lua            # Docked window UI
-├── search.lua        # Library browsing and search
-├── highlights.lua    # Theming and highlight groups
-├── artwork.lua       # Album artwork management
-├── cache.lua         # Persistent artwork cache
-├── queue_artwork.lua # Queue thumbnails
-└── kitty.lua         # Direct Kitty graphics protocol implementation
+├── init.lua              # Public API & backend selection
+├── config.lua            # Configuration management
+├── backends/
+│   ├── backend.lua       # Backend interface/abstract class
+│   ├── apple_music.lua   # Apple Music backend implementation
+│   └── spotify.lua       # Spotify backend implementation
+├── spotify/
+│   ├── auth.lua          # OAuth 2.0 flow
+│   ├── api.lua           # API client with rate limiting
+│   ├── state.lua         # Token storage
+│   └── oauth_server.lua  # Automatic OAuth callback handler
+├── player.lua            # AppleScript interface (Apple Music)
+├── ui.lua                # Docked window UI (backend-agnostic)
+├── search.lua            # Library browsing (Apple Music)
+├── highlights.lua        # Theming and highlight groups
+├── artwork.lua           # Album artwork management
+├── cache.lua             # Persistent artwork cache
+├── queue_artwork.lua     # Queue thumbnails
+└── kitty.lua             # Direct Kitty graphics protocol implementation
 ```
 
 ## Metadata Available

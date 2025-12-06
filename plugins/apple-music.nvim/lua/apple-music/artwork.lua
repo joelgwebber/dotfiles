@@ -21,8 +21,11 @@ cache.init()
 
 -- Clear currently displayed artwork (but keep cache)
 function M.clear()
-  -- Just hide the current image, don't delete from Kitty memory
-  -- The image stays loaded and can be quickly repositioned if needed
+  -- Delete the currently displayed image from screen (but keep in cache for quick reload)
+  if M.current_image and M.current_buf then
+    kitty.delete_image(M.current_image, M.current_buf)
+  end
+
   M.current_image = nil
   M.current_album = nil
   M.is_loading = false
@@ -67,6 +70,16 @@ function M.display(buf, row, col, album_name, width_chars, height_chars)
   local max_width_chars = width_chars or config.options.artwork.max_width_chars
   local max_height_chars = height_chars or config.options.artwork.max_height_chars
 
+  -- If already loading different album artwork, clear current display and return
+  -- This prevents flashing of old cached artwork while new artwork loads
+  if M.is_loading and album_name ~= M.current_album then
+    if M.current_image and M.current_buf then
+      kitty.delete_image(M.current_image, M.current_buf)
+      M.current_image = nil
+    end
+    return
+  end
+
   -- If this is the same album and image exists, just reposition it
   -- This is the key optimization: Kitty can reposition without re-transmitting!
   if album_name == M.current_album and M.current_image then
@@ -90,7 +103,7 @@ function M.display(buf, row, col, album_name, width_chars, height_chars)
     return
   end
 
-  -- If already loading, skip
+  -- If already loading same album, skip (waiting for async to complete)
   if M.is_loading then
     return
   end
@@ -101,18 +114,63 @@ function M.display(buf, row, col, album_name, width_chars, height_chars)
   -- Mark as loading
   M.is_loading = true
 
-  -- Fetch artwork from Apple Music
-  player.get_artwork_async(function(artwork, err)
+  -- Fetch artwork from backend
+  local backend = require('apple-music').get_backend()
+  if not backend then
+    M.is_loading = false
+    return
+  end
+
+  backend.get_artwork_async(function(artwork, err)
     if err or not artwork then
       M.is_loading = false
       return
     end
 
-    -- Convert to PNG and store in persistent cache
     local png_path = cache.get_album_cache_path(album_name, 'png')
 
-    local convert_result = vim.fn.system(string.format('convert "%s" "%s"', artwork.path, png_path))
-    if vim.v.shell_error ~= 0 then
+    -- Handle URL-based artwork (Spotify) vs file-based (Apple Music)
+    if artwork.url then
+      -- Download to temp file first to check content-type
+      local temp_path = cache.get_album_cache_path(album_name, 'tmp')
+      local curl_cmd = string.format(
+        'curl -s -L -w "\\n%%{content_type}" -o "%s" "%s"',
+        temp_path,
+        artwork.url
+      )
+
+      local output = vim.fn.system(curl_cmd)
+      if vim.v.shell_error ~= 0 then
+        M.is_loading = false
+        return
+      end
+
+      -- Extract content-type from output
+      local content_type = output:match("\n([^\n]+)$")
+
+      -- Check if it's an image format we can handle
+      if content_type and content_type:match("video") then
+        M.is_loading = false
+        return
+      end
+
+      -- Convert to PNG
+      local convert_result = vim.fn.system(string.format('convert "%s" "%s" 2>&1', temp_path, png_path))
+      if vim.v.shell_error ~= 0 then
+        M.is_loading = false
+        return
+      end
+
+      -- Clean up temp file
+      vim.fn.delete(temp_path)
+    elseif artwork.path then
+      -- File-based artwork (Apple Music)
+      local convert_result = vim.fn.system(string.format('convert "%s" "%s"', artwork.path, png_path))
+      if vim.v.shell_error ~= 0 then
+        M.is_loading = false
+        return
+      end
+    else
       M.is_loading = false
       return
     end

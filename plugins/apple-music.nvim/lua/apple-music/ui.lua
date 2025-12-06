@@ -1,10 +1,15 @@
-local player = require("apple-music.player")
 local config = require("apple-music.config")
 local artwork = require("apple-music.artwork")
 local queue_artwork = require("apple-music.queue_artwork")
 local hl = require("apple-music.highlights")
 
 local M = {}
+
+-- Get backend from main module
+local function get_backend()
+  local main = require("apple-music")
+  return main.get_backend()
+end
 
 M.buf = nil
 M.win = nil
@@ -177,7 +182,9 @@ local function render_with_state(state, queue)
 	-- Reserve space at the TOP for artwork (if enabled)
 	-- Always reserve space to prevent text jumping when loading/changing tracks
 	if config.options.artwork.enabled then
-		if state.artwork_count and state.artwork_count > 0 then
+		-- Check if artwork is available (either as Apple Music artwork_count or Spotify URL)
+		local has_artwork = (state.artwork_count and state.artwork_count > 0) or state.artwork_url
+		if has_artwork then
 			-- Reserve empty space for actual artwork (will be displayed via extmarks)
 			for i = 1, artwork_height_chars + 1 do -- +1 for spacing
 				table.insert(lines, "")
@@ -191,14 +198,14 @@ local function render_with_state(state, queue)
 		end
 	end
 
-	if state.player_state == "stopped" or not state.track_name then
+	if not state.playing or not state.track_name then
 		table.insert(lines, "")
-		table.insert(lines, centered_line("Apple Music", win_width))
+		table.insert(lines, centered_line("Music Player", win_width))
 		table.insert(lines, "")
 		table.insert(lines, centered_line("No track playing", win_width))
 		table.insert(lines, "")
 	else
-		local player_icon = state.player_state == "playing" and "▶" or "⏸"
+		local player_icon = state.playing and "▶" or "⏸"
 
 		-- Track name with player icon
 		table.insert(lines, "")
@@ -271,9 +278,15 @@ local function render_with_state(state, queue)
 			table.insert(lines, "")
 		end
 
-		-- Check if shuffle is enabled
-		if queue.shuffle_enabled then
-			-- Shuffle is on - can't show queue order
+		-- Check if shuffle is enabled and backend can't show accurate shuffle queue
+		local backend = require('apple-music').get_backend()
+		local show_shuffle_message = queue.shuffle_enabled and
+		                               backend and
+		                               backend.capabilities and
+		                               backend.capabilities.queue_shuffle_accurate == false
+
+		if show_shuffle_message then
+			-- Shuffle is on and backend can't show accurate queue (Apple Music)
 			table.insert(lines, centered_line("🔀 Shuffle enabled", win_width))
 			table.insert(highlights, { line = #lines - 1, col_start = 0, col_end = -1, group = hl.get('Shuffle') })
 			table.insert(lines, "")
@@ -326,14 +339,17 @@ local function render_with_state(state, queue)
 
 	-- Display artwork if enabled and available (at the TOP)
 	if config.options.artwork.enabled then
-		if state.artwork_count and state.artwork_count > 0 and state.album then
+		-- Check if artwork is available (Apple Music has artwork_count, Spotify has artwork_url)
+		local has_artwork = (state.artwork_count and state.artwork_count > 0) or state.artwork_url
+		if has_artwork and state.album then
 			-- Calculate centered column position (size already calculated above)
 			local centered_col = math.floor((win_width - artwork_width_chars) / 2) + 1 -- 1-indexed
 
-			-- Use album name for caching (more efficient than per-track)
+			-- Display artwork for both Apple Music and Spotify
+			-- Album name is used for caching (more efficient than per-track)
 			artwork.display(M.buf, 2, centered_col, state.album, artwork_width_chars, artwork_height_chars)
 		end
-		-- Note: Don't clear artwork here when artwork_count is 0!
+		-- Note: Don't clear artwork here when no artwork!
 		-- That can happen during brief player state queries.
 		-- Let artwork.lua manage its own state. Only clear when window closes.
 
@@ -356,14 +372,23 @@ local function render_with_state(state, queue)
 	end
 end
 
--- Fetch state from AppleScript and render
+-- Fetch state from backend and render
 local function render_ui()
 	if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
 		return
 	end
 
+	local backend = get_backend()
+	if not backend then
+		return
+	end
+
 	-- Async call - doesn't block the UI!
-	player.get_state_async(function(state)
+	backend.get_state_async(function(state, err)
+		if err or not state then
+			return
+		end
+
 		-- Cache state for volume controls and resize handling
 		M.last_state = state
 
@@ -379,8 +404,8 @@ local function render_ui()
 			end
 
 			-- Fetch queue asynchronously
-			player.get_queue_async(function(queue, err)
-				if queue then
+			backend.get_queue_async(function(queue, queue_err)
+				if queue and not queue_err then
 					M.last_queue = queue
 					-- Re-render with new queue data
 					render_with_state(state, queue)
@@ -440,7 +465,7 @@ function M.open()
 	vim.api.nvim_buf_set_keymap(
 		M.buf,
 		"n",
-		"p",
+		"<Space>",
 		':lua require("apple-music.ui").action_play_pause()<CR>',
 		{ silent = true }
 	)
@@ -573,34 +598,40 @@ function M.close()
 	end
 end
 
--- Action wrappers that provide immediate visual feedback before calling player functions
+-- Action wrappers that provide immediate visual feedback before calling backend functions
 -- This makes the UI feel much more responsive
 
 function M.action_play_pause()
-	if not M.last_state or not M.last_state.player_state then
-		player.play_pause()
+	local backend = get_backend()
+	if not backend then
+		return
+	end
+
+	if not M.last_state or M.last_state.playing == nil then
+		backend.play_pause()
 		render_ui()
 		return
 	end
 
-	-- Optimistically toggle the player state for instant visual feedback
-	if M.last_state.player_state == "playing" then
-		M.last_state.player_state = "paused"
-	elseif M.last_state.player_state == "paused" then
-		M.last_state.player_state = "playing"
-	end
+	-- Optimistically toggle the playing state for instant visual feedback
+	M.last_state.playing = not M.last_state.playing
 
 	-- Re-render with optimistic state (instant!)
 	render_with_state(M.last_state, M.last_queue)
 
 	-- Execute the actual action
-	player.play_pause()
+	backend.play_pause()
 
-	-- Trigger immediate refresh to get accurate state (reduces perceived latency to just AppleScript round-trip)
+	-- Trigger immediate refresh to get accurate state
 	render_ui()
 end
 
 function M.action_next_track()
+	local backend = get_backend()
+	if not backend then
+		return
+	end
+
 	-- Clear main artwork and show loading state
 	artwork.clear()
 	-- NOTE: Don't clear queue_artwork - keep it cached for reuse!
@@ -615,19 +646,23 @@ function M.action_next_track()
 			track_name = "Loading...",
 			artist = "",
 			album = "",
-			artwork_count = 0,
 		})
 		render_with_state(loading_state, nil)
 	end
 
 	-- Execute the actual action
-	player.next_track()
+	backend.next_track()
 
 	-- Trigger immediate refresh to get new track info
 	render_ui()
 end
 
 function M.action_previous_track()
+	local backend = get_backend()
+	if not backend then
+		return
+	end
+
 	-- Clear main artwork and show loading state
 	artwork.clear()
 	-- NOTE: Don't clear queue_artwork - keep it cached for reuse!
@@ -642,21 +677,25 @@ function M.action_previous_track()
 			track_name = "Loading...",
 			artist = "",
 			album = "",
-			artwork_count = 0,
 		})
 		render_with_state(loading_state, nil)
 	end
 
 	-- Execute the actual action
-	player.previous_track()
+	backend.previous_track()
 
 	-- Trigger immediate refresh to get new track info
 	render_ui()
 end
 
 function M.action_increase_volume()
+	local backend = get_backend()
+	if not backend then
+		return
+	end
+
 	if not M.last_state or not M.last_state.volume then
-		player.increase_volume()
+		backend.increase_volume()
 		render_ui()
 		return
 	end
@@ -666,15 +705,20 @@ function M.action_increase_volume()
 	render_with_state(M.last_state, M.last_queue)
 
 	-- Execute the actual action
-	player.increase_volume()
+	backend.increase_volume()
 
 	-- Trigger immediate refresh to get accurate volume
 	render_ui()
 end
 
 function M.action_decrease_volume()
+	local backend = get_backend()
+	if not backend then
+		return
+	end
+
 	if not M.last_state or not M.last_state.volume then
-		player.decrease_volume()
+		backend.decrease_volume()
 		render_ui()
 		return
 	end
@@ -684,52 +728,74 @@ function M.action_decrease_volume()
 	render_with_state(M.last_state, M.last_queue)
 
 	-- Execute the actual action
-	player.decrease_volume()
+	backend.decrease_volume()
 
 	-- Trigger immediate refresh to get accurate volume
 	render_ui()
 end
 
 function M.action_toggle_shuffle()
+	local backend = get_backend()
+	if not backend then
+		return
+	end
+
 	-- Clear queue cache since shuffle state affects queue display
 	M.last_queue = nil
 
 	-- No visual feedback for shuffle in current UI, but still trigger immediate refresh
-	player.toggle_shuffle()
+	backend.toggle_shuffle()
 	render_ui()
 end
 
 function M.action_seek_forward(seconds)
+	local backend = get_backend()
+	if not backend then
+		return
+	end
+
 	if not M.last_state or not M.last_state.position or not M.last_state.duration then
-		player.seek_forward(seconds)
+		-- backend.seek expects milliseconds, convert seconds
+		if M.last_state and M.last_state.position then
+			backend.seek(math.floor((M.last_state.position + seconds) * 1000))
+		end
 		render_ui()
 		return
 	end
 
 	-- Optimistically update position for instant visual feedback
-	M.last_state.position = math.min(M.last_state.duration, M.last_state.position + seconds)
+	local new_position = math.min(M.last_state.duration, M.last_state.position + seconds)
+	M.last_state.position = new_position
 	render_with_state(M.last_state, M.last_queue)
 
-	-- Execute the actual action
-	player.seek_forward(seconds)
+	-- Execute the actual action (backend.seek expects milliseconds)
+	backend.seek(math.floor(new_position * 1000))
 
 	-- Trigger immediate refresh to get accurate position
 	render_ui()
 end
 
 function M.action_seek_backward(seconds)
+	local backend = get_backend()
+	if not backend then
+		return
+	end
+
 	if not M.last_state or not M.last_state.position then
-		player.seek_backward(seconds)
+		if M.last_state and M.last_state.position then
+			backend.seek(math.floor(math.max(0, M.last_state.position - seconds) * 1000))
+		end
 		render_ui()
 		return
 	end
 
 	-- Optimistically update position for instant visual feedback
-	M.last_state.position = math.max(0, M.last_state.position - seconds)
+	local new_position = math.max(0, M.last_state.position - seconds)
+	M.last_state.position = new_position
 	render_with_state(M.last_state, M.last_queue)
 
-	-- Execute the actual action
-	player.seek_backward(seconds)
+	-- Execute the actual action (backend.seek expects milliseconds)
+	backend.seek(math.floor(new_position * 1000))
 
 	-- Trigger immediate refresh to get accurate position
 	render_ui()

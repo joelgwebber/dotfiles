@@ -16,6 +16,112 @@ local function get_picker()
   return 'vim.ui.select', nil
 end
 
+-- Generic picker function that works with any item list
+-- Items should have { id, name, artist?, album? }
+function M.show_picker(items, title, on_select)
+  local picker_type, picker = get_picker()
+
+  if picker_type == 'telescope' then
+    local pickers = require('telescope.pickers')
+    local finders = require('telescope.finders')
+    local conf = require('telescope.config').values
+    local actions = require('telescope.actions')
+    local action_state = require('telescope.actions.state')
+
+    pickers.new({}, {
+      prompt_title = title,
+      finder = finders.new_table({
+        results = items,
+        entry_maker = function(entry)
+          local display_text = entry.name
+          if entry.artist then
+            display_text = string.format("%s - %s", entry.name, entry.artist)
+          end
+          if entry.album then
+            display_text = display_text .. string.format(" [%s]", entry.album)
+          end
+
+          return {
+            value = entry,
+            display = display_text,
+            ordinal = entry.name .. ' ' .. (entry.artist or '') .. ' ' .. (entry.album or ''),
+          }
+        end,
+      }),
+      sorter = conf.generic_sorter({}),
+      attach_mappings = function(prompt_bufnr, map)
+        actions.select_default:replace(function()
+          local selection = action_state.get_selected_entry()
+          actions.close(prompt_bufnr)
+          if selection then
+            on_select(selection.value)
+          end
+        end)
+        return true
+      end,
+    }):find()
+  elseif picker_type == 'fzf-lua' then
+    local fzf = require('fzf-lua')
+    local entries = {}
+    for _, item in ipairs(items) do
+      local display_text = item.name
+      if item.artist then
+        display_text = string.format("%s - %s", item.name, item.artist)
+      end
+      if item.album then
+        display_text = display_text .. string.format(" [%s]", item.album)
+      end
+      table.insert(entries, display_text)
+    end
+
+    fzf.fzf_exec(entries, {
+      prompt = title .. '> ',
+      actions = {
+        ['default'] = function(selected)
+          if selected and #selected > 0 then
+            -- Find the item by matching the display text
+            local selected_text = selected[1]
+            for _, item in ipairs(items) do
+              local display_text = item.name
+              if item.artist then
+                display_text = string.format("%s - %s", item.name, item.artist)
+              end
+              if item.album then
+                display_text = display_text .. string.format(" [%s]", item.album)
+              end
+              if display_text == selected_text then
+                on_select(item)
+                break
+              end
+            end
+          end
+        end,
+      },
+    })
+  else
+    -- vim.ui.select fallback
+    local display_items = {}
+    for _, item in ipairs(items) do
+      local display_text = item.name
+      if item.artist then
+        display_text = string.format("%s - %s", item.name, item.artist)
+      end
+      if item.album then
+        display_text = display_text .. string.format(" [%s]", item.album)
+      end
+      table.insert(display_items, display_text)
+    end
+
+    vim.ui.select(display_items, {
+      prompt = title .. ':',
+    }, function(choice, idx)
+      if idx then
+        on_select(items[idx])
+      end
+    end)
+  end
+end
+
 -- Get all tracks from library
 -- Returns: { { name, artist, album, persistent_id }, ... }
 function M.get_library_tracks_async(callback)

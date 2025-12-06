@@ -28,7 +28,7 @@ local function execute_applescript(script)
   return nil, result.stderr
 end
 
--- Get upcoming tracks from the current playlist queue
+-- Get upcoming tracks from current playlist or album
 -- Returns: { current_index, total_tracks, shuffle_enabled, upcoming_tracks[] }
 -- Each track has: name, artist, album
 function M.get_queue_async(callback)
@@ -38,60 +38,126 @@ function M.get_queue_async(callback)
         return "stopped"
       end if
 
-      -- Check shuffle status first
       set shuffleOn to shuffle enabled
-
-      set currentPL to current playlist
-      set allTracks to every track of currentPL
       set currentTrack to current track
+      set currentTrackID to database ID of currentTrack
 
-      -- Find current track index
-      set currentIndex to 0
-      repeat with i from 1 to count of allTracks
-        if id of (item i of allTracks) = id of currentTrack then
-          set currentIndex to i
-          exit repeat
-        end if
-      end repeat
+      -- Try 1: Access current playlist (works when playing from a playlist)
+      try
+        set currentPL to current playlist
+        set plTracks to tracks of currentPL
+        set trackCount to count of plTracks
 
-      if currentIndex = 0 then
-        return "notfound"
-      end if
-
-      -- Build output: current_index, total_count, shuffle_status, then upcoming tracks (name, artist, album triples)
-      set output to currentIndex as string
-      set output to output & tab & (count of allTracks) as string
-      set output to output & tab & (shuffleOn as string)
-
-      -- Only get upcoming tracks if shuffle is OFF
-      -- When shuffle is on, Music.app's internal queue order isn't exposed via AppleScript
-      if not shuffleOn then
-        -- Get next 5 tracks (or until end of playlist)
-        set endIndex to currentIndex + 5
-        if endIndex > (count of allTracks) then
-          set endIndex to count of allTracks
-        end if
-
-        repeat with i from (currentIndex + 1) to endIndex
-          set t to item i of allTracks
-          set output to output & tab & (name of t)
-          set output to output & tab & (artist of t)
-          set output to output & tab & (album of t)
+        -- Find current track index in playlist
+        set currentIndex to 0
+        repeat with i from 1 to trackCount
+          try
+            if database ID of (item i of plTracks) = currentTrackID then
+              set currentIndex to i
+              exit repeat
+            end if
+          end try
         end repeat
-      end if
 
-      return output
+        if currentIndex > 0 then
+          -- Success! Build output from playlist
+          set output to currentIndex as string
+          set output to output & tab & trackCount as string
+          set output to output & tab & (shuffleOn as string)
+
+          if not shuffleOn then
+            set endIndex to currentIndex + 5
+            if endIndex > trackCount then
+              set endIndex to trackCount
+            end if
+
+            repeat with i from (currentIndex + 1) to endIndex
+              try
+                set t to item i of plTracks
+                set output to output & tab & (name of t)
+                set output to output & tab & (artist of t)
+                set output to output & tab & (album of t)
+              end try
+            end repeat
+          end if
+
+          return output
+        end if
+      end try
+
+      -- Try 2: Fall back to library search by album (works when playing album directly)
+      try
+        set albumName to album of currentTrack
+        set artistName to artist of currentTrack
+        set lib to library playlist 1
+        set matchingTracks to (every track of lib whose album is albumName and artist is artistName)
+
+        if (count of matchingTracks) = 0 then
+          return "error|No queue available"
+        end if
+
+        -- Find current track in album tracks
+        set currentIndex to 0
+        repeat with i from 1 to (count of matchingTracks)
+          if database ID of (item i of matchingTracks) = currentTrackID then
+            set currentIndex to i
+            exit repeat
+          end if
+        end repeat
+
+        if currentIndex = 0 then
+          return "error|No queue available"
+        end if
+
+        -- Build output from album tracks
+        set output to currentIndex as string
+        set output to output & tab & (count of matchingTracks) as string
+        set output to output & tab & (shuffleOn as string)
+
+        if not shuffleOn then
+          set endIndex to currentIndex + 5
+          if endIndex > (count of matchingTracks) then
+            set endIndex to count of matchingTracks
+          end if
+
+          repeat with i from (currentIndex + 1) to endIndex
+            set t to item i of matchingTracks
+            set output to output & tab & (name of t)
+            set output to output & tab & (artist of t)
+            set output to output & tab & (album of t)
+          end repeat
+        end if
+
+        return output
+      on error errMsg
+        return "error|" & errMsg
+      end try
     end tell
   ]]
 
   execute_applescript_async(script, function(result, err)
     if err or not result then
-      callback(nil, err)
+      callback(nil, "AppleScript error: " .. tostring(err))
       return
     end
 
-    if result == "stopped" or result == "notfound" then
-      callback(nil, result)
+    -- Check for error conditions
+    if result:match("^stopped") then
+      callback(nil, "Player is stopped")
+      return
+    end
+
+    if result:match("^notfound") then
+      local parts = vim.split(result, '|')
+      local playlist_name = parts[2] or "unknown"
+      local track_count = parts[3] or "unknown"
+      callback(nil, string.format("Current track not found in playlist '%s' (%s tracks)", playlist_name, track_count))
+      return
+    end
+
+    if result:match("^error") then
+      local parts = vim.split(result, '|')
+      callback(nil, "Queue fetch error: " .. (parts[2] or "unknown"))
       return
     end
 
