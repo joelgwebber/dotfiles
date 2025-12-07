@@ -299,12 +299,19 @@ function M.get_state_async(callback)
         -- Artwork count
         set output to output & tab & (count of artworks of t) as string
 
+        -- Database ID (for unique track identification)
+        try
+          set output to output & tab & (database ID of t as string)
+        on error
+          set output to output & tab & "0"
+        end try
+
       else
         -- Stopped state - return empty values
         set output to output & tab & "" & tab & "" & tab & "" & tab & "0" & tab & "0"
         set output to output & tab & "" & tab & "0" & tab & "0" & tab & "0" & tab & "0"
         set output to output & tab & "0" & tab & "0" & tab & "0" & tab & "0"
-        set output to output & tab & "false" & tab & "false" & tab & "" & tab & "" & tab & "0"
+        set output to output & tab & "false" & tab & "false" & tab & "" & tab & "" & tab & "0" & tab & "0"
       end if
 
       set output to output & tab & (sound volume)
@@ -346,9 +353,10 @@ function M.get_state_async(callback)
 			state.composer = parts[18] ~= "" and parts[18] or nil
 			state.album_artist = parts[19] ~= "" and parts[19] or nil
 			state.artwork_count = tonumber(parts[20]) or 0
-			state.volume = tonumber(parts[21])
+			state.track_id = parts[21] ~= "0" and parts[21] or nil -- Database ID for unique identification
+			state.volume = tonumber(parts[22])
 		else
-			state.volume = tonumber(parts[21] or parts[2])
+			state.volume = tonumber(parts[22] or parts[21] or parts[2])
 		end
 
 		callback(state)

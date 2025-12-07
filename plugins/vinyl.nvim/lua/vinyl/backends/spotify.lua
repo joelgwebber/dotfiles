@@ -113,29 +113,37 @@ function M.new()
 
 	-- Play/pause toggle
 	function backend.play_pause(callback)
-		-- First check current state
-		backend.get_state_async(function(state, err)
-			if err then
-				if callback then
-					callback(false, err)
-				end
-				return
-			end
+		-- Use cached state from UI instead of fetching (optimization)
+		-- UI maintains accurate state via optimistic updates + periodic refresh
+		local ui = require("vinyl.ui")
+		local cached_playing = ui.last_state and ui.last_state.playing
 
-			local endpoint = state.playing and "/me/player/pause" or "/me/player/play"
-			local method = "PUT"
-
-			api.request(method, endpoint, {}, function(response, api_err)
-				if api_err then
+		if cached_playing == nil then
+			-- No cached state available, fetch it first (rare: first action before any render)
+			backend.get_state_async(function(state, err)
+				if err then
 					if callback then
-						callback(false, api_err)
+						callback(false, err)
 					end
 					return
 				end
-				if callback then
-					callback(true, nil)
-				end
+
+				local endpoint = state.playing and "/me/player/pause" or "/me/player/play"
+				api.request("PUT", endpoint, {}, function(response, api_err)
+					if callback then
+						callback(not api_err, api_err)
+					end
+				end)
 			end)
+			return
+		end
+
+		-- Use cached state (common path: saves 50-200ms API call)
+		local endpoint = cached_playing and "/me/player/pause" or "/me/player/play"
+		api.request("PUT", endpoint, {}, function(response, api_err)
+			if callback then
+				callback(not api_err, api_err)
+			end
 		end)
 	end
 
@@ -180,47 +188,78 @@ function M.new()
 
 	-- Increase volume
 	function backend.increase_volume(callback)
-		backend.get_state_async(function(state, err)
-			if err or not state.volume then
-				if callback then
-					callback(false, err or "No volume info")
+		-- Use cached volume from UI state (mirrors Apple Music optimization)
+		local ui = require("vinyl.ui")
+		if ui.last_state and ui.last_state.volume then
+			backend.set_volume(math.min(100, ui.last_state.volume + 10), callback)
+		else
+			-- Fallback: fetch state if cache unavailable (rare)
+			backend.get_state_async(function(state, err)
+				if err or not state.volume then
+					if callback then
+						callback(false, err or "No volume info")
+					end
+					return
 				end
-				return
-			end
-			backend.set_volume(state.volume + 10, callback)
-		end)
+				backend.set_volume(state.volume + 10, callback)
+			end)
+		end
 	end
 
 	-- Decrease volume
 	function backend.decrease_volume(callback)
-		backend.get_state_async(function(state, err)
-			if err or not state.volume then
-				if callback then
-					callback(false, err or "No volume info")
+		-- Use cached volume from UI state (mirrors Apple Music optimization)
+		local ui = require("vinyl.ui")
+		if ui.last_state and ui.last_state.volume then
+			backend.set_volume(math.max(0, ui.last_state.volume - 10), callback)
+		else
+			-- Fallback: fetch state if cache unavailable (rare)
+			backend.get_state_async(function(state, err)
+				if err or not state.volume then
+					if callback then
+						callback(false, err or "No volume info")
+					end
+					return
 				end
-				return
-			end
-			backend.set_volume(state.volume - 10, callback)
-		end)
+				backend.set_volume(state.volume - 10, callback)
+			end)
+		end
 	end
 
 	-- Toggle shuffle
 	function backend.toggle_shuffle(callback)
-		backend.get_state_async(function(state, err)
-			if err then
-				if callback then
-					callback(false, err)
-				end
-				return
-			end
+		-- Use cached shuffle state from UI (optimization)
+		local ui = require("vinyl.ui")
+		local cached_shuffle = ui.last_state and ui.last_state.shuffle
 
-			local new_state = not state.shuffle
-			local endpoint = string.format("/me/player/shuffle?state=%s", new_state and "true" or "false")
-			api.put(endpoint, {}, function(response, api_err)
-				if callback then
-					callback(not api_err, api_err)
+		if cached_shuffle == nil then
+			-- Fallback: fetch if no cache (rare)
+			backend.get_state_async(function(state, err)
+				if err then
+					if callback then
+						callback(false, err)
+					end
+					return
 				end
+
+				local new_state = not state.shuffle
+				local endpoint = string.format("/me/player/shuffle?state=%s", new_state and "true" or "false")
+				api.put(endpoint, {}, function(response, api_err)
+					if callback then
+						callback(not api_err, api_err)
+					end
+				end)
 			end)
+			return
+		end
+
+		-- Use cached state (common path: saves 50-200ms)
+		local new_state = not cached_shuffle
+		local endpoint = string.format("/me/player/shuffle?state=%s", new_state and "true" or "false")
+		api.put(endpoint, {}, function(response, api_err)
+			if callback then
+				callback(not api_err, api_err)
+			end
 		end)
 	end
 
@@ -547,13 +586,21 @@ function M.new()
 
 	-- Get artwork (Spotify provides URLs in state, so we return the URL)
 	function backend.get_artwork_async(callback)
+		-- Optimization: Use cached artwork URL from UI state (already fetched)
+		local ui = require("vinyl.ui")
+		if ui.last_state and ui.last_state.artwork_url and ui.last_state.artwork_url ~= vim.NIL then
+			callback({ url = ui.last_state.artwork_url }, nil)
+			return
+		end
+
+		-- Fallback: fetch state if no cache (rare: cache miss or first load)
 		backend.get_state_async(function(state, err)
 			if err then
 				callback(nil, err)
 				return
 			end
 
-			if state.artwork_url then
+			if state.artwork_url and state.artwork_url ~= vim.NIL then
 				callback({ url = state.artwork_url }, nil)
 			else
 				callback(nil, "No artwork available")

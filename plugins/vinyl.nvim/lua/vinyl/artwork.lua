@@ -2,6 +2,7 @@ local player = require("vinyl.player")
 local config = require("vinyl.config")
 local kitty = require("vinyl.kitty")
 local cache = require("vinyl.cache")
+local preloader = require("vinyl.artwork_preloader")
 
 local M = {}
 
@@ -13,8 +14,16 @@ M.current_album = nil -- Track by album instead of track_id
 M.is_loading = false
 M.current_buf = nil
 
--- Counter for unique image IDs (starts at 1000000, separate from queue artwork)
-M.image_id_counter = 1000000
+-- Generate stable image ID for an album (hash-based, not incrementing)
+-- This ensures the same album always gets the same ID, preventing duplicates in Kitty
+local function get_image_id_for_album(album_name)
+	-- Use hash of album name for stable ID
+	-- Range: 1000000-1999999 (separate from queue: 2000000+, preloader: 3000000+)
+	local hash = vim.fn.sha256(album_name)
+	local id = 1000000 + (hash:byte(1) * 3000) + (hash:byte(2) * 10) + hash:byte(3)
+	-- Ensure we stay in our range
+	return 1000000 + (id % 1000000)
+end
 
 -- Initialize cache directory
 cache.init()
@@ -89,12 +98,29 @@ function M.display(buf, row, col, album_name, width_chars, height_chars, artwork
 		return
 	end
 
+	-- Different album - delete old image to prevent flash of wrong artwork
+	if M.current_image and M.current_album and M.current_album ~= album_name then
+		kitty.delete_image(M.current_image, M.current_buf)
+		M.current_image = nil
+	end
+
 	-- Check album cache (already loaded in Kitty)
 	if M.album_cache[album_name] and M.album_cache[album_name].image then
 		local cached = M.album_cache[album_name]
 		M.current_image = cached.image
 		M.current_album = album_name
 		kitty.display_image(cached.image, row, col, max_width_chars, max_height_chars, buf)
+		return
+	end
+
+	-- Check preloaded artwork (instant display for next track!)
+	local preloaded = preloader.get_preloaded(album_name)
+	if preloaded and preloaded.image then
+		-- Move from preloader to main cache
+		M.album_cache[album_name] = preloaded
+		M.current_image = preloaded.image
+		M.current_album = album_name
+		kitty.display_image(preloaded.image, row, col, max_width_chars, max_height_chars, buf)
 		return
 	end
 
@@ -202,9 +228,10 @@ end
 
 -- Load artwork from file into Kitty and cache it
 function M.load_from_file(album_name, png_path, buf, row, col, width, height)
-	M.image_id_counter = M.image_id_counter + 1
+	-- Use stable ID based on album name (prevents duplicate images in Kitty)
+	local image_id = get_image_id_for_album(album_name)
 	local img, load_err = kitty.load_image(png_path, {
-		id = M.image_id_counter,
+		id = image_id,
 	})
 
 	if not img then

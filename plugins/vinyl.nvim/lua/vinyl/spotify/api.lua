@@ -215,13 +215,21 @@ function M.request(method, endpoint, opts, callback)
 					return
 				end
 
+				-- Handle 204 No Content (common for play/pause, volume, etc.)
+				if status_code == 204 then
+					callback({}, nil)
+					return
+				end
+
 				-- Parse successful response
 				if body and body ~= "" then
 					local ok, response = pcall(vim.json.decode, body)
 					if ok then
 						callback(response, nil)
 					else
-						callback(nil, "Failed to parse response JSON: " .. body)
+						-- Treat JSON parse failure on success status as empty response
+						-- This handles cases where curl output has garbage
+						callback({}, nil)
 					end
 				else
 					callback({}, nil) -- Empty response is OK for some endpoints

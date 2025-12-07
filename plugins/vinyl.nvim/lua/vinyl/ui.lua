@@ -1,7 +1,10 @@
 local config = require("vinyl.config")
 local artwork = require("vinyl.artwork")
 local queue_artwork = require("vinyl.queue_artwork")
+local artwork_preloader = require("vinyl.artwork_preloader")
+local state_cache = require("vinyl.state_cache")
 local hl = require("vinyl.highlights")
+local debouncer = require("vinyl.debouncer")
 
 local M = {}
 
@@ -18,6 +21,10 @@ M.last_state = {} -- Cache state for volume controls
 M.last_queue = nil -- Cache queue data
 M.last_track_id = nil -- Track ID to detect track changes
 M.resize_group = nil -- Autocmd group for resize handling
+M.track_changing = false -- Flag to prevent stale renders during track transitions
+M.last_play_pause_time = 0 -- Timestamp to prevent rapid play/pause calls
+M.last_volume_time = 0 -- Timestamp to prevent rapid volume calls
+M.optimistic_update_until = 0 -- Timestamp until which to ignore periodic refreshes
 
 local function format_time(seconds)
 	if not seconds then
@@ -359,7 +366,7 @@ local function render_with_state(state, queue)
 		-- IMPORTANT: Check for vim.NIL which is truthy but represents JSON null
 		local has_artwork = (state.artwork_count and state.artwork_count > 0)
 			or (state.artwork_url and state.artwork_url ~= vim.NIL)
-		if has_artwork and state.album then
+		if has_artwork and state.album and state.album ~= "" and not M.track_changing then
 			-- Calculate centered column position (size already calculated above)
 			local centered_col = math.floor((win_width - artwork_width_chars) / 2) + 1 -- 1-indexed
 
@@ -420,48 +427,128 @@ local function render_ui()
 		return
 	end
 
+	-- Skip periodic refreshes during optimistic update window
+	-- This prevents stale backend state from overriding optimistic updates
+	local now = vim.loop.hrtime() / 1000000
+	if now < M.optimistic_update_until then
+		return
+	end
+
 	local backend = get_backend()
 	if not backend then
 		return
 	end
 
-	-- Async call - doesn't block the UI!
-	backend.get_state_async(function(state, err)
-		if err or not state then
-			return
+	-- Detect if we need to fetch queue (track changed or missing)
+	-- Do this check before fetching state to enable parallel fetching
+	local need_queue_fetch = false
+	local current_track_id_preview = nil
+
+	-- Quick preview check using cached state to decide if we need queue
+	if M.last_state then
+		if M.last_state.track_id then
+			current_track_id_preview = tostring(M.last_state.track_id)
+		else
+			current_track_id_preview = (M.last_state.track_name or "") .. "::" .. (M.last_state.album or "")
+		end
+	end
+	need_queue_fetch = (M.last_queue == nil)
+		or (M.last_track_id and M.last_track_id ~= current_track_id_preview)
+		or M.track_changing -- Always fetch queue during track transitions
+
+	-- Parallel fetch optimization: fetch state and queue simultaneously when both needed
+	if need_queue_fetch then
+		local state_result, queue_result = nil, nil
+		local state_done, queue_done = false, false
+
+		-- Helper to render when both complete
+		local function try_render()
+			if state_done and queue_done then
+				if state_result then
+					M.last_state = state_result
+					-- Save to persistent cache for next startup (optimization)
+					state_cache.save_state(state_result)
+
+
+					-- Update track ID after state fetch
+					local current_track_id
+					if state_result.track_id then
+						current_track_id = tostring(state_result.track_id)
+					else
+						current_track_id = (state_result.track_name or "") .. "::" .. (state_result.album or "")
+					end
+
+					if M.last_track_id ~= current_track_id then
+						M.last_track_id = current_track_id
+
+
+					-- Clear track changing flag only if we got a different track than we were transitioning from
+					if M.track_changing and M.changing_from_track_id and current_track_id ~= M.changing_from_track_id then
+						M.track_changing = false
+						M.changing_from_track_id = nil
+					end
+					end
+
+					M.last_queue = queue_result -- May be nil if queue fetch failed
+
+				-- Preload next track's artwork in background (non-blocking optimization)
+				if queue_result and queue_result.upcoming_tracks then
+					artwork_preloader.preload_next_track(queue_result)
+				end
+
+					render_with_state(state_result, queue_result)
+				end
+			end
 		end
 
-		-- Cache state for volume controls and resize handling
-		M.last_state = state
+		-- Fetch state (async, non-blocking)
+		backend.get_state_async(function(state, err)
+			state_result = (err or not state) and nil or state
+			state_done = true
+			try_render()
+		end)
 
-		-- Detect track changes to fetch queue efficiently
-		local current_track_id = (state.track_name or "") .. "::" .. (state.album or "")
-		local track_changed = (M.last_track_id ~= current_track_id)
-		local queue_missing = (M.last_queue == nil)
+		-- Fetch queue in parallel (async, non-blocking)
+		backend.get_queue_async(function(queue, queue_err)
+			queue_result = (queue_err or not queue) and nil or queue
+			queue_done = true
+			try_render()
+		end)
+	else
+		-- Simple state fetch only (queue is cached and still valid)
+		backend.get_state_async(function(state, err)
+			if err or not state then
+				return
+			end
 
-		-- Fetch queue if track changed OR if queue cache is missing (e.g., after shuffle toggle)
-		if track_changed or queue_missing then
-			if track_changed then
+			-- Cache state for volume controls and resize handling
+			M.last_state = state
+			-- Save to persistent cache (optimization)
+			state_cache.save_state(state)
+
+
+			-- Detect track changes to update track ID cache
+			local current_track_id
+			if state.track_id then
+				current_track_id = tostring(state.track_id)
+			else
+				current_track_id = (state.track_name or "") .. "::" .. (state.album or "")
+			end
+
+			if M.last_track_id ~= current_track_id then
 				M.last_track_id = current_track_id
 			end
 
-			-- Fetch queue asynchronously
-			backend.get_queue_async(function(queue, queue_err)
-				if queue and not queue_err then
-					M.last_queue = queue
-					-- Re-render with new queue data
-					render_with_state(state, queue)
-				else
-					-- No queue available, render without it
-					M.last_queue = nil
-					render_with_state(state, nil)
-				end
-			end)
-		else
-			-- Track hasn't changed and queue exists, use cached queue
+			-- Clear track changing flag only if we got a different track than we were transitioning from
+			if M.track_changing and M.changing_from_track_id and current_track_id ~= M.changing_from_track_id then
+				M.track_changing = false
+				M.changing_from_track_id = nil
+			end
+
+			-- Use cached queue
 			render_with_state(state, M.last_queue)
-		end
-	end)
+		end)
+	end
 end
 
 function M.toggle()
@@ -471,6 +558,23 @@ function M.toggle()
 		M.open()
 	end
 end
+-- Helper function to set up buffer keymaps (called once per buffer)
+local function setup_buffer_keymaps(buf)
+	vim.api.nvim_buf_set_keymap(buf, "n", "q", ':lua require("vinyl.ui").close()<CR>', { noremap = true, silent = true })
+	vim.api.nvim_buf_set_keymap(buf, "n", "<Esc>", ':lua require("vinyl.ui").close()<CR>', { noremap = true, silent = true })
+	vim.api.nvim_buf_set_keymap(buf, "n", "<Space>", ':lua require("vinyl.ui").action_play_pause()<CR>', { noremap = true, silent = true })
+	vim.api.nvim_buf_set_keymap(buf, "n", "n", ':lua require("vinyl.ui").action_next_track()<CR>', { noremap = true, silent = true })
+	vim.api.nvim_buf_set_keymap(buf, "n", "N", ':lua require("vinyl.ui").action_previous_track()<CR>', { noremap = true, silent = true })
+	vim.api.nvim_buf_set_keymap(buf, "n", "=", ':lua require("vinyl.ui").action_increase_volume()<CR>', { noremap = true, silent = true })
+	vim.api.nvim_buf_set_keymap(buf, "n", "-", ':lua require("vinyl.ui").action_decrease_volume()<CR>', { noremap = true, silent = true })
+	vim.api.nvim_buf_set_keymap(buf, "n", "s", ':lua require("vinyl.ui").action_toggle_shuffle()<CR>', { noremap = true, silent = true })
+	vim.api.nvim_buf_set_keymap(buf, "n", "h", ':lua require("vinyl.ui").action_seek_backward(5)<CR>', { noremap = true, silent = true })
+	vim.api.nvim_buf_set_keymap(buf, "n", "l", ':lua require("vinyl.ui").action_seek_forward(5)<CR>', { noremap = true, silent = true })
+	vim.api.nvim_buf_set_keymap(buf, "n", "H", ':lua require("vinyl.ui").action_seek_backward(30)<CR>', { noremap = true, silent = true })
+	vim.api.nvim_buf_set_keymap(buf, "n", "L", ':lua require("vinyl.ui").action_seek_forward(30)<CR>', { noremap = true, silent = true })
+	vim.api.nvim_buf_set_keymap(buf, "n", "?", ':lua require("vinyl.ui").show_help()<CR>', { noremap = true, silent = true })
+end
+
 
 function M.open()
 	if M.win and vim.api.nvim_win_is_valid(M.win) then
@@ -482,6 +586,9 @@ function M.open()
 		M.buf = vim.api.nvim_create_buf(false, true)
 		vim.api.nvim_buf_set_option(M.buf, "bufhidden", "hide")
 		vim.api.nvim_buf_set_option(M.buf, "filetype", "vinyl")
+
+		-- Set up keymaps once when buffer is created
+		setup_buffer_keymaps(M.buf)
 	end
 
 	local width = config.options.window.width
@@ -502,89 +609,14 @@ function M.open()
 	vim.api.nvim_win_set_option(M.win, "conceallevel", 0) -- Don't conceal placeholders!
 	vim.api.nvim_win_set_option(M.win, "winfixwidth", true) -- Dock behavior - don't resize when balancing splits
 
-	vim.api.nvim_buf_set_keymap(M.buf, "n", "q", ':lua require("vinyl.ui").close()<CR>', { silent = true })
-	vim.api.nvim_buf_set_keymap(M.buf, "n", "<Esc>", ':lua require("vinyl.ui").close()<CR>', { silent = true })
-	vim.api.nvim_buf_set_keymap(
-		M.buf,
-		"n",
-		"<Space>",
-		':lua require("vinyl.ui").action_play_pause()<CR>',
-		{ silent = true }
-	)
-	vim.api.nvim_buf_set_keymap(M.buf, "n", "n", ':lua require("vinyl.ui").action_next_track()<CR>', { silent = true })
-	vim.api.nvim_buf_set_keymap(
-		M.buf,
-		"n",
-		"N",
-		':lua require("vinyl.ui").action_previous_track()<CR>',
-		{ silent = true }
-	)
-	vim.api.nvim_buf_set_keymap(
-		M.buf,
-		"n",
-		"=",
-		':lua require("vinyl.ui").action_increase_volume()<CR>',
-		{ silent = true }
-	)
-	vim.api.nvim_buf_set_keymap(
-		M.buf,
-		"n",
-		"-",
-		':lua require("vinyl.ui").action_decrease_volume()<CR>',
-		{ silent = true }
-	)
-	vim.api.nvim_buf_set_keymap(
-		M.buf,
-		"n",
-		"s",
-		':lua require("vinyl.ui").action_toggle_shuffle()<CR>',
-		{ silent = true }
-	)
-	vim.api.nvim_buf_set_keymap(
-		M.buf,
-		"n",
-		"h",
-		':lua require("vinyl.ui").action_seek_backward(5)<CR>',
-		{ silent = true }
-	)
-	vim.api.nvim_buf_set_keymap(
-		M.buf,
-		"n",
-		"l",
-		':lua require("vinyl.ui").action_seek_forward(5)<CR>',
-		{ silent = true }
-	)
-	vim.api.nvim_buf_set_keymap(
-		M.buf,
-		"n",
-		"H",
-		':lua require("vinyl.ui").action_seek_backward(30)<CR>',
-		{ silent = true }
-	)
-	vim.api.nvim_buf_set_keymap(
-		M.buf,
-		"n",
-		"L",
-		':lua require("vinyl.ui").action_seek_forward(30)<CR>',
-		{ silent = true }
-	)
-
-	-- Set up resize handler (instant visual feedback without AppleScript)
-	if not M.resize_group then
-		M.resize_group = vim.api.nvim_create_augroup("AppleMusicResize", { clear = true })
+	-- Load cached state for instant first render (optimization)
+	local cached = state_cache.load_state(3600) -- Load if less than 1 hour old
+	if cached and cached.state then
+		M.last_state = cached.state
+		-- Render immediately with cached state (instant startup!)
+		render_with_state(cached.state, nil)
+		-- Note: render_ui() below will fetch fresh data and update
 	end
-	vim.api.nvim_create_autocmd("WinResized", {
-		group = M.resize_group,
-		callback = function()
-			-- Only re-render if our window was resized
-			if M.win and vim.api.nvim_win_is_valid(M.win) and vim.tbl_contains(vim.v.event.windows, M.win) then
-				-- Re-render with cached state (no AppleScript call)
-				if M.last_state and M.last_state.track_name then
-					render_with_state(M.last_state, M.last_queue)
-				end
-			end
-		end,
-	})
 
 	render_ui()
 
@@ -600,6 +632,25 @@ function M.open()
 			end)
 		)
 	end
+end
+
+function M.show_help()
+	vim.notify([[
+Vinyl Music Player - Keyboard Shortcuts:
+
+<Space>  Play/Pause
+n        Next track
+N        Previous track
+=        Volume up
+-        Volume down
+s        Toggle shuffle
+h        Seek backward 5s
+l        Seek forward 5s
+H        Seek backward 30s
+L        Seek forward 30s
+?        Show this help
+q / Esc  Close player
+]], vim.log.levels.INFO)
 end
 
 function M.close()
@@ -638,6 +689,15 @@ end
 -- This makes the UI feel much more responsive
 
 function M.action_play_pause()
+	-- Guard against rapid successive calls (debounce 200ms)
+	local now = vim.loop.hrtime() / 1000000 -- Convert to milliseconds
+	local time_since_last = now - M.last_play_pause_time
+
+	if time_since_last < 200 then
+		return
+	end
+	M.last_play_pause_time = now
+
 	local backend = get_backend()
 	if not backend then
 		return
@@ -649,17 +709,39 @@ function M.action_play_pause()
 		return
 	end
 
+	-- Save original state for rollback on error
+	local original_playing = M.last_state.playing
+
+	-- Execute the backend action FIRST (before optimistic update)
+	-- This ensures the backend reads the correct current state
+	backend.play_pause(function(success, err)
+		-- Don't refresh immediately - let the periodic timer pick up the change
+		-- This prevents bouncing when Spotify's state hasn't updated yet
+
+		-- Only show error notification for real errors (not ignorable Spotify API issues)
+		if not success and err then
+			local err_lower = err:lower()
+			local is_ignorable = err_lower:match("restriction") or err_lower:match("no_active_device")
+
+			if not is_ignorable then
+				-- Real error - rollback the optimistic update
+				M.last_state.playing = original_playing
+				render_with_state(M.last_state, M.last_queue)
+				vim.notify("Play/pause failed: " .. err, vim.log.levels.WARN)
+			end
+		end
+	end)
+
 	-- Optimistically toggle the playing state for instant visual feedback
+	-- Do this AFTER calling backend so it reads the original state
 	M.last_state.playing = not M.last_state.playing
 
-	-- Re-render with optimistic state (instant!)
+	-- Prevent periodic refreshes from overriding optimistic update for 1.5s
+	-- This gives Spotify time to update its state on their end
+	local now = vim.loop.hrtime() / 1000000
+	M.optimistic_update_until = now + 1500
+
 	render_with_state(M.last_state, M.last_queue)
-
-	-- Execute the actual action
-	backend.play_pause()
-
-	-- Trigger immediate refresh to get accurate state
-	render_ui()
 end
 
 function M.action_next_track()
@@ -671,12 +753,14 @@ function M.action_next_track()
 	-- Clear main artwork and show loading state
 	artwork.clear()
 	-- NOTE: Don't clear queue_artwork - keep it cached for reuse!
+	-- NOTE: Don't clear queue data - keep it visible during transition (optimistic UX)
 
-	-- Clear queue data cache to force refresh
-	M.last_queue = nil
+	-- Save old track ID to detect when backend gives us the new track
+	M.changing_from_track_id = M.last_track_id
+	M.track_changing = true
 	M.last_track_id = nil
 
-	-- Show loading placeholder
+	-- Show loading placeholder with current queue still visible
 	if M.last_state then
 		local loading_state = vim.tbl_deep_extend("force", M.last_state, {
 			track_name = "Loading...",
@@ -686,7 +770,7 @@ function M.action_next_track()
 			artwork_count = 0,
 			artwork_url = nil,
 		})
-		render_with_state(loading_state, nil)
+		render_with_state(loading_state, M.last_queue)
 	end
 
 	-- Execute the actual action
@@ -705,12 +789,14 @@ function M.action_previous_track()
 	-- Clear main artwork and show loading state
 	artwork.clear()
 	-- NOTE: Don't clear queue_artwork - keep it cached for reuse!
+	-- NOTE: Don't clear queue data - keep it visible during transition (optimistic UX)
 
-	-- Clear queue data cache to force refresh
-	M.last_queue = nil
+	-- Save old track ID to detect when backend gives us the new track
+	M.changing_from_track_id = M.last_track_id
+	M.track_changing = true
 	M.last_track_id = nil
 
-	-- Show loading placeholder
+	-- Show loading placeholder with current queue still visible
 	if M.last_state then
 		local loading_state = vim.tbl_deep_extend("force", M.last_state, {
 			track_name = "Loading...",
@@ -720,7 +806,7 @@ function M.action_previous_track()
 			artwork_count = 0,
 			artwork_url = nil,
 		})
-		render_with_state(loading_state, nil)
+		render_with_state(loading_state, M.last_queue)
 	end
 
 	-- Execute the actual action
@@ -731,6 +817,13 @@ function M.action_previous_track()
 end
 
 function M.action_increase_volume()
+	-- Guard against rapid successive calls (debounce 100ms)
+	local now = vim.loop.hrtime() / 1000000
+	if now - M.last_volume_time < 100 then
+		return
+	end
+	M.last_volume_time = now
+
 	local backend = get_backend()
 	if not backend then
 		return
@@ -744,16 +837,35 @@ function M.action_increase_volume()
 
 	-- Optimistically update volume for instant visual feedback
 	M.last_state.volume = math.min(100, M.last_state.volume + 10)
+
+	-- Prevent periodic refreshes from overriding optimistic update for 1.5s
+	local now = vim.loop.hrtime() / 1000000
+	M.optimistic_update_until = now + 1500
+
 	render_with_state(M.last_state, M.last_queue)
 
-	-- Execute the actual action
-	backend.increase_volume()
-
-	-- Trigger immediate refresh to get accurate volume
-	render_ui()
+	-- Debounce backend call (300ms delay, batches rapid presses)
+	-- This saves API calls while keeping UI instant
+	debouncer.schedule("volume", function()
+		local final_volume = M.last_state.volume
+		backend.set_volume(final_volume, function(success, err)
+			if not success then
+				vim.notify("Volume change failed: " .. (err or "unknown error"), vim.log.levels.WARN)
+			end
+			-- Refresh state after backend call completes
+			render_ui()
+		end)
+	end)
 end
 
 function M.action_decrease_volume()
+	-- Guard against rapid successive calls (debounce 100ms)
+	local now = vim.loop.hrtime() / 1000000
+	if now - M.last_volume_time < 100 then
+		return
+	end
+	M.last_volume_time = now
+
 	local backend = get_backend()
 	if not backend then
 		return
@@ -767,13 +879,24 @@ function M.action_decrease_volume()
 
 	-- Optimistically update volume for instant visual feedback
 	M.last_state.volume = math.max(0, M.last_state.volume - 10)
+
+	-- Prevent periodic refreshes from overriding optimistic update for 1.5s
+	local now = vim.loop.hrtime() / 1000000
+	M.optimistic_update_until = now + 1500
+
 	render_with_state(M.last_state, M.last_queue)
 
-	-- Execute the actual action
-	backend.decrease_volume()
-
-	-- Trigger immediate refresh to get accurate volume
-	render_ui()
+	-- Debounce backend call (same timer as increase - both adjust final volume)
+	debouncer.schedule("volume", function()
+		local final_volume = M.last_state.volume
+		backend.set_volume(final_volume, function(success, err)
+			if not success then
+				vim.notify("Volume change failed: " .. (err or "unknown error"), vim.log.levels.WARN)
+			end
+			-- Refresh state after backend call completes
+			render_ui()
+		end)
+	end)
 end
 
 function M.action_toggle_shuffle()
@@ -810,11 +933,17 @@ function M.action_seek_forward(seconds)
 	M.last_state.position = new_position
 	render_with_state(M.last_state, M.last_queue)
 
-	-- Execute the actual action (backend.seek expects milliseconds)
-	backend.seek(math.floor(new_position * 1000))
-
-	-- Trigger immediate refresh to get accurate position
-	render_ui()
+	-- Debounce backend seek (allows rapid seeking without API spam)
+	debouncer.schedule("seek", function()
+		local final_position = M.last_state.position
+		backend.seek(math.floor(final_position * 1000), function(success, err)
+			if not success then
+				vim.notify("Seek failed: " .. (err or "unknown error"), vim.log.levels.WARN)
+			end
+			-- Refresh state after backend call completes
+			render_ui()
+		end)
+	end)
 end
 
 function M.action_seek_backward(seconds)
@@ -836,11 +965,17 @@ function M.action_seek_backward(seconds)
 	M.last_state.position = new_position
 	render_with_state(M.last_state, M.last_queue)
 
-	-- Execute the actual action (backend.seek expects milliseconds)
-	backend.seek(math.floor(new_position * 1000))
-
-	-- Trigger immediate refresh to get accurate position
-	render_ui()
+	-- Debounce backend seek (same timer as forward - both adjust final position)
+	debouncer.schedule("seek", function()
+		local final_position = M.last_state.position
+		backend.seek(math.floor(final_position * 1000), function(success, err)
+			if not success then
+				vim.notify("Seek failed: " .. (err or "unknown error"), vim.log.levels.WARN)
+			end
+			-- Refresh state after backend call completes
+			render_ui()
+		end)
+	end)
 end
 
 return M
