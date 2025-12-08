@@ -1,6 +1,6 @@
 -- Apple Music backend implementation
 local Backend = require("vinyl.backends.backend")
-local player = require("vinyl.player")
+local player = require("vinyl.backends.apple_player")
 local search = require("vinyl.search")
 
 local M = {}
@@ -309,6 +309,13 @@ function M.new()
 				callback(queue, nil)
 			end
 		end)
+	end
+
+	-- Apple Music specific: Get artwork for a specific album by name
+	-- This is needed for preloading queue artwork
+	-- Not in the base Backend interface as it's Apple Music specific
+	function backend.get_album_artwork_async(album_name, callback)
+		player.get_album_artwork_async(album_name, callback)
 	end
 
 	return backend

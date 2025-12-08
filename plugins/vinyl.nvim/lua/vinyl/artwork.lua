@@ -1,4 +1,3 @@
-local player = require("vinyl.player")
 local config = require("vinyl.config")
 local kitty = require("vinyl.kitty")
 local cache = require("vinyl.cache")

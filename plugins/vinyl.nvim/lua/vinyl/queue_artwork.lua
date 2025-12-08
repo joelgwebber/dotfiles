@@ -1,5 +1,4 @@
 -- Queue artwork manager - handles multiple small album covers for queue display
-local player = require("vinyl.player")
 local kitty = require("vinyl.kitty")
 local cache = require("vinyl.cache")
 
@@ -91,7 +90,18 @@ function M.display_album_artwork(album_name, buf, row, col, artwork_data, callba
 	end
 
 	-- Otherwise, fetch artwork from Apple Music backend for this album
-	player.get_album_artwork_async(album_name, function(artwork, err)
+	local backend_module = require("vinyl")
+	local backend = backend_module.get_backend()
+
+	if not backend or not backend.get_album_artwork_async then
+		M.loading[album_name] = nil
+		if callback then
+			callback(false)
+		end
+		return
+	end
+
+	backend.get_album_artwork_async(album_name, function(artwork, err)
 		M.loading[album_name] = nil
 
 		if err or not artwork then

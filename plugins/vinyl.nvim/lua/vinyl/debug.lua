@@ -1,9 +1,9 @@
-local player = require("vinyl.player")
+local player = require("vinyl.backends.apple_player")
 
 local M = {}
 
 function M.test_state()
-	print("Testing player state...")
+	print("Testing Apple Music player state...")
 	player.get_state_async(function(state)
 		print("=== Player State ===")
 		print("player_state: " .. tostring(state.player_state))

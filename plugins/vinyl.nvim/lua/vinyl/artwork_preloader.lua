@@ -82,10 +82,19 @@ function M.preload_next_track(queue, callback)
 		end)
 	else
 		-- Apple Music: fetch artwork using backend
-		local player = require("vinyl.player")
+		local backend_module = require("vinyl")
+		local backend = backend_module.get_backend()
+
+		if not backend or not backend.get_album_artwork_async then
+			if callback then
+				callback(false, "Backend does not support album artwork fetch")
+			end
+			return
+		end
+
 		M.current_preload = album_name
 
-		player.get_album_artwork_async(album_name, function(artwork, err)
+		backend.get_album_artwork_async(album_name, function(artwork, err)
 			if err or not artwork then
 				M.current_preload = nil
 				if callback then
