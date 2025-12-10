@@ -1,12 +1,12 @@
 return {
-  dir = vim.fn.expand '~/dotfiles/plugins/vinyl.nvim',
+  dir = vim.fn.expand '~/src/vinyl.nvim',
   name = 'vinyl.nvim',
-  -- No dependencies - we implement Kitty graphics protocol directly!
+
   config = function()
     require('vinyl').setup {
-      update_interval = 2000,
+      update_interval = 1000,
       window = {
-        width = 48,
+        width = 36,
       },
       artwork = {
         enabled = true, -- Enabled with docked window (more stable than floating)
