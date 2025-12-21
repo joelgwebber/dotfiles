@@ -13,14 +13,17 @@ export GEMINI_API_KEY="..."
 export CONTEXT7_API_KEY="..."
 export OPENAI_API_KEY="..."
 export BRAVE_API_KEY="..."
+export READECK_API_URL="..."
+export READECK_API_KEY="..."
 ```
 
 # Symlinks
 ```sh
-ln -s ./claude/settings.json ~/.claude/settings.json
-ln -s ./kitty/ ~/.config/kitty
-ln -s ./nvim/ ~/.config/nvim
-ln -s ./serena/ ~/.serena
+ln -s ~/dotfiles/config/kitty/ ~/.config/kitty
+ln -s ~/dotfiles/config/nvim/ ~/.config/nvim
+ln -s ~/dotfiles/config/claude/settings.json ~/.claude/settings.json
+ln -s ~/dotfiles/config/claude/skills ~/.claude/skills
+ln -s ~/dotfiles/config/serena/ ~/.serena
 ```
 
 # MCP Servers
