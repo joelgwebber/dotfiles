@@ -7,8 +7,7 @@ return {
     },
     cli = {
       mux = {
-        backend = 'tmux',
-        enabled = true,
+        enabled = false,
       },
       -- Performance optimizations
       scrollback = 1000, -- Limit scrollback to prevent performance issues
@@ -16,14 +15,14 @@ return {
 
       -- Window management - make sidekick behave more like toggleterm
       win = {
-        layout = "right", -- Keep default right side placement
+        layout = 'right', -- Keep default right side placement
         split = {
-          width = 100,     -- Fixed width like your terminals
-          height = 0,      -- Use default height
+          width = 100, -- Fixed width like your terminals
+          height = 0, -- Use default height
         },
         wo = {
-          winfixwidth = true,  -- Prevent sidekick from being resized
-          number = false,      -- No line numbers in sidekick
+          winfixwidth = true, -- Prevent sidekick from being resized
+          number = false, -- No line numbers in sidekick
           relativenumber = false,
         },
       },
@@ -41,36 +40,44 @@ return {
   -- Simplified keybindings
   keys = {
     {
-      "<leader>aa",
-      function() require("sidekick.cli").toggle() end,
-      mode = { "n", "v" },
-      desc = "Sidekick Toggle CLI",
+      '<leader>aa',
+      function()
+        require('sidekick.cli').toggle()
+      end,
+      mode = { 'n', 'v' },
+      desc = 'Sidekick Toggle CLI',
     },
     {
-      "<leader>as",
+      '<leader>as',
       function()
         -- Use filter to only show installed tools for faster loading
-        require("sidekick.cli").select({ filter = { installed = true } })
+        require('sidekick.cli').select { filter = { installed = true } }
       end,
-      desc = "Sidekick Select CLI",
+      desc = 'Sidekick Select CLI',
     },
     {
-      "<leader>as",
-      function() require("sidekick.cli").send({ selection = true }) end,
-      mode = { "v" },
-      desc = "Sidekick Send Visual Selection",
+      '<leader>as',
+      function()
+        require('sidekick.cli').send { selection = true }
+      end,
+      mode = { 'v' },
+      desc = 'Sidekick Send Visual Selection',
     },
     {
-      "<leader>ap",
-      function() require("sidekick.cli").prompt() end,
-      mode = { "n", "v" },
-      desc = "Sidekick Select Prompt",
+      '<leader>ap',
+      function()
+        require('sidekick.cli').prompt()
+      end,
+      mode = { 'n', 'v' },
+      desc = 'Sidekick Select Prompt',
     },
     {
-      "<c-.>",
-      function() require("sidekick.cli").focus() end,
-      mode = { "n", "x", "i", "t" },
-      desc = "Sidekick Switch Focus",
+      '<c-.>',
+      function()
+        require('sidekick.cli').focus()
+      end,
+      mode = { 'n', 'x', 'i', 't' },
+      desc = 'Sidekick Switch Focus',
     },
   },
 }
