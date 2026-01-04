@@ -1,0 +1,1086 @@
+#!/usr/bin/env python3
+"""
+Bitwarden Vault Cleanup Tool
+
+Finds and merges duplicate entries, and simplifies URLs.
+
+Usage:
+  bw-cleanup                    # Interactive duplicate merge mode
+  bw-cleanup --list             # Just list merge candidates
+  bw-cleanup --auto             # Merge all duplicates without prompting
+  bw-cleanup --simplify         # Interactive URL simplification mode
+  bw-cleanup --simplify --list  # List simplification candidates
+  bw-cleanup --simplify --auto  # Auto-simplify with saved decisions
+  bw-cleanup --reset-decisions  # Clear saved decisions
+"""
+
+import json
+import subprocess
+import base64
+import sys
+import os
+import argparse
+from collections import defaultdict
+from pathlib import Path
+from urllib.parse import urlparse
+
+try:
+    import tldextract
+except ImportError:
+    print("Installing tldextract...")
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "tldextract"], check=True)
+    import tldextract
+
+# ============================================================================
+# Constants
+# ============================================================================
+
+# Generic auth subdomains that can be stripped to eTLD+1
+AUTH_SUBDOMAINS = {
+    'www', 'login', 'auth', 'account', 'accounts', 'signin', 'sso',
+    'id', 'identity', 'secure', 'my', 'app', 'api', 'oauth', 'm', 'mobile',
+    'activate', 'register', 'signup', 'checkout', 'pay', 'order',
+    'online', 'portal', 'portals', 'members', 'member', 'customer',
+    'support', 'help', 'wiki', 'answers', 'forum', 'community',
+    'store', 'shop', 'buy', 'billing', 'payment', 'cart',
+    'dashboard', 'admin', 'panel', 'console', 'manage',
+    'service', 'services', 'platform', 'gateway', 'connect',
+    'global', 'us', 'eu', 'na', 'uk', 'au', 'ca',
+}
+
+# Multi-tenant platforms where subdomain is meaningful
+MULTI_TENANT_DOMAINS = {
+    'slack.com', 'managebac.com', 'zendesk.com', 'myschoolapp.com',
+    'onelogin.com', 'cratejoy.com', 'campintouch.com', 'backerkit.com',
+    'blackbaudhosting.com', 'flywheelsites.com', 'bunkr.me',
+    'freshdesk.com', 'atlassian.net', 'salesforce.com', 'force.com',
+    'okta.com', 'auth0.com', 'cloudfront.net', 'herokuapp.com',
+    'azurewebsites.net', 'netlify.app', 'vercel.app', 'github.io',
+    'blogspot.com', 'wordpress.com', 'squarespace.com', 'wixsite.com',
+    'typeform.com', 'notion.site', 'carrd.co', 'webflow.io',
+}
+
+DECISIONS_FILE = Path.home() / '.config' / 'bw-cleanup' / 'decisions.json'
+
+# ============================================================================
+# Utility Functions
+# ============================================================================
+
+def run_bw(args):
+    result = subprocess.run(['bw'] + args, capture_output=True, text=True)
+    if result.returncode != 0:
+        return None
+    return json.loads(result.stdout) if result.stdout.strip() else None
+
+
+def get_etld1(uri):
+    if not uri:
+        return None
+    if uri.startswith('androidapp://'):
+        parts = uri.replace('androidapp://', '').split('.')
+        return f"{parts[-2]}.{parts[-1]}" if len(parts) >= 2 else None
+    try:
+        ext = tldextract.extract(uri)
+        return f"{ext.domain}.{ext.suffix}" if ext.domain and ext.suffix else None
+    except:
+        return None
+
+
+def get_full_domain(uri):
+    """Get full domain including subdomain."""
+    if not uri:
+        return None
+    if uri.startswith('androidapp://'):
+        return uri.replace('androidapp://', '')
+    try:
+        ext = tldextract.extract(uri)
+        if ext.subdomain:
+            return f"{ext.subdomain}.{ext.domain}.{ext.suffix}"
+        return f"{ext.domain}.{ext.suffix}"
+    except:
+        return None
+
+
+def get_subdomain(uri):
+    """Get just the subdomain part."""
+    if not uri or uri.startswith('androidapp://'):
+        return None
+    try:
+        ext = tldextract.extract(uri)
+        return ext.subdomain if ext.subdomain else None
+    except:
+        return None
+
+
+def pw_hint(pw):
+    if not pw:
+        return "(none)"
+    if len(pw) <= 6:
+        return "***"
+    return f"{pw[:2]}..{pw[-2:]}"
+
+
+def simplify_uri(uri):
+    """Simplify a URI to just scheme://domain/"""
+    if not uri:
+        return uri
+    if uri.startswith('androidapp://'):
+        return uri  # Keep as-is
+    try:
+        parsed = urlparse(uri)
+        return f"{parsed.scheme}://{parsed.netloc}/"
+    except:
+        return uri
+
+
+def is_uri_simplified(uri):
+    """Check if a URI is already in simplified form (just scheme://domain/)."""
+    if not uri:
+        return True
+    if uri.startswith('androidapp://'):
+        return True  # Android app URIs are kept as-is
+    try:
+        parsed = urlparse(uri)
+        # Simplified means path is empty or just "/"
+        return parsed.path in ('', '/')
+    except:
+        return False
+
+
+def is_item_already_simplified(item, etld1):
+    """Check if an item is already in simplified form for its eTLD+1."""
+    # Name should match the eTLD+1
+    if item.get('name') != etld1:
+        return False
+
+    # All URIs should be simplified
+    for uri in item.get('login', {}).get('uris', []):
+        if not is_uri_simplified(uri.get('uri', '')):
+            return False
+
+    return True
+
+
+# ============================================================================
+# Decisions Persistence
+# ============================================================================
+
+def load_decisions():
+    """Load saved decisions from file."""
+    if not DECISIONS_FILE.exists():
+        return {
+            'version': 1,
+            'subdomains': {},      # domain -> 'keep' | 'simplify'
+            'multi_tenant': {},    # etld+1 -> 'keep' | 'simplify'
+            'conflicts': {},       # etld+1 -> {'action': 'separate'|'merge', ...}
+            'stale': {},          # "etld+1:username" -> {'keep_id': ..., 'discard_ids': [...]}
+        }
+    try:
+        with open(DECISIONS_FILE) as f:
+            return json.load(f)
+    except:
+        return load_decisions.__wrapped__() if hasattr(load_decisions, '__wrapped__') else {
+            'version': 1, 'subdomains': {}, 'multi_tenant': {}, 'conflicts': {}, 'stale': {}
+        }
+
+
+def save_decisions(decisions):
+    """Save decisions to file."""
+    DECISIONS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(DECISIONS_FILE, 'w') as f:
+        json.dump(decisions, f, indent=2)
+
+
+def reset_decisions():
+    """Delete the decisions file."""
+    if DECISIONS_FILE.exists():
+        DECISIONS_FILE.unlink()
+        print(f"Deleted {DECISIONS_FILE}")
+    else:
+        print("No decisions file to delete.")
+
+
+# ============================================================================
+# Subdomain Classification
+# ============================================================================
+
+def can_simplify_subdomain(subdomain, etld1):
+    """
+    Check if a subdomain can be stripped.
+    Returns: 'simplify' | 'keep' | 'ask'
+    """
+    if not subdomain:
+        return 'simplify'  # No subdomain, already simple
+
+    sub_lower = subdomain.lower()
+
+    # Check if it's a known multi-tenant domain
+    if etld1 in MULTI_TENANT_DOMAINS:
+        return 'keep'  # Subdomain is meaningful
+
+    # Check exact match against auth subdomains
+    if sub_lower in AUTH_SUBDOMAINS:
+        return 'simplify'
+
+    # Check prefixes like www2, login1, secure3
+    for auth_sub in AUTH_SUBDOMAINS:
+        if sub_lower.startswith(auth_sub) and sub_lower[len(auth_sub):].isdigit():
+            return 'simplify'
+
+    # Check compound subdomains like "us.account" or "na.signin"
+    parts = sub_lower.split('.')
+    if all(p in AUTH_SUBDOMAINS or p.isdigit() or len(p) <= 2 for p in parts):
+        return 'simplify'
+
+    # Unknown - need to ask
+    return 'ask'
+
+
+# ============================================================================
+# Duplicate Merge Mode (Original Functionality)
+# ============================================================================
+
+def find_candidates(items):
+    """Find duplicate entries (same domain + same credentials)."""
+    by_domain = defaultdict(list)
+    for item in items:
+        if item.get('type') != 1:
+            continue
+        for uri in item.get('login', {}).get('uris', []):
+            etld1 = get_etld1(uri.get('uri'))
+            if etld1:
+                by_domain[etld1].append(item)
+                break
+
+    candidates = []
+    for domain, domain_items in by_domain.items():
+        if len(domain_items) <= 1:
+            continue
+        by_creds = defaultdict(list)
+        for item in domain_items:
+            login = item.get('login', {})
+            key = (login.get('username'), login.get('password'))
+            by_creds[key].append(item)
+        for (username, password), group_items in by_creds.items():
+            if len(group_items) > 1:
+                candidates.append({
+                    'domain': domain,
+                    'username': username,
+                    'password': password,
+                    'items': group_items
+                })
+
+    candidates.sort(key=lambda c: len(c['items']), reverse=True)
+    return candidates
+
+
+def display_list(candidates, start=0, count=40):
+    end = min(start + count, len(candidates))
+    print(f"\n{'#':>3} {'Domain':<28} {'Username':<24} {'Pass':>8} {'#':>2} {'Entries':<30}")
+    print("=" * 100)
+
+    for i, c in enumerate(candidates[start:end], start + 1):
+        user = (c['username'] or '(none)')[:23]
+        pw = pw_hint(c['password'])
+        names = ", ".join(item['name'][:15] for item in c['items'])
+        if len(names) > 30:
+            names = names[:27] + "..."
+        print(f"{i:>3} {c['domain']:<28} {user:<24} {pw:>8} {len(c['items']):>2}  {names}")
+
+    print("=" * 100)
+    print(f"Showing {start+1}-{end} of {len(candidates)} candidates")
+
+
+def merge_candidate(c, dry_run=False):
+    items = c['items']
+    primary_id = items[0]['id']
+
+    if dry_run:
+        return True, len(items) - 1
+
+    primary = run_bw(['get', 'item', primary_id])
+    if not primary:
+        return False, 0
+
+    all_uris = []
+    seen = set()
+    for item in items:
+        for uri in item.get('login', {}).get('uris', []):
+            uri_str = uri.get('uri', '')
+            if uri_str and uri_str not in seen:
+                seen.add(uri_str)
+                all_uris.append(uri)
+
+    primary['name'] = c['domain']
+    primary['login']['uris'] = all_uris
+
+    encoded = base64.b64encode(json.dumps(primary).encode()).decode()
+    result = subprocess.run(['bw', 'edit', 'item', primary_id, encoded], capture_output=True, text=True)
+
+    if result.returncode != 0:
+        return False, 0
+
+    deleted = 0
+    for item in items[1:]:
+        result = subprocess.run(['bw', 'delete', 'item', item['id']], capture_output=True, text=True)
+        if result.returncode == 0:
+            deleted += 1
+
+    return True, deleted
+
+
+def parse_range(s, max_val):
+    """Parse range like '1-10' or '5' or '1,3,5-7' into list of indices."""
+    indices = set()
+    for part in s.split(','):
+        part = part.strip()
+        if '-' in part:
+            start, end = part.split('-', 1)
+            start = int(start.strip())
+            end = int(end.strip())
+            indices.update(range(start, end + 1))
+        elif part.isdigit():
+            indices.add(int(part))
+    return sorted(i for i in indices if 1 <= i <= max_val)
+
+
+def interactive_mode(candidates):
+    print(f"\nFound {len(candidates)} merge candidates ({sum(len(c['items']) for c in candidates)} items)")
+    print("\nCommands:")
+    print("  list [N]        Show next N candidates (default 40)")
+    print("  show N          Show details of candidate N")
+    print("  merge N         Merge candidate N")
+    print("  merge N-M       Merge candidates N through M")
+    print("  merge all       Merge all remaining candidates")
+    print("  skip N          Remove candidate N from list")
+    print("  quit            Exit")
+
+    while candidates:
+        display_list(candidates, 0, 40)
+
+        try:
+            cmd = input("\n> ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print("\nExiting.")
+            break
+
+        if not cmd:
+            continue
+
+        parts = cmd.split()
+        action = parts[0]
+
+        if action == 'quit' or action == 'q':
+            break
+
+        elif action == 'list':
+            count = int(parts[1]) if len(parts) > 1 else 40
+            display_list(candidates, 0, count)
+
+        elif action == 'show' and len(parts) > 1:
+            idx = int(parts[1]) - 1
+            if 0 <= idx < len(candidates):
+                c = candidates[idx]
+                print(f"\n{'='*60}")
+                print(f"Candidate {idx+1}: {c['domain']}")
+                print(f"Username: {c['username']}")
+                print(f"Password: {pw_hint(c['password'])}")
+                print(f"{'='*60}")
+                for i, item in enumerate(c['items'], 1):
+                    print(f"\n  [{i}] {item['name']}")
+                    for uri in item.get('login', {}).get('uris', []):
+                        print(f"      → {uri.get('uri', '')[:70]}")
+
+        elif action == 'merge':
+            if len(parts) < 2:
+                print("Usage: merge N or merge N-M or merge all")
+                continue
+
+            if parts[1] == 'all':
+                indices = list(range(1, len(candidates) + 1))
+            else:
+                indices = parse_range(parts[1], len(candidates))
+
+            if not indices:
+                print("No valid candidates specified")
+                continue
+
+            print(f"\nMerging {len(indices)} candidates...")
+            merged = 0
+            deleted = 0
+            to_remove = []
+
+            for idx in indices:
+                c = candidates[idx - 1]
+                success, del_count = merge_candidate(c)
+                if success:
+                    print(f"  ✓ {c['domain']:<30} ({len(c['items'])} → 1)")
+                    merged += 1
+                    deleted += del_count
+                    to_remove.append(idx - 1)
+                else:
+                    print(f"  ✗ {c['domain']:<30} (failed)")
+
+            for idx in sorted(to_remove, reverse=True):
+                candidates.pop(idx)
+
+            print(f"\nMerged: {merged}, Deleted: {deleted}, Remaining: {len(candidates)}")
+
+        elif action == 'skip' and len(parts) > 1:
+            indices = parse_range(parts[1], len(candidates))
+            for idx in sorted(indices, reverse=True):
+                c = candidates.pop(idx - 1)
+                print(f"Skipped: {c['domain']}")
+
+    print(f"\nDone. {len(candidates)} candidates remaining.")
+
+
+# ============================================================================
+# Simplification Mode
+# ============================================================================
+
+def find_simplification_candidates(items, decisions):
+    """
+    Find items that could be simplified.
+    Returns list of candidates with conflict info.
+    """
+    candidates = []
+
+    # Group items by what they would simplify to
+    by_etld1 = defaultdict(list)
+
+    for item in items:
+        if item.get('type') != 1:
+            continue
+
+        login = item.get('login', {})
+
+        for uri in login.get('uris', []):
+            uri_str = uri.get('uri', '')
+            if not uri_str:
+                continue
+
+            etld1 = get_etld1(uri_str)
+            subdomain = get_subdomain(uri_str)
+            full_domain = get_full_domain(uri_str)
+
+            if not etld1:
+                continue
+
+            # Check if this can be simplified
+            classification = can_simplify_subdomain(subdomain, etld1)
+
+            # Check saved decisions
+            if full_domain and full_domain in decisions.get('subdomains', {}):
+                classification = decisions['subdomains'][full_domain]
+            elif etld1 in decisions.get('multi_tenant', {}):
+                classification = decisions['multi_tenant'][etld1]
+
+            by_etld1[etld1].append({
+                'item': item,
+                'uri': uri_str,
+                'subdomain': subdomain,
+                'full_domain': full_domain,
+                'classification': classification,
+                'username': login.get('username'),
+                'password': login.get('password'),
+            })
+            break  # Only consider first URI per item
+
+    # Get resolved domains to skip
+    resolved = set(decisions.get('resolved', []))
+
+    # Analyze each domain group
+    for etld1, entries in by_etld1.items():
+        # Skip if already marked as resolved
+        if etld1 in resolved:
+            continue
+
+        # Skip if all entries are already simplified
+        if all(is_item_already_simplified(e['item'], etld1) for e in entries):
+            # Check if there are duplicate credentials that need merging
+            creds = set((e['username'], e['password']) for e in entries)
+            if len(creds) == len(entries):
+                continue  # All simplified and no duplicates
+
+        simplifiable = [e for e in entries if e['classification'] == 'simplify']
+        keepable = [e for e in entries if e['classification'] == 'keep']
+        askable = [e for e in entries if e['classification'] == 'ask']
+
+        if not simplifiable and not askable:
+            continue  # Nothing to simplify
+
+        # Detect conflicts
+        creds = set()
+        for e in entries:
+            creds.add((e['username'], e['password']))
+
+        conflict_type = None
+        if len(creds) > 1:
+            # Check if same user different passwords, or different users
+            users = set(e['username'] for e in entries)
+            if len(users) == 1:
+                conflict_type = 'stale_creds'  # Same user, different passwords
+            else:
+                conflict_type = 'multi_user'  # Different users
+
+        candidates.append({
+            'etld1': etld1,
+            'entries': entries,
+            'simplifiable': simplifiable,
+            'keepable': keepable,
+            'askable': askable,
+            'conflict_type': conflict_type,
+            'cred_count': len(creds),
+        })
+
+    # Sort by complexity (conflicts first, then by count)
+    candidates.sort(key=lambda c: (c['conflict_type'] is None, -len(c['entries'])))
+
+    return candidates
+
+
+def display_simplification_list(candidates, start=0, count=40):
+    """Display simplification candidates in a table."""
+    end = min(start + count, len(candidates))
+
+    print(f"\n{'#':>3} {'Domain':<28} {'Entries':>7} {'Simplify':>8} {'Keep':>6} {'Ask':>5} {'Conflict':<15}")
+    print("=" * 85)
+
+    for i, c in enumerate(candidates[start:end], start + 1):
+        conflict = c['conflict_type'] or '-'
+        if c['conflict_type'] == 'multi_user':
+            conflict = f"multi-user ({c['cred_count']})"
+        elif c['conflict_type'] == 'stale_creds':
+            conflict = 'stale creds'
+
+        print(f"{i:>3} {c['etld1']:<28} {len(c['entries']):>7} {len(c['simplifiable']):>8} {len(c['keepable']):>6} {len(c['askable']):>5} {conflict:<15}")
+
+    print("=" * 85)
+    print(f"Showing {start+1}-{end} of {len(candidates)} candidates")
+
+
+def show_simplification_detail(c):
+    """Show detailed info about a simplification candidate."""
+    print(f"\n{'='*70}")
+    print(f"Domain: {c['etld1']}")
+    print(f"Conflict: {c['conflict_type'] or 'None'}")
+    print(f"{'='*70}")
+
+    for i, e in enumerate(c['entries'], 1):
+        status = e['classification'].upper()
+        user = e['username'] or '(none)'
+        pw = pw_hint(e['password'])
+        print(f"\n  [{i}] {e['item']['name']}")
+        print(f"      Status: {status}")
+        print(f"      User: {user:<30} Pass: {pw}")
+        print(f"      URI: {e['uri'][:60]}...")
+
+
+def execute_simplification(c, decisions, dry_run=False):
+    """
+    Execute simplification for a candidate.
+    - Rename items to eTLD+1
+    - Simplify URIs (strip paths)
+    - Merge if same credentials
+    """
+    etld1 = c['etld1']
+    entries = c['entries']
+
+    # Quick check: are all items already simplified?
+    all_simplified = all(is_item_already_simplified(e['item'], etld1) for e in entries)
+    if all_simplified and len(entries) == len(set((e['username'], e['password']) for e in entries)):
+        # All items already have correct name and URIs, and no duplicates to merge
+        return True  # Skip silently
+
+    # Group by credentials
+    by_creds = defaultdict(list)
+    for e in entries:
+        key = (e['username'], e['password'])
+        by_creds[key].append(e)
+
+    changes = []
+    deletes = []
+
+    for creds, group in by_creds.items():
+        if len(group) == 1:
+            # Single entry - check if already simplified
+            e = group[0]
+            if is_item_already_simplified(e['item'], etld1):
+                continue  # Skip, already done
+            changes.append({
+                'item_id': e['item']['id'],
+                'new_name': etld1,
+                'simplify_uris': True,
+            })
+        else:
+            # Multiple entries with same creds - merge
+            primary = group[0]
+            changes.append({
+                'item_id': primary['item']['id'],
+                'new_name': etld1,
+                'simplify_uris': True,
+                'merge_uris_from': [e['item']['id'] for e in group[1:]],
+            })
+            for e in group[1:]:
+                deletes.append(e['item']['id'])
+
+    # Nothing to do?
+    if not changes and not deletes:
+        return True
+
+    if dry_run:
+        print(f"  Would rename {len(changes)} items to '{etld1}'")
+        if deletes:
+            print(f"  Would delete {len(deletes)} duplicates")
+        return True
+
+    # Execute changes
+    for change in changes:
+        item = run_bw(['get', 'item', change['item_id']])
+        if not item:
+            continue
+
+        item['name'] = change['new_name']
+
+        if change.get('simplify_uris'):
+            for uri in item.get('login', {}).get('uris', []):
+                uri['uri'] = simplify_uri(uri.get('uri', ''))
+
+        if change.get('merge_uris_from'):
+            seen = set(u.get('uri') for u in item.get('login', {}).get('uris', []))
+            for other_id in change['merge_uris_from']:
+                other = run_bw(['get', 'item', other_id])
+                if other:
+                    for uri in other.get('login', {}).get('uris', []):
+                        simplified = simplify_uri(uri.get('uri', ''))
+                        if simplified and simplified not in seen:
+                            seen.add(simplified)
+                            item['login']['uris'].append({'uri': simplified})
+
+        encoded = base64.b64encode(json.dumps(item).encode()).decode()
+        subprocess.run(['bw', 'edit', 'item', change['item_id'], encoded],
+                      capture_output=True, text=True)
+
+    # Delete merged items
+    for item_id in deletes:
+        subprocess.run(['bw', 'delete', 'item', item_id], capture_output=True, text=True)
+
+    print(f"  ✓ {etld1}: renamed {len(changes)}, deleted {len(deletes)}")
+    return True
+
+
+def show_candidate_detail(c, index, total):
+    """Show detailed info about a candidate for wizard mode."""
+    print(f"\n{'='*70}")
+    print(f"=== {c['etld1']} ({index}/{total}) ===")
+    print(f"{'='*70}")
+
+    entries = c['entries']
+    for i, e in enumerate(entries, 1):
+        user = e['username'] or '(none)'
+        pw = pw_hint(e['password'])
+        modified = e['item'].get('revisionDate', '')[:10] if e['item'].get('revisionDate') else '?'
+        print(f"\n  [{i}] {e['item']['name']}")
+        print(f"      User: {user}")
+        print(f"      Pass: {pw}  (modified: {modified})")
+        print(f"      URI:  {e['uri'][:60]}...")
+
+
+def wizard_merge_entries(c, indices, decisions, dry_run=False):
+    """
+    Interactively merge specified entries.
+    Returns updated candidate or None if merge failed/cancelled.
+    """
+    entries = c['entries']
+    to_merge = [entries[i-1] for i in indices]
+
+    if len(to_merge) < 2:
+        print("Need at least 2 entries to merge.")
+        return None
+
+    print(f"\nMerging entries {indices}: (enter 'c' to cancel)")
+
+    # Collect unique values
+    usernames = list(dict.fromkeys(e['username'] for e in to_merge if e['username']))
+    passwords = list(dict.fromkeys(e['password'] for e in to_merge if e['password']))
+
+    # Choose username
+    if len(usernames) == 0:
+        final_user = None
+    elif len(usernames) == 1:
+        final_user = usernames[0]
+        print(f"  User: {final_user}")
+    else:
+        print(f"  Users found:")
+        for i, u in enumerate(usernames, 1):
+            print(f"    [{i}] {u}")
+        try:
+            choice = input(f"  Pick user [1-{len(usernames)}, c=cancel]: ").strip()
+            if choice.lower() in ('c', 'cancel', 'q'):
+                print("  Cancelled.")
+                return None
+            final_user = usernames[int(choice) - 1]
+        except:
+            print("  Invalid choice, using first.")
+            final_user = usernames[0]
+
+    # Choose password
+    if len(passwords) == 0:
+        final_pass = None
+    elif len(passwords) == 1:
+        final_pass = passwords[0]
+        print(f"  Pass: {pw_hint(final_pass)}")
+    else:
+        print(f"  Passwords found:")
+        for i, p in enumerate(passwords, 1):
+            # Show which entries have this password
+            has_pw = [str(j+1) for j, e in enumerate(to_merge) if e['password'] == p]
+            mod_dates = [e['item'].get('revisionDate', '')[:10] for e in to_merge if e['password'] == p]
+            print(f"    [{i}] {pw_hint(p)} (entries {','.join(has_pw)}, modified: {', '.join(mod_dates)})")
+        try:
+            choice = input(f"  Pick password [1-{len(passwords)}, c=cancel]: ").strip()
+            if choice.lower() in ('c', 'cancel', 'q'):
+                print("  Cancelled.")
+                return None
+            final_pass = passwords[int(choice) - 1]
+        except:
+            print("  Invalid choice, using first.")
+            final_pass = passwords[0]
+
+    # Collect all URIs
+    all_uris = []
+    seen_uris = set()
+    for e in to_merge:
+        uri = simplify_uri(e['uri'])
+        if uri and uri not in seen_uris:
+            seen_uris.add(uri)
+            all_uris.append({'uri': uri})
+
+    print(f"  URIs: combining {len(all_uris)} unique URIs")
+    print(f"  Result: {c['etld1']} / {final_user} / {pw_hint(final_pass)}")
+
+    confirm = input("  Proceed? [Y/n/c]: ").strip().lower()
+    if confirm in ('n', 'c', 'cancel'):
+        print("  Cancelled.")
+        return None
+
+    if dry_run:
+        print("  [DRY RUN] Would merge these entries.")
+        return None
+
+    # Execute merge: update first entry, delete the rest
+    primary_entry = to_merge[0]
+    primary = run_bw(['get', 'item', primary_entry['item']['id']])
+    if not primary:
+        print("  Failed to get primary item.")
+        return None
+
+    primary['name'] = c['etld1']
+    primary['login']['username'] = final_user
+    primary['login']['password'] = final_pass
+    primary['login']['uris'] = all_uris
+
+    encoded = base64.b64encode(json.dumps(primary).encode()).decode()
+    result = subprocess.run(['bw', 'edit', 'item', primary['id'], encoded],
+                          capture_output=True, text=True)
+
+    if result.returncode != 0:
+        print(f"  Failed to update: {result.stderr}")
+        return None
+
+    # Delete merged entries
+    for e in to_merge[1:]:
+        subprocess.run(['bw', 'delete', 'item', e['item']['id']],
+                      capture_output=True, text=True)
+
+    print(f"  ✓ Merged {len(to_merge)} entries into 1")
+
+    # Update candidate - remove merged entries, update first one
+    new_entries = []
+    merged_ids = set(e['item']['id'] for e in to_merge[1:])
+    for e in entries:
+        if e['item']['id'] not in merged_ids:
+            if e['item']['id'] == primary_entry['item']['id']:
+                # Update the primary entry in our local state
+                e['item']['name'] = c['etld1']
+                e['username'] = final_user
+                e['password'] = final_pass
+                e['uri'] = all_uris[0]['uri'] if all_uris else ''
+            new_entries.append(e)
+
+    c['entries'] = new_entries
+    return c
+
+
+def wizard_delete_entries(c, indices, dry_run=False):
+    """Delete specified entries."""
+    entries = c['entries']
+    to_delete = [entries[i-1] for i in indices]
+
+    print(f"\nDeleting entries {indices}:")
+    for e in to_delete:
+        print(f"  - {e['item']['name']} (user={e['username']})")
+
+    confirm = input("Confirm delete? [y/N]: ").strip().lower()
+    if confirm != 'y':
+        print("  Cancelled.")
+        return c
+
+    if dry_run:
+        print("  [DRY RUN] Would delete these entries.")
+        return c
+
+    for e in to_delete:
+        result = subprocess.run(['bw', 'delete', 'item', e['item']['id']],
+                              capture_output=True, text=True)
+        if result.returncode == 0:
+            print(f"  ✓ Deleted {e['item']['name']}")
+        else:
+            print(f"  ✗ Failed to delete {e['item']['name']}")
+
+    # Remove from candidate
+    deleted_ids = set(e['item']['id'] for e in to_delete)
+    c['entries'] = [e for e in entries if e['item']['id'] not in deleted_ids]
+
+    return c
+
+
+def wizard_simplify_all(c, dry_run=False):
+    """Simplify all entries in a candidate (rename to eTLD+1, strip paths)."""
+    entries = c['entries']
+
+    if dry_run:
+        print(f"  [DRY RUN] Would rename {len(entries)} entries to '{c['etld1']}'")
+        return c
+
+    for e in entries:
+        item = run_bw(['get', 'item', e['item']['id']])
+        if not item:
+            continue
+
+        item['name'] = c['etld1']
+        for uri in item.get('login', {}).get('uris', []):
+            uri['uri'] = simplify_uri(uri.get('uri', ''))
+
+        encoded = base64.b64encode(json.dumps(item).encode()).decode()
+        subprocess.run(['bw', 'edit', 'item', item['id'], encoded],
+                      capture_output=True, text=True)
+
+        e['item']['name'] = c['etld1']
+        e['uri'] = simplify_uri(e['uri'])
+
+    print(f"  ✓ Renamed {len(entries)} entries to '{c['etld1']}'")
+    return c
+
+
+def interactive_simplify(candidates, decisions, dry_run=False):
+    """Interactive wizard mode - one candidate at a time."""
+    # Separate into conflicts and simple cases
+    with_conflicts = [c for c in candidates if c['conflict_type']]
+    without_conflicts = [c for c in candidates if not c['conflict_type']]
+
+    print(f"\nFound {len(candidates)} candidates:")
+    print(f"  - {len(with_conflicts)} with conflicts (need review)")
+    print(f"  - {len(without_conflicts)} simple (can auto-simplify)")
+
+    if without_conflicts:
+        resp = input(f"\nAuto-simplify {len(without_conflicts)} simple cases first? [Y/n]: ").strip().lower()
+        if resp != 'n':
+            print(f"\nSimplifying {len(without_conflicts)} simple candidates...")
+            for c in without_conflicts:
+                execute_simplification(c, decisions, dry_run=dry_run)
+            candidates = with_conflicts
+            save_decisions(decisions)
+            print(f"Done. {len(candidates)} candidates remaining for review.")
+
+    if not candidates:
+        print("\nNo candidates remaining!")
+        return
+
+    print("\n" + "="*70)
+    print("WIZARD MODE - Review each domain one at a time")
+    print("="*70)
+    print("\nCommands:")
+    print("  [n]ext       - Skip for now, come back later")
+    print("  [g]ood       - Simplify URLs, mark resolved, move to next")
+    print("  [r]ename     - Rename all entries to domain name (stay on this candidate)")
+    print("  [m]erge      - Merge all entries (or 'm 1,2' for specific ones)")
+    print("  [d]elete X   - Delete entry X")
+    print("  [l]ist       - Show overview of all remaining candidates")
+    print("  [q]uit       - Exit wizard")
+
+    idx = 0
+    skipped = []  # Track skipped candidates to re-add at end
+
+    while idx < len(candidates):
+        c = candidates[idx]
+        show_candidate_detail(c, idx + 1, len(candidates))
+
+        try:
+            cmd = input("\n> ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print("\nExiting.")
+            break
+
+        if not cmd or cmd == 'n' or cmd == 'next':
+            skipped.append(candidates.pop(idx))
+            # Don't increment idx since we removed current
+            if idx >= len(candidates):
+                idx = 0
+            continue
+
+        elif cmd == 'g' or cmd == 'good':
+            # Simplify all entries first, then mark as resolved
+            wizard_simplify_all(c, dry_run=dry_run)
+            decisions.setdefault('resolved', []).append(c['etld1'])
+            save_decisions(decisions)
+            print(f"  Marked {c['etld1']} as resolved.")
+            candidates.pop(idx)
+            if idx >= len(candidates):
+                idx = 0
+
+        elif cmd == 'r' or cmd == 'rename':
+            wizard_simplify_all(c, dry_run=dry_run)
+            save_decisions(decisions)
+            # Stay on same candidate to allow further actions
+
+        elif cmd.startswith('m') or cmd.startswith('merge'):
+            parts = cmd.replace(',', ' ').split()
+            try:
+                # Parse indices: "merge 1,2" or "m 1 2" or "merge 1,2,3"
+                # If just "m" or "merge" with no indices, merge all
+                indices = [int(p) for p in parts if p.isdigit()]
+                if not indices:
+                    indices = list(range(1, len(c['entries']) + 1))
+                if len(indices) >= 2:
+                    result = wizard_merge_entries(c, indices, decisions, dry_run=dry_run)
+                    if result:
+                        # Mark as resolved so it won't come back
+                        decisions.setdefault('resolved', []).append(c['etld1'])
+                        save_decisions(decisions)
+                        if len(result['entries']) <= 1:
+                            # Fully merged - move to next
+                            print(f"  Fully merged! Moving to next.")
+                            candidates.pop(idx)
+                            if idx >= len(candidates):
+                                idx = 0
+                else:
+                    print("  Usage: merge 1,2 or merge 1 2 3 (or just 'm' for all)")
+            except ValueError:
+                print("  Invalid indices. Usage: merge 1,2")
+
+        elif cmd.startswith('d') or cmd.startswith('delete'):
+            parts = cmd.replace(',', ' ').split()
+            try:
+                indices = [int(p) for p in parts if p.isdigit()]
+                if indices:
+                    wizard_delete_entries(c, indices, dry_run=dry_run)
+                    save_decisions(decisions)
+                    if len(c['entries']) <= 1:
+                        # Mark as resolved
+                        decisions.setdefault('resolved', []).append(c['etld1'])
+                        save_decisions(decisions)
+                        print(f"  Only 1 entry left. Moving to next.")
+                        candidates.pop(idx)
+                        if idx >= len(candidates):
+                            idx = 0
+                else:
+                    print("  Usage: delete 1 or delete 1,2")
+            except ValueError:
+                print("  Invalid indices. Usage: delete 1")
+
+        elif cmd == 'l' or cmd == 'list':
+            display_simplification_list(candidates, 0, min(40, len(candidates)))
+
+        elif cmd == 'q' or cmd == 'quit':
+            break
+
+        else:
+            print("  Unknown command. Use n/g/r/m/d/l/q")
+
+    # Re-add skipped candidates for next run
+    candidates.extend(skipped)
+    save_decisions(decisions)
+    print(f"\nDone. {len(candidates)} candidates remaining.")
+
+
+# ============================================================================
+# Main
+# ============================================================================
+
+def main():
+    parser = argparse.ArgumentParser(description='Bitwarden vault cleanup tool')
+    parser.add_argument('--list', action='store_true', help='Just list candidates')
+    parser.add_argument('--auto', action='store_true', help='Process all without prompting')
+    parser.add_argument('--dry-run', action='store_true', help='Show what would be done')
+    parser.add_argument('--simplify', action='store_true', help='URL simplification mode')
+    parser.add_argument('--reset-decisions', action='store_true', help='Clear saved decisions')
+    args = parser.parse_args()
+
+    if args.reset_decisions:
+        reset_decisions()
+        return
+
+    # Check vault status
+    status = run_bw(['status'])
+    if not status or status.get('status') != 'unlocked':
+        print("Error: Vault is not unlocked. Run 'bw unlock' first.")
+        sys.exit(1)
+
+    print("Fetching vault items...")
+    items = run_bw(['list', 'items'])
+    if not items:
+        print("Error: Could not fetch items")
+        sys.exit(1)
+
+    print(f"Found {len(items)} items, analyzing...")
+
+    if args.simplify:
+        # Simplification mode
+        decisions = load_decisions()
+        candidates = find_simplification_candidates(items, decisions)
+
+        if not candidates:
+            print("No simplification candidates found!")
+            sys.exit(0)
+
+        if args.list:
+            display_simplification_list(candidates, 0, len(candidates))
+        elif args.auto:
+            # Auto-simplify only non-conflicting candidates
+            non_conflict = [c for c in candidates if c['conflict_type'] is None]
+            print(f"\nSimplifying {len(non_conflict)} candidates (skipping {len(candidates) - len(non_conflict)} with conflicts)...")
+            for c in non_conflict:
+                execute_simplification(c, decisions, dry_run=args.dry_run)
+            save_decisions(decisions)
+            print(f"\n{'[DRY RUN] ' if args.dry_run else ''}Done.")
+        else:
+            interactive_simplify(candidates, decisions, dry_run=args.dry_run)
+    else:
+        # Duplicate merge mode (original behavior)
+        candidates = find_candidates(items)
+
+        if not candidates:
+            print("No duplicates found!")
+            sys.exit(0)
+
+        if args.list:
+            display_list(candidates, 0, len(candidates))
+        elif args.auto:
+            print(f"\nMerging {len(candidates)} candidates...")
+            merged = 0
+            deleted = 0
+            for c in candidates:
+                success, del_count = merge_candidate(c, dry_run=args.dry_run)
+                if success:
+                    print(f"  ✓ {c['domain']:<30} ({len(c['items'])} → 1)")
+                    merged += 1
+                    deleted += del_count
+            print(f"\n{'[DRY RUN] ' if args.dry_run else ''}Merged: {merged}, Deleted: {deleted}")
+        else:
+            interactive_mode(candidates)
+
+
+if __name__ == '__main__':
+    main()
