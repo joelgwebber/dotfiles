@@ -48,6 +48,16 @@ return {
         ['.'] = false,
       },
 
+      -- Suppress "Copilot is disabled" notifications for disabled filetypes
+      should_attach = function(bufnr)
+        local ft = vim.bo[bufnr].filetype
+        local disabled_filetypes = { yaml = true, markdown = true, help = true, gitcommit = true, gitrebase = true, hgcommit = true, svn = true, cvs = true }
+        if disabled_filetypes[ft] then
+          return false -- Silently don't attach
+        end
+        return true
+      end,
+
       copilot_node_command = '/opt/homebrew/bin/node', -- Node.js version must be > 18.x
       server_opts_overrides = {},
     }

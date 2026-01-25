@@ -341,6 +341,24 @@ tmap('<C-j>', '<C-\\><C-n><C-w>j', 'focus lower window (terminal)')
 tmap('<C-k>', '<C-\\><C-n><C-w>k', 'focus upper window (terminal)')
 tmap('<C-l>', '<C-\\><C-n><C-w>l', 'focus right window (terminal)')
 
+-- Terminal scrolling (exits terminal mode to scroll)
+tmap('<C-u>', '<C-\\><C-n><C-u>', 'Scroll up (terminal)')
+tmap('<C-d>', '<C-\\><C-n><C-d>', 'Scroll down (terminal)')
+
+-- Auto-enter insert mode when focusing a terminal buffer
+vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter' }, {
+  pattern = 'term://*',
+  callback = function()
+    vim.cmd 'startinsert'
+  end,
+})
+
+-- Universal leader key: <C-Space> works as leader in normal, insert, and terminal modes
+-- This allows using leader commands from any mode without remembering mode-specific escapes
+vim.keymap.set('n', '<C-Space>', '<leader>', { remap = true, desc = 'Leader (universal)' })
+vim.keymap.set('i', '<C-Space>', '<Esc><leader>', { remap = true, desc = 'Leader (universal)' })
+tmap('<C-Space>', '<C-\\><C-n><leader>', 'Leader (universal)')
+
 -- Music -------------------------------------------------------------------------------------------
 which.add {
   { '<leader>m', group = '[m]usic' },
