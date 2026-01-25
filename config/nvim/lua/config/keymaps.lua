@@ -345,6 +345,10 @@ tmap('<C-l>', '<C-\\><C-n><C-w>l', 'focus right window (terminal)')
 tmap('<C-u>', '<C-\\><C-n><C-u>', 'Scroll up (terminal)')
 tmap('<C-d>', '<C-\\><C-n><C-d>', 'Scroll down (terminal)')
 
+-- Terminal search (exits terminal mode to search)
+tmap('<C-/>', '<C-\\><C-n>/', 'Search forward (terminal)')
+tmap('<C-?>', '<C-\\><C-n>?', 'Search backward (terminal)')
+
 -- Auto-enter insert mode when focusing a terminal buffer
 vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter' }, {
   pattern = 'term://*',
@@ -357,7 +361,14 @@ vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter' }, {
 -- This allows using leader commands from any mode without remembering mode-specific escapes
 vim.keymap.set('n', '<C-Space>', '<leader>', { remap = true, desc = 'Leader (universal)' })
 vim.keymap.set('i', '<C-Space>', '<Esc><leader>', { remap = true, desc = 'Leader (universal)' })
-tmap('<C-Space>', '<C-\\><C-n><leader>', 'Leader (universal)')
+vim.keymap.set('t', '<C-Space>', function()
+  -- Exit terminal mode first
+  local esc = vim.api.nvim_replace_termcodes('<C-\\><C-n>', true, false, true)
+  vim.api.nvim_feedkeys(esc, 'nx', false)
+  -- Feed leader key with remap so it triggers leader timeout for additional keys
+  local leader = vim.g.mapleader or '\\'
+  vim.api.nvim_feedkeys(leader, 'm', false)
+end, { desc = 'Leader (universal)' })
 
 -- Music -------------------------------------------------------------------------------------------
 which.add {
