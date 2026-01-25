@@ -138,9 +138,25 @@ require('lazy').setup {
   { 'jbyuki/venn.nvim' },
   { 'Apeiros-46B/qalc.nvim' },
 
+  { -- Beads issue tracking integration
+    'joeblubaugh/nvim-beads',
+    config = function()
+      require('beads').setup {
+        keymaps = true,
+        auto_sync = false,
+        theme = 'dark',
+        auto_theme = true, -- Auto-detect from vim.o.background
+      }
+    end,
+  },
+
   -- Other plugins with more configuration
   { import = 'plugins' },
+
+  { 'rocketsurgery-games/tree-sitter-grue' },
 }
+
+vim.filetype.add { extension = { grue = 'grue' } }
 
 require 'config.keymaps' -- Global key mappings
 require 'config.autocmds' -- Autocommands

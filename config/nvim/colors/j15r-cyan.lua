@@ -91,7 +91,7 @@ require('colors').apply('j15rcyan', {
     red = '#ff6666',
     green = '#82e3ba',
     yellow = '#ebcd91',
-    blue = '#598ab9', -- Muted blue for selections
+    blue = '#7a9fd9', -- Readable blue for URLs
     magenta = '#bb6d9b',
     cyan = '#8be9fd',
     white = '#d0d0d0',
@@ -99,7 +99,7 @@ require('colors').apply('j15rcyan', {
     bright_red = '#ff8888',
     bright_green = '#a0f0d0',
     bright_yellow = '#f0d8a8',
-    bright_blue = '#7aa0c9', -- Muted bright blue
+    bright_blue = '#9ab4e9', -- Brighter blue for URLs
     bright_magenta = '#ffb9e5',
     bright_cyan = '#a0f0ff',
     bright_white = '#fcfcfc',

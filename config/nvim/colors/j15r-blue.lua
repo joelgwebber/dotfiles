@@ -91,7 +91,7 @@ require('colors').apply('j15r', {
     red = '#ff4444',
     green = '#7abd70',
     yellow = '#f1fa8c',
-    blue = '#3a7a9a', -- Muted for selections
+    blue = '#6a9aca', -- Readable blue for URLs
     magenta = '#ff79c6',
     cyan = '#8be9fd',
     white = '#d4d4d4',
@@ -99,7 +99,7 @@ require('colors').apply('j15r', {
     bright_red = '#ff4444',
     bright_green = '#7abd70',
     bright_yellow = '#f1fa8c',
-    bright_blue = '#4a8aaa', -- Muted for selections
+    bright_blue = '#8ab4da', -- Brighter blue for URLs
     bright_magenta = '#ffc4ff',
     bright_cyan = '#8be9fd',
     bright_white = '#f0f0f0',

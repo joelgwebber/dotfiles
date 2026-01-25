@@ -72,5 +72,7 @@ token_count_estimator: CHAR_COUNT
 # If you want to maintain full control of the project configuration, create the project.yml file manually and then
 # instruct Serena to activate the project by its path for first-time activation.
 # NOTE: Make sure there are no name collisions in the names of registered projects.
-projects: []
+projects:
+- /Users/joel/src/rs/frotz-lm
+- /Users/joel/src/rs/tree-sitter-grue
 language_backend: LSP

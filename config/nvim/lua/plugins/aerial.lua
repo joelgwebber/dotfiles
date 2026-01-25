@@ -24,7 +24,7 @@ return {
 
       float = {
         border = 'single',
-        relative = 'editor',
+        relative = 'win',
         -- Set max_height to a reasonable maximum
         max_height = { 40, 0.9 },
         -- Remove height to let it auto-calculate between min and max

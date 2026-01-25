@@ -88,7 +88,6 @@ which.add {
 nmap('<leader>wd', '<cmd>q<cr>', '[w]indow [d]elete')
 nmap('<leader>ws', '<cmd>split<cr>', '[w]indow [s]plit')
 nmap('<leader>wv', '<cmd>vsplit<cr>', '[w]indow [v]ertical-split')
-nmap('<leader>w=', '<C-w>=', '[w]indow [=]ize')
 
 -- <C-hjkl> window navigation
 nmap('<C-h>', '<C-w><C-h>', 'focus left window')
@@ -102,11 +101,47 @@ nmap('<C-Right>', '4<C-w>>', 'Increase window vsize')
 nmap('<C-Down>', '2<C-w>-', 'Decrease window hsize')
 nmap('<C-Up>', '2<C-w>+', 'Increase window vsize')
 
+-- Window equalization by axis
+local function equalize_widths()
+  local wins = vim.api.nvim_tabpage_list_wins(0)
+  local heights = {}
+  for _, win in ipairs(wins) do
+    heights[win] = vim.api.nvim_win_get_height(win)
+  end
+  vim.cmd 'wincmd ='
+  for win, h in pairs(heights) do
+    if vim.api.nvim_win_is_valid(win) then
+      vim.api.nvim_win_set_height(win, h)
+    end
+  end
+end
+
+local function equalize_heights()
+  local wins = vim.api.nvim_tabpage_list_wins(0)
+  local widths = {}
+  for _, win in ipairs(wins) do
+    widths[win] = vim.api.nvim_win_get_width(win)
+  end
+  vim.cmd 'wincmd ='
+  for win, w in pairs(widths) do
+    if vim.api.nvim_win_is_valid(win) then
+      vim.api.nvim_win_set_width(win, w)
+    end
+  end
+end
+
+which.add {
+  { '<leader>=', group = '[=] equalize' },
+}
+nmap('<leader>=w', equalize_widths, '[=] equalize [w]idths')
+nmap('<leader>=h', equalize_heights, '[=] equalize [h]eights')
+nmap('<leader>==', '<C-w>=', '[=] equalize all')
+
 -- Terminal mode window resizing
 tmap('<C-Left>', '<C-\\><C-n>4<C-w><lt>a', 'Decrease window width (terminal)')
 tmap('<C-Right>', '<C-\\><C-n>4<C-w>>a', 'Increase window width (terminal)')
-tmap('<C-Down>', '<C-\\><C-n>2<C-w>+a', 'Increase window height (terminal)')
-tmap('<C-Up>', '<C-\\><C-n>2<C-w>-a', 'Decrease window height (terminal)')
+tmap('<C-Down>', '<C-\\><C-n>2<C-w>-a', 'Decrease window height (terminal)')
+tmap('<C-Up>', '<C-\\><C-n>2<C-w>+a', 'Increase window height (terminal)')
 
 -- Buffer controls ---------------------------------------------------------------------------------
 which.add {
@@ -116,7 +151,7 @@ nmap('<leader>bd', '<cmd>bdelete<cr>', '[b]uffer [d]elete')
 nmap('<leader>bD', '<cmd>bdelete!<cr>', '[b]uffer [D]elete!')
 nmap('<leader>by', '<cmd>let @+=expand("%:p")<cr>', '[b]uffer [y]ank path')
 nmap('<leader>bo', function()
-  local filepath = vim.fn.expand('%:p')
+  local filepath = vim.fn.expand '%:p'
   if filepath == '' then
     vim.notify('No file to open', vim.log.levels.WARN)
     return
@@ -331,13 +366,13 @@ which.add {
 
 -- Custom Copilot accept with debugging
 vim.keymap.set('i', '<C-Enter>', function()
-  require('config.utils').debug_log('C-Enter pressed in insert mode')
-  local suggestion = require('copilot.suggestion')
+  require('config.utils').debug_log 'C-Enter pressed in insert mode'
+  local suggestion = require 'copilot.suggestion'
   if suggestion.is_visible() then
-    require('config.utils').debug_log('Suggestion is visible, accepting')
+    require('config.utils').debug_log 'Suggestion is visible, accepting'
     suggestion.accept()
   else
-    require('config.utils').debug_log('No suggestion visible to accept')
+    require('config.utils').debug_log 'No suggestion visible to accept'
     -- Fallback to normal Enter behavior
     return '<Enter>'
   end
@@ -349,7 +384,7 @@ vim.api.nvim_create_user_command('CopilotDebug', function()
 end, { desc = 'Show Copilot debug information' })
 
 vim.api.nvim_create_user_command('CopilotCheckKeymap', function()
-  local utils = require('config.utils')
+  local utils = require 'config.utils'
   local keymap = utils.check_keymap('i', '<C-Enter>')
   if keymap then
     local info = {
@@ -366,8 +401,8 @@ vim.api.nvim_create_user_command('CopilotCheckKeymap', function()
 end, { desc = 'Check if C-Enter keymap exists' })
 
 vim.api.nvim_create_user_command('CopilotTestAccept', function()
-  require('config.utils').debug_log('Manual test of Copilot accept triggered')
-  local suggestion = require('copilot.suggestion')
+  require('config.utils').debug_log 'Manual test of Copilot accept triggered'
+  local suggestion = require 'copilot.suggestion'
   if suggestion.is_visible() then
     vim.notify('Suggestion visible - accepting', vim.log.levels.INFO)
     suggestion.accept()

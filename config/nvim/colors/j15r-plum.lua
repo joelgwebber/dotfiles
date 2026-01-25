@@ -91,7 +91,7 @@ require('colors').apply('j15r-plum', {
     red = '#D05A6E', -- Crimson
     green = '#86C166', -- Green
     yellow = '#D4A76A', -- Muted gold
-    blue = '#5a4a65', -- Muted purple for selections (less contrast)
+    blue = '#7a8ac8', -- Soft periwinkle blue (readable for URLs)
     magenta = '#F596AA', -- Pink
     cyan = '#7ac9c9', -- Soft cyan
     white = '#F7F1D5', -- Cream
@@ -99,7 +99,7 @@ require('colors').apply('j15r-plum', {
     bright_red = '#D05A6E', -- Crimson (same)
     bright_green = '#86C166', -- Green (same)
     bright_yellow = '#D4A76A', -- Muted gold
-    bright_blue = '#6a5a75', -- Slightly brighter muted purple
+    bright_blue = '#9aa8d8', -- Brighter periwinkle blue
     bright_magenta = '#F596AA', -- Pink (same)
     bright_cyan = '#91989F', -- Silver
     bright_white = '#F7F1D5', -- Cream (same)
