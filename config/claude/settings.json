@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "statusLine": {
+    "type": "command",
+    "command": "printf \"\\033[34m[%s]\\033[0m \\033[32m%s\\033[0m\" \"$(hostname -s)\" \"$(pwd | sed 's|.*/\\([^/]*/[^/]*/[^/]*/[^/]*\\)$|.../\\1|' | sed \"s|^$HOME|~|\")\""
+  },
+  "enabledPlugins": {
+    "beads@beads-marketplace": true,
+    "testbed@testbed-marketplace": true,
+    "typescript-lsp@claude-plugins-official": true,
+    "pyright-lsp@claude-plugins-official": true,
+    "gopls-lsp@claude-plugins-official": true,
+    "subtext@subtext-marketplace": true
+  },
+  "alwaysThinkingEnabled": true,
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(yarn *)",
+      "Bash(pnpm *)",
+      "Bash(go *)",
+      "Bash(python3 --version)",
+      "Bash(python3 -c *)",
+      "Bash(python3 -m *)",
+      "Bash(pytest *)",
+      "Bash(pip3 *)",
+      "Bash(brew *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "Bash(diff *)",
+      "Bash(which *)",
+      "Bash(type *)",
+      "Bash(man *)",
+      "Bash(make *)",
+      "Bash(cargo *)",
+      "Bash(rustc *)",
+      "Bash(nvim --headless *)",
+      "Bash(rg *)",
+      "Bash(fd *)",
+      "Bash(fzf *)",
+      "Bash(jq *)",
+      "Bash(yq *)",
+      "Bash(curl --help*)",
+      "Bash(mkdir *)",
+      "Bash(touch *)",
+      "Bash(cp *)",
+      "Bash(mv *)",
+      "Bash(chmod *)",
+      "Bash(ln *)",
+      "Bash(tree *)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(awk *)",
+      "Bash(sed *)",
+      "Bash(sort *)",
+      "Bash(uniq *)",
+      "Bash(xargs *)",
+      "Bash(tee *)",
+      "Read"
+    ],
+    "deny": [
+      "Bash(sudo *)",
+      "Bash(rm -rf *)",
+      "Bash(rm -fr *)",
+      "Bash(> /dev/*)",
+      "Bash(dd *)"
+    ]
+  },
+  "hooks": {
+    "PermissionRequest": [
+      {
+        "matchers": ["Bash", "Python"],
+        "handlers": [
+          {
+            "type": "prompt",
+            "prompt": "Evaluate if this command is safe. APPROVE if: (1) read-only operation, (2) writes only to project directory or /tmp, (3) standard dev tool (compilers, linters, test runners, package managers). BLOCK if: (1) uses sudo, (2) recursive delete outside project, (3) modifies system files, (4) accesses credentials/secrets. Return only valid JSON: {\"decision\": \"approve\"} or {\"decision\": \"block\", \"reason\": \"brief explanation\"}"
+          }
+        ]
+      }
+    ]
+  }
+}
