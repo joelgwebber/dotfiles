@@ -76,8 +76,8 @@ vim.opt.et = true
 -- Default shell.
 vim.opt.shell = 'zsh'
 
--- Wrap text at 120 columns (for 'gq').
-vim.opt.textwidth = 120
+-- Wrap text at 100 columns (for 'gq').
+vim.opt.textwidth = 100
 
 -- Less aggressive scroll offset.
 vim.opt.scrolloff = 4
