@@ -22,6 +22,10 @@
       "Bash(yarn *)",
       "Bash(pnpm *)",
       "Bash(go *)",
+      "Bash(bd *)",
+      "Bash(python --version)",
+      "Bash(python -c *)",
+      "Bash(python -m *)",
       "Bash(python3 --version)",
       "Bash(python3 -c *)",
       "Bash(python3 -m *)",
@@ -75,11 +79,11 @@
   "hooks": {
     "PermissionRequest": [
       {
-        "matchers": ["Bash", "Python"],
-        "handlers": [
+        "matcher": "Bash|Python",
+        "hooks": [
           {
             "type": "prompt",
-            "prompt": "Evaluate if this command is safe. APPROVE if: (1) read-only operation, (2) writes only to project directory or /tmp, (3) standard dev tool (compilers, linters, test runners, package managers). BLOCK if: (1) uses sudo, (2) recursive delete outside project, (3) modifies system files, (4) accesses credentials/secrets. Return only valid JSON: {\"decision\": \"approve\"} or {\"decision\": \"block\", \"reason\": \"brief explanation\"}"
+            "prompt": "Evaluate if this command is safe. APPROVE if: (1) read-only operation, (2) writes only to project directory or /tmp, (3) standard dev tool (compilers, linters, test runners, package managers). BLOCK if: (1) uses sudo, (2) recursive delete outside project, (3) modifies system files, (4) accesses credentials/secrets. Return JSON with decision object: {\"decision\": {\"behavior\": \"allow\"}} or {\"decision\": {\"behavior\": \"deny\", \"message\": \"reason\"}}"
           }
         ]
       }
