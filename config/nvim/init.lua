@@ -151,7 +151,8 @@ require('lazy').setup {
   },
 
   { -- Yaks task tracking
-    dir = '/Users/joel/src/yaks.nvim',
+    -- dir = '/Users/joel/src/yaks.nvim',
+    'joelgwebber/yaks.nvim',
     config = function()
       require('yaks').setup {
         split = 'horizontal',
