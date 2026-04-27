@@ -1,6 +1,6 @@
 # Zed Keymap Migration Notes
 
-Mapping nvim keybindings to Zed, cluster by cluster. Leader is `space` in both.
+Mapping nvim keybindings to Zed. See `~/.config/zed/keymap.json` for the live config.
 
 References:
 - [Zed key-bindings docs](https://zed.dev/docs/key-bindings)
@@ -8,112 +8,152 @@ References:
 - [anuragg-p/zed-nvim keymap.json](https://github.com/anuragg-p/zed-nvim/blob/main/keymap.json)
 - Source nvim config: `config/nvim/lua/config/keymaps.lua` + plugin configs
 
-## Cluster 1: Pane Navigation & Splits (done)
+## Leader scheme
 
-| Nvim | Zed Binding | Zed Action | Notes |
-|------|-------------|------------|-------|
-| `<C-h/j/k/l>` | `ctrl-h/j/k/l` | `workspace::ActivatePane*` | Also bound in Terminal context |
-| `<C-Left/Right>` | `ctrl-left/right` | `SendKeystrokes 4 ctrl-w </>` | Count prefix for larger step |
-| `<C-Up/Down>` | `ctrl-up/down` | `SendKeystrokes 2 ctrl-w +/-` | Count prefix for larger step |
-| `<leader>ws` | `space w s` | `pane::SplitDown` | |
-| `<leader>wv` | `space w v` | `pane::SplitRight` | |
-| `<leader>wd` | `space w d` | `pane::CloseActiveItem` | |
-| `<C-S-l>` (terminal) | `ctrl-shift-l` | `terminal::SendKeystroke ctrl-l` | Clear screen only; no scrollback clear in Zed |
+`cmd-space` is the canonical leader, working from any context. In vim normal mode,
+bare `space` is aliased to `cmd-space` via `SendKeystrokes`, so muscle memory from
+nvim still works. The alias is necessary because Zed's terminal and panel contexts
+eat bare keystrokes before the keymap system sees them; `cmd-` keys are processed at
+the OS level and reach Zed's action dispatch first.
 
-**Gaps:** No `<leader>==` equivalent (equalize panes) in Zed.
+## Pane navigation, resizing, and tab management
 
-## Cluster 2: Code / LSP Navigation (done)
+Per-context blocks are required for non-Editor contexts (Terminal, ImageViewer,
+ProjectPanel, GitPanel) because they consume keys before the keymap system unless
+explicitly overridden.
 
-### Goto
+| Keys | Action | Notes |
+|------|--------|-------|
+| `ctrl-h/j/k/l` | `workspace::ActivatePane*` | Move focus among panes |
+| `ctrl-arrows` | resize panes | Editor/Image/Panel use `SendKeystrokes` (`10 ctrl-w </>`, `5 ctrl-w +/-`); Terminal uses `vim::ResizePane*` (SendKeystrokes is consumed by PTY) |
+| `ctrl-shift-h/j/k/l` | `workspace::MoveItemToPaneInDirection` | Move tab to pane in direction |
+| `ctrl-{` / `ctrl-}` | `pane::SwapItemLeft/Right` | Reorder tab within pane. Note: `ctrl-shift-[/]` is encoded as `ctrl-{`/`ctrl-}` because Zed only preserves `shift` for ASCII letters |
+| `q` (panels) | `workspace::ToggleLeftDock` | Dismiss project/git panels |
 
-| Nvim | Zed Binding | Zed Action | Notes |
-|------|-------------|------------|-------|
-| `gd` | `g d` | `editor::GoToDefinition` | Also a Zed vim default |
-| `gr` | `g r` | `editor::FindAllReferences` | |
-| `gI` | `g I` | `editor::GoToImplementation` | |
-| `gt` | `g t` | `editor::GoToTypeDefinition` | |
-| `gD` | `g D` | `editor::GoToDeclaration` | |
-| `K` | `shift-k` | `editor::Hover` | Also a Zed vim default |
+**Gaps:** No `<leader>==` (equalize panes) in Zed.
 
-### Code Actions
+## Code / LSP Navigation (vim normal mode)
 
-| Nvim | Zed Binding | Zed Action | Notes |
-|------|-------------|------------|-------|
-| `<leader>cr` | `space c r` | `editor::Rename` | |
-| `<leader>ca` | `space c a` | `editor::ToggleCodeActions` | |
-| `<leader>cf` | `space c f` | `editor::Format` | |
-| `<leader>cs` | `space c s` | `outline::Toggle` | Replaces Trouble lsp_document_symbols |
-| `<leader>co` | `space c o` | `outline::Toggle` | Replaces Aerial float; same as cs in Zed |
+| Nvim | Zed Binding | Zed Action |
+|------|-------------|------------|
+| `gd` | `g d` | `editor::GoToDefinition` |
+| `gr` | `g r` | `editor::FindAllReferences` |
+| `gI` | `g I` | `editor::GoToImplementation` |
+| `gt` | `g t` | `editor::GoToTypeDefinition` |
+| `gD` | `g D` | `editor::GoToDeclaration` |
+| `K` | `shift-k` | `editor::Hover` |
 
-**Gaps:** No float vs pinned outline distinction (Aerial). `<leader>cO` not mapped.
+### Code Actions (leader)
+
+| Nvim | Zed Binding | Zed Action |
+|------|-------------|------------|
+| `<leader>cr` | `space c r` | `editor::Rename` |
+| `<leader>ca` | `space c a` | `editor::ToggleCodeActions` |
+| `<leader>cf` | `space c f` | `editor::Format` |
+| `<leader>co` | `space c o` | `outline::Toggle` |
+
+**Gaps:** No `<leader>cs` (Trouble document symbols); merged into `co`.
 
 ### Diagnostics
 
-| Nvim | Zed Binding | Zed Action | Notes |
-|------|-------------|------------|-------|
-| `]d` / `[d` | `] d` / `[ d` | `editor::GoTo(Prev)Diagnostic` | |
-| `]e` / `[e` | `] e` / `[ e` | Same as `]d`/`[d` | No severity filter in Zed |
-| `]w` / `[w` | `] w` / `[ w` | Same as `]d`/`[d` | No severity filter in Zed |
-| `<leader>dd` | `space d d` | `diagnostics::Deploy` | Replaces Trouble diagnostics |
+| Nvim | Zed Binding | Zed Action |
+|------|-------------|------------|
+| `]d` / `[d` | `] d` / `[ d` | `editor::GoTo(Prev)Diagnostic` |
+| `<leader>dd` | `space d d` | `diagnostics::Deploy` |
 
 **Gaps:**
-- No severity-filtered navigation (`[e`/`]e` for errors only). All map to the same action.
-- `<leader>dt` (Trouble todo) has no equivalent.
-- `<leader>ds`/`<leader>dh` (enable/disable diagnostics) not available.
-- **Known bug** ([zed#40394](https://github.com/zed-industries/zed/issues/40394)): `GoToDiagnostic` skips `is_unnecessary` diagnostics (e.g. Rust unused-variable warnings) due to a hardcoded filter. Related-info children (info-level) are visited instead. Not configurable. Use diagnostics panel as workaround.
+- No severity-filtered navigation (`]e`/`]w` for errors/warnings only).
+- `<leader>dt` (Trouble todo), `<leader>ds`/`<leader>dh` (toggle diagnostics) not available.
+- **Known bug** ([zed#40394](https://github.com/zed-industries/zed/issues/40394)): `GoToDiagnostic` skips `is_unnecessary` diagnostics (e.g. Rust unused-variable warnings) due to a hardcoded filter. Workaround: use diagnostics panel.
 
-## Cluster 3: Search / Fuzzy Finding (done)
+## Search / Fuzzy Finding
 
-| Nvim | Zed Binding | Zed Action | Notes |
-|------|-------------|------------|-------|
-| `<leader>sf` | `space s f` | `file_finder::Toggle` | |
-| `<leader>sg` | `space s g` | `pane::DeploySearch` | Reuses existing search tab |
-| `<leader>s.` | `space s .` | `file_finder::Toggle` | Zed finder shows recents by default |
-| `<leader><leader>` | `space space` | `tab_switcher::ToggleAll` | All open files across all panes, sorted by recency |
-| `<leader>/` | `space /` | `buffer_search::Deploy` | Search in current buffer |
-| `<leader>sr` | `space s r` | `pane::DeploySearch` | Reuses existing search tab with previous query |
+| Nvim | Zed Binding | Zed Action |
+|------|-------------|------------|
+| `<leader>sf` | `space s f` | `file_finder::Toggle` |
+| `<leader>sg` | `space s g` | `pane::DeploySearch` |
+| `<leader><leader>` | `space space` | `tab_switcher::ToggleAll` (all panes) |
+| `<leader>/` | `space /` | `buffer_search::Deploy` |
 
 **Gaps:**
-- `<leader>sw` (grep current word) — no project-search-with-query action yet ([zed PR#47331](https://github.com/zed-industries/zed/pull/47331) pending). Vim `*`/`#` work for in-buffer word search.
-- `<leader>s/` (grep in open files only) — no "open files" scope in Zed search.
-- `<leader>sh` (help tags), `<leader>sk` (keymaps), `<leader>ss` (select picker), `<leader>sn` (nvim config files) — Telescope-specific, no equivalents.
+- `<leader>sw` (grep current word) — no project-search-with-query action ([zed PR#47331](https://github.com/zed-industries/zed/pull/47331) pending). `*`/`#` work for in-buffer.
+- `<leader>s/` (grep open files only) — no "open files" scope.
+- `<leader>sh`/`<leader>sk`/`<leader>ss`/`<leader>sn` — Telescope-specific, no equivalents.
+- `<leader>s.` / `<leader>sr` — no recents/resume picker.
 
-## Cluster 4: Buffer / Tab Management (planned)
+## Buffer / Path
 
-| Nvim | Zed Binding | Zed Action | Notes |
-|------|-------------|------------|-------|
-| `<leader>bd` | `space b d` | `pane::CloseActiveItem` | |
-| `<leader>by` | `space b y` | `editor::CopyPath` | |
-| `<leader>bo` | `space b o` | ? | Open with OS — may need SendKeystrokes |
-| `H` / `L` | `shift-h` / `shift-l` | `pane::ActivatePrev/NextItem` | Buffer cycling |
+| Nvim | Zed Binding | Zed Action |
+|------|-------------|------------|
+| `<leader>bd` | `space w d` | `pane::CloseActiveItem` (under `w`, not `b`) |
+| `<leader>by` | `space b y` | `workspace::CopyRelativePath` |
+| `<leader>bY` | `space b Y` | `workspace::CopyPath` (absolute) |
 
-## Cluster 5: File Explorer, Git, Comments (planned)
+**Gaps:**
+- `H` / `L` for buffer cycling — not bound; relies on `space space` tab switcher instead.
+- `<leader>bo` (open with OS) — not mapped.
 
-| Nvim | Zed Binding | Zed Action | Notes |
-|------|-------------|------------|-------|
-| `<leader>e` | `space e` | `project_panel::ToggleFocus` | |
-| `<C-n>` | `ctrl-n` | `project_panel::RevealInProjectPanel` | Locate current file |
-| `<leader>gb` | `space g b` | `editor::ToggleGitBlame` | |
-| `<leader>gg` | `space g g` | ? | LazyGit — open terminal + command? |
-| `<leader>/` | `space /` | `editor::ToggleComments` | Normal + visual mode |
+## File Explorer / Git / AI
 
-## Cluster 6: Terminal, Line Moving (planned)
+| Nvim | Zed Binding | Zed Action |
+|------|-------------|------------|
+| `<leader>e` | `space e` | `project_panel::ToggleFocus` |
+| `<C-n>` | `ctrl-n` | `pane::RevealInProjectPanel` |
+| `<leader>gg` | `space g g` | `git_panel::ToggleFocus` (not LazyGit; Zed's git panel) |
+| `<leader>gb` | `space g b` | `git::Branch` (branch picker, not blame) |
+| (n/a) | `space a a` | `agent::Toggle` (Zed AI agent panel) |
 
-| Nvim | Zed Binding | Zed Action | Notes |
-|------|-------------|------------|-------|
-| `<C-,>` | `ctrl-,` | `workspace::ToggleBottomDock` | |
-| `<leader>tf` | `space t f` | `workspace::NewCenterTerminal` | Float terminal |
-| `<C-S-j/k>` | `ctrl-shift-j/k` | `editor::MoveLineDown/Up` | |
+GitPanel-specific: `h` / `l` aliased to `left` / `right` for tree collapse/expand,
+matching nvim-tree muscle memory.
+
+**Gaps:**
+- `<leader>gB` (ToggleGitBlame) not bound.
+- LazyGit integration replaced by Zed's native git panel.
+- `<leader>/` toggle comments not bound (collides with buffer search).
+
+## Terminal
+
+| Nvim | Zed Binding | Zed Action |
+|------|-------------|------------|
+| `<C-,>` | `ctrl-,` | `workspace::ToggleBottomDock` |
+| `<leader>tt` | `space t t` | `terminal_panel::ToggleFocus` |
+| `<leader>th` | `space t h` | `workspace::ToggleBottomDock` |
+| `<leader>tf` | `space t f` | `workspace::NewCenterTerminal` (float) |
+| `<leader>tn` | `space t n` | `workspace::NewTerminal` |
+| `<leader>tr` | `space t r` | `terminal_panel::RenameTerminal` |
+| (Zed default) | `ctrl-space` | `terminal::ToggleViMode` (instead of awkward `ctrl-shift-space`) |
+
+**Known issue:** When terminal is in vi/select mode, system `cmd-`` ` (window cycling)
+sometimes gets eaten by the terminal's vi handler. Tried binding it explicitly to
+`workspace::ActivatePreviousWindow` but that only toggles between two windows and made
+window cycling worse — reverted. Probably a Zed bug where the vi handler intercepts
+cmd-modified keystrokes before action dispatch.
+
+## Universal
+
+| Keys | Action | Notes |
+|------|--------|-------|
+| `cmd-;` | `command_palette::Toggle` | Universal escape hatch from any context. Overridden in Editor too because default toggles line numbers |
 
 ## Not Mapped (no Zed equivalent)
 
 - **REPL** (`<leader>r*`) — no integrated REPL
 - **Xcodebuild** (`<leader>x*`) — platform-specific nvim plugin
-- **SuperCollider** (`<leader>mS*`) — niche
+- **SuperCollider** (`<leader>mS*`)
 - **Hex editor** (`<leader>hx`)
 - **JQ/FQ playground** (`<leader>jq`, `<leader>fq`)
-- **CSV view** — no equivalent
+- **CSV view**
 - **Image preview** (`<leader>i*`)
 - **Neotest details** — Zed's test runner is more basic
 - **Window equalize** (`<leader>=*`)
 - **Copilot suggestion cycling** (`<C-=>`/`<C-->`) — Zed handles inline completions differently
+- **Toggle comments via `<leader>/`** — Zed default is `cmd-/`; leader slash is taken by buffer search
+- **Line move (`<C-S-j/k>`)** — slot reused for `MoveItemToPaneInDirection`
+
+## Quirks worth remembering
+
+- **Space alias trick**: bare space in `VimControl` aliases to `cmd-space`, so leader bindings live under one canonical `Workspace` block.
+- **`ctrl-shift-[/]` syntax**: Zed only preserves shift for ASCII letters. For punctuation, use the shifted character: `ctrl-{` / `ctrl-}`.
+- **GitPanel always reports as "editing"**: don't qualify GitPanel context with `not_editing` — it'll never match.
+- **Terminal eats SendKeystrokes**: any binding that synthesizes vim ex commands won't reach vim from inside Terminal context. Bind real actions instead (e.g., `vim::ResizePane*`).
+- **which-key dismissal**: bare `space` bound to `vim::WrappingRight` was dismissing the popup; the alias to `cmd-space` works around it.
