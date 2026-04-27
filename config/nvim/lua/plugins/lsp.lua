@@ -9,33 +9,25 @@ return { -- LSP Configuration & Plugins
 
     -- Useful status updates for LSP.
     { 'j-hui/fidget.nvim', opts = {} },
-
-    -- `neodev` configures Lua LSP for your Neovim config, runtime and plugins
-    -- used for completion, annotations and signatures of Neovim apis
-    { 'folke/neodev.nvim', opts = {} },
   },
 
   config = function()
     vim.lsp.config.protols = {}
 
     -- Configure LSP floating windows to use single borders
-    vim.lsp.handlers['textDocument/hover'] = vim.lsp.with(
-      vim.lsp.handlers.hover, {
-        border = 'single'
-      }
-    )
-
-    vim.lsp.handlers['textDocument/signatureHelp'] = vim.lsp.with(
-      vim.lsp.handlers.signature_help, {
-        border = 'single'
-      }
-    )
-
-    vim.diagnostic.config({
-      float = {
-        border = 'single'
-      }
+    vim.lsp.handlers['textDocument/hover'] = vim.lsp.with(vim.lsp.handlers.hover, {
+      border = 'single',
     })
+
+    vim.lsp.handlers['textDocument/signatureHelp'] = vim.lsp.with(vim.lsp.handlers.signature_help, {
+      border = 'single',
+    })
+
+    vim.diagnostic.config {
+      float = {
+        border = 'single',
+      },
+    }
 
     --  This func gets run when an LSP attaches to a particular buffer.
     --    That is to say, every time a new file is opened that is associated with
@@ -114,6 +106,7 @@ return { -- LSP Configuration & Plugins
     local ensure_installed = vim.tbl_keys(servers or {})
     vim.list_extend(ensure_installed, {
       'stylua', -- Used to format Lua code
+      'codelldb', -- Used for Swift/iOS debugging via xcodebuild.nvim
     })
 
     require('mason-tool-installer').setup { ensure_installed = ensure_installed }
@@ -130,5 +123,20 @@ return { -- LSP Configuration & Plugins
         end,
       },
     }
+
+    -- sourcekit-lsp for Swift (ships with Xcode, not managed by Mason)
+    vim.lsp.config.sourcekit = {
+      cmd = { 'xcrun', 'sourcekit-lsp' },
+      filetypes = { 'swift' },
+      root_markers = { 'buildServer.json', 'Package.swift', '.xcodeproj', '.xcworkspace', '.git' },
+      capabilities = vim.tbl_deep_extend('force', {}, capabilities, {
+        workspace = {
+          didChangeWatchedFiles = {
+            dynamicRegistration = true,
+          },
+        },
+      }),
+    }
+    vim.lsp.enable 'sourcekit'
   end,
 }

@@ -37,4 +37,3 @@ claude mcp add --scope user --transport http context7 https://mcp.context7.com/m
 /plugin marketplace add steveyegge/beads
 /plugin install beads
 ```
-

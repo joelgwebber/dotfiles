@@ -1,0 +1,241 @@
+[
+  // Alias space → cmd-space in vim normal mode so the universal leader bindings work
+  // (also prevents vim::WrappingRight from conflicting with which-key)
+  {
+    "context": "VimControl && !menu",
+    "bindings": {
+      "space": ["workspace::SendKeystrokes", "cmd-space"],
+    },
+  },
+
+  // ==================================================================================
+  // Vim-specific bindings (g* motions, LSP, diagnostics — only meaningful in editor)
+  // ==================================================================================
+  {
+    "context": "vim_mode == normal && !VimWaiting && !menu",
+    "bindings": {
+      // Code / LSP Navigation
+      "g d": "editor::GoToDefinition",
+      "g r": "editor::FindAllReferences",
+      "g I": "editor::GoToImplementation",
+      "g t": "editor::GoToTypeDefinition",
+      "g D": "editor::GoToDeclaration",
+      "shift-k": "editor::Hover",
+
+      // Diagnostics navigation
+      "] d": "editor::GoToDiagnostic",
+      "[ d": "editor::GoToPreviousDiagnostic",
+
+      // Quick toggles (no leader)
+      "ctrl-,": "workspace::ToggleBottomDock",
+      "ctrl-n": "pane::RevealInProjectPanel",
+    },
+  },
+
+  // ==================================================================================
+  // Universal leader bindings (cmd-space)
+  // In vim normal mode, bare "space" aliases to "cmd-space" (see above),
+  // so these work as "space ..." from the editor and "cmd-space ..." from anywhere.
+  // ==================================================================================
+  {
+    "context": "Workspace",
+    "bindings": {
+      "cmd-;": "command_palette::Toggle",
+
+      // Splits & window management
+      "cmd-space w s": "pane::SplitDown",
+      "cmd-space w v": "pane::SplitRight",
+      "cmd-space w d": "pane::CloseActiveItem",
+
+      // Code actions (editor-specific, but harmless from other contexts)
+      "cmd-space c r": "editor::Rename",
+      "cmd-space c a": "editor::ToggleCodeActions",
+      "cmd-space c f": "editor::Format",
+      "cmd-space c o": "outline::Toggle",
+
+      // Buffer path
+      "cmd-space b y": "workspace::CopyRelativePath",
+      "cmd-space b shift-y": "workspace::CopyPath",
+
+      // Diagnostics panel
+      "cmd-space d d": "diagnostics::Deploy",
+
+      // Search / Fuzzy Finding
+      "cmd-space s f": "file_finder::Toggle",
+      "cmd-space s g": "pane::DeploySearch",
+      "cmd-space /": ["buffer_search::Deploy", { "focus": true }],
+      "cmd-space space": "tab_switcher::ToggleAll",
+
+      // File Explorer
+      "cmd-space e": "project_panel::ToggleFocus",
+
+      // Git
+      "cmd-space g g": "git_panel::ToggleFocus",
+      "cmd-space g b": "git::Branch",
+
+      // AI assistant
+      "cmd-space a a": "agent::Toggle",
+
+      // Terminal
+      "cmd-space t t": "terminal_panel::ToggleFocus",
+      "cmd-space t h": "workspace::ToggleBottomDock",
+      "cmd-space t f": "workspace::NewCenterTerminal",
+      "cmd-space t n": "workspace::NewTerminal",
+      "cmd-space t r": "terminal::RenameTerminal",
+    },
+  },
+  // cmd-; needs to override the default line-number toggle in Editor context
+  {
+    "context": "Editor",
+    "bindings": {
+      "cmd-;": "command_palette::Toggle",
+    },
+  },
+
+  // ==================================================================================
+  // Pane navigation, resizing, and tab management
+  //
+  // These need per-context blocks because non-editor contexts (Terminal, ImageViewer,
+  // panels) eat keys before Zed's keymap system unless explicitly overridden.
+  //
+  // Scheme:
+  //   ctrl-hjkl         → move focus among panes
+  //   ctrl-arrows        → resize panes
+  //   ctrl-shift-hjkl    → move tab to pane in direction
+  //   ctrl-{ / ctrl-}    → reorder tab within pane
+  // ==================================================================================
+
+  // --- Editor (vim normal mode) ---
+  {
+    "context": "vim_mode == normal && !VimWaiting && !menu",
+    "bindings": {
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-l": "workspace::ActivatePaneRight",
+      "ctrl-j": "workspace::ActivatePaneDown",
+      "ctrl-k": "workspace::ActivatePaneUp",
+      "ctrl-left": ["workspace::SendKeystrokes", "1 0 ctrl-w <"],
+      "ctrl-right": ["workspace::SendKeystrokes", "1 0 ctrl-w >"],
+      "ctrl-down": ["workspace::SendKeystrokes", "5 ctrl-w -"],
+      "ctrl-up": ["workspace::SendKeystrokes", "5 ctrl-w +"],
+      "ctrl-shift-h": [
+        "workspace::MoveItemToPaneInDirection",
+        { "direction": "left" },
+      ],
+      "ctrl-shift-l": [
+        "workspace::MoveItemToPaneInDirection",
+        { "direction": "right" },
+      ],
+      "ctrl-shift-j": [
+        "workspace::MoveItemToPaneInDirection",
+        { "direction": "down" },
+      ],
+      "ctrl-shift-k": [
+        "workspace::MoveItemToPaneInDirection",
+        { "direction": "up" },
+      ],
+      "ctrl-{": "pane::SwapItemLeft",
+      "ctrl-}": "pane::SwapItemRight",
+    },
+  },
+
+  // --- Terminal ---
+  {
+    "context": "Terminal",
+    "bindings": {
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-l": "workspace::ActivatePaneRight",
+      "ctrl-j": "workspace::ActivatePaneDown",
+      "ctrl-k": "workspace::ActivatePaneUp",
+      "ctrl-left": "vim::ResizePaneLeft",
+      "ctrl-right": "vim::ResizePaneRight",
+      "ctrl-down": "vim::ResizePaneDown",
+      "ctrl-up": "vim::ResizePaneUp",
+      "ctrl-shift-h": [
+        "workspace::MoveItemToPaneInDirection",
+        { "direction": "left" },
+      ],
+      "ctrl-shift-l": [
+        "workspace::MoveItemToPaneInDirection",
+        { "direction": "right" },
+      ],
+      "ctrl-shift-j": [
+        "workspace::MoveItemToPaneInDirection",
+        { "direction": "down" },
+      ],
+      "ctrl-shift-k": [
+        "workspace::MoveItemToPaneInDirection",
+        { "direction": "up" },
+      ],
+      "ctrl-{": "pane::SwapItemLeft",
+      "ctrl-}": "pane::SwapItemRight",
+      "ctrl-space": "terminal::ToggleViMode",
+    },
+  },
+
+  // --- Image viewer ---
+  {
+    "context": "ImageViewer",
+    "bindings": {
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-l": "workspace::ActivatePaneRight",
+      "ctrl-j": "workspace::ActivatePaneDown",
+      "ctrl-k": "workspace::ActivatePaneUp",
+      "ctrl-left": ["workspace::SendKeystrokes", "1 0 ctrl-w <"],
+      "ctrl-right": ["workspace::SendKeystrokes", "1 0 ctrl-w >"],
+      "ctrl-down": ["workspace::SendKeystrokes", "5 ctrl-w -"],
+      "ctrl-up": ["workspace::SendKeystrokes", "5 ctrl-w +"],
+      "ctrl-shift-h": [
+        "workspace::MoveItemToPaneInDirection",
+        { "direction": "left" },
+      ],
+      "ctrl-shift-l": [
+        "workspace::MoveItemToPaneInDirection",
+        { "direction": "right" },
+      ],
+      "ctrl-shift-j": [
+        "workspace::MoveItemToPaneInDirection",
+        { "direction": "down" },
+      ],
+      "ctrl-shift-k": [
+        "workspace::MoveItemToPaneInDirection",
+        { "direction": "up" },
+      ],
+      "ctrl-{": "pane::SwapItemLeft",
+      "ctrl-}": "pane::SwapItemRight",
+    },
+  },
+
+  // --- Project panel ---
+  {
+    "context": "ProjectPanel && not_editing",
+    "bindings": {
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-l": "workspace::ActivatePaneRight",
+      "ctrl-j": "workspace::ActivatePaneDown",
+      "ctrl-k": "workspace::ActivatePaneUp",
+      "ctrl-left": ["workspace::SendKeystrokes", "1 0 ctrl-w <"],
+      "ctrl-right": ["workspace::SendKeystrokes", "1 0 ctrl-w >"],
+      "ctrl-down": ["workspace::SendKeystrokes", "5 ctrl-w -"],
+      "ctrl-up": ["workspace::SendKeystrokes", "5 ctrl-w +"],
+      "q": "workspace::ToggleLeftDock",
+    },
+  },
+
+  // --- Git panel ---
+  {
+    "context": "GitPanel",
+    "bindings": {
+      "h": ["workspace::SendKeystrokes", "left"],
+      "l": ["workspace::SendKeystrokes", "right"],
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-l": "workspace::ActivatePaneRight",
+      "ctrl-j": "workspace::ActivatePaneDown",
+      "ctrl-k": "workspace::ActivatePaneUp",
+      "ctrl-left": ["workspace::SendKeystrokes", "1 0 ctrl-w <"],
+      "ctrl-right": ["workspace::SendKeystrokes", "1 0 ctrl-w >"],
+      "ctrl-down": ["workspace::SendKeystrokes", "5 ctrl-w -"],
+      "ctrl-up": ["workspace::SendKeystrokes", "5 ctrl-w +"],
+      "q": "workspace::ToggleLeftDock",
+    },
+  },
+]

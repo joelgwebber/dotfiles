@@ -1,18 +1,5 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "statusLine": {
-    "type": "command",
-    "command": "printf \"\\033[34m[%s]\\033[0m \\033[32m%s\\033[0m\" \"$(hostname -s)\" \"$(pwd | sed 's|.*/\\([^/]*/[^/]*/[^/]*/[^/]*\\)$|.../\\1|' | sed \"s|^$HOME|~|\")\""
-  },
-  "enabledPlugins": {
-    "beads@beads-marketplace": true,
-    "testbed@testbed-marketplace": true,
-    "typescript-lsp@claude-plugins-official": true,
-    "pyright-lsp@claude-plugins-official": true,
-    "gopls-lsp@claude-plugins-official": true,
-    "subtext@subtext-marketplace": true
-  },
-  "alwaysThinkingEnabled": true,
   "permissions": {
     "allow": [
       "Bash(git *)",
@@ -88,5 +75,34 @@
         ]
       }
     ]
-  }
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "input=$(cat); cwd=$(echo \"$input\" | jq -r '.workspace.current_dir'); branch=$(git -C \"$cwd\" branch --show-current 2>/dev/null); repo=$(git -C \"$cwd\" rev-parse --show-toplevel 2>/dev/null | xargs basename 2>/dev/null); short_path=$(echo \"$cwd\" | sed 's|.*/\\([^/]*/[^/]*/[^/]*/[^/]*\\)$|.../\\1|' | sed \"s|^$HOME|~|\"); if [ -n \"$branch\" ] && [ -n \"$repo\" ]; then printf \"\\033[34m[%s]\\033[0m \\033[32m%s\\033[0m \\033[33m%s\\033[0m \\033[35m(%s)\\033[0m\" \"$(hostname -s)\" \"$short_path\" \"$repo\" \"$branch\"; else printf \"\\033[34m[%s]\\033[0m \\033[32m%s\\033[0m\" \"$(hostname -s)\" \"$short_path\"; fi"
+  },
+  "enabledPlugins": {
+    "typescript-lsp@claude-plugins-official": true,
+    "pyright-lsp@claude-plugins-official": true,
+    "gopls-lsp@claude-plugins-official": true,
+    "yaks@yaks-marketplace": true,
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "atlassian@claude-plugins-official": true,
+    "notion@claude-plugins-official": true,
+    "playground@claude-plugins-official": true,
+    "subtext@subtext-marketplace": true,
+    "clangd-lsp@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "subtext-marketplace": {
+      "source": {
+        "source": "git",
+        "url": "https://github.com/fullstorydev/subtext.git"
+      },
+      "autoUpdate": true
+    }
+  },
+  "alwaysThinkingEnabled": true,
+  "skipDangerousModePermissionPrompt": true,
+  "editorMode": "vim",
+  "agentPushNotifEnabled": true
 }

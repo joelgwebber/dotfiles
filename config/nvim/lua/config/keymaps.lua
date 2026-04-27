@@ -280,6 +280,8 @@ end, 'Increment value')
 -- Git ---------------------------------------------------------------------------------------------
 which.add {
   { '<leader>g', group = '[g]it' },
+  { '<leader>gp', group = '[p]r' },
+  { '<leader>gi', group = '[i]ssue' },
 }
 nmap('<leader>gg', '<cmd>LazyGit<cr>', '[g]it Lazy[g]it')
 nmap('<leader>gb', '<cmd>GitBlameToggle<cr>', '[g]it [b]lame')
@@ -359,16 +361,16 @@ vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter' }, {
 
 -- Universal leader key: <C-Space> works as leader in normal, insert, and terminal modes
 -- This allows using leader commands from any mode without remembering mode-specific escapes
-vim.keymap.set('n', '<C-Space>', '<leader>', { remap = true, desc = 'Leader (universal)' })
-vim.keymap.set('i', '<C-Space>', '<Esc><leader>', { remap = true, desc = 'Leader (universal)' })
-vim.keymap.set('t', '<C-Space>', function()
-  -- Exit terminal mode first
-  local esc = vim.api.nvim_replace_termcodes('<C-\\><C-n>', true, false, true)
-  vim.api.nvim_feedkeys(esc, 'nx', false)
-  -- Feed leader key with remap so it triggers leader timeout for additional keys
-  local leader = vim.g.mapleader or '\\'
-  vim.api.nvim_feedkeys(leader, 'm', false)
-end, { desc = 'Leader (universal)' })
+-- vim.keymap.set('n', '<C-Space>', '<leader>', { remap = true, desc = 'Leader (universal)' })
+-- vim.keymap.set('i', '<C-Space>', '<Esc><leader>', { remap = true, desc = 'Leader (universal)' })
+-- vim.keymap.set('t', '<C-Space>', function()
+--   -- Exit terminal mode first
+--   local esc = vim.api.nvim_replace_termcodes('<C-\\><C-n>', true, false, true)
+--   vim.api.nvim_feedkeys(esc, 'nx', false)
+--   -- Feed leader key with remap so it triggers leader timeout for additional keys
+--   local leader = vim.g.mapleader or '\\'
+--   vim.api.nvim_feedkeys(leader, 'm', false)
+-- end, { desc = 'Leader (universal)' })
 
 -- Music -------------------------------------------------------------------------------------------
 which.add {

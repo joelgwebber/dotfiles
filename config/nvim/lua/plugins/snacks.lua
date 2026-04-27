@@ -1,5 +1,6 @@
 return {
   'folke/snacks.nvim',
+  dir = '~/src/snacks.nvim', -- Local dev version for testing fix
   priority = 1000,
   lazy = false,
 
