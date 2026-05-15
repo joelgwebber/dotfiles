@@ -74,7 +74,9 @@
       "cmd-space g b": "git::Branch",
 
       // AI assistant
-      "cmd-space a a": "agent::Toggle",
+      "cmd-space a a": "agent::ToggleFocus",
+      "cmd-space a t": "multi_workspace::ToggleWorkspaceSidebar", // [t]hreads sidebar
+      "cmd-space a s": "agents_sidebar::ToggleThreadSwitcher", // thread [s]witcher
 
       // Terminal
       "cmd-space t t": "terminal_panel::ToggleFocus",
@@ -95,19 +97,25 @@
   // ==================================================================================
   // Pane navigation, resizing, and tab management
   //
-  // These need per-context blocks because non-editor contexts (Terminal, ImageViewer,
-  // panels) eat keys before Zed's keymap system unless explicitly overridden.
-  //
   // Scheme:
   //   ctrl-hjkl         → move focus among panes
   //   ctrl-arrows        → resize panes
   //   ctrl-shift-hjkl    → move tab to pane in direction
   //   ctrl-{ / ctrl-}    → reorder tab within pane
+  //
+  // The Workspace baseline below covers everything except Editor and Terminal.
+  // Excluded because:
+  //   - Editor in insert mode would lose vim's ctrl-h-as-backspace convention,
+  //     and the vim normal mode block handles editor pane nav properly
+  //   - Terminal forwards raw keys to the PTY and needs explicit re-binding
+  //     (and uses vim::ResizePane* directly because SendKeystrokes is eaten)
   // ==================================================================================
 
-  // --- Editor (vim normal mode) ---
+  // --- Workspace baseline (catches Markdown preview, SVG, CSV, image,
+  //     project/git panels, project search results, git diffs, etc.,
+  //     PLUS editors in vim normal mode) ---
   {
-    "context": "vim_mode == normal && !VimWaiting && !menu",
+    "context": "(Workspace && !Editor) || (vim_mode == normal && !VimWaiting && !menu)",
     "bindings": {
       "ctrl-h": "workspace::ActivatePaneLeft",
       "ctrl-l": "workspace::ActivatePaneRight",
@@ -139,6 +147,11 @@
   },
 
   // --- Terminal ---
+  // Workspace baseline now applies in Terminal too (no `!Terminal` exclusion).
+  // We only override the bindings that need PTY-aware treatment:
+  //   - ctrl-hjkl: Terminal otherwise forwards as control chars
+  //   - ctrl-arrows: Terminal eats SendKeystrokes, so use vim::ResizePane* directly
+  // ctrl-shift-hjkl and ctrl-{/} are served by Workspace baseline.
   {
     "context": "Terminal",
     "bindings": {
@@ -150,58 +163,14 @@
       "ctrl-right": "vim::ResizePaneRight",
       "ctrl-down": "vim::ResizePaneDown",
       "ctrl-up": "vim::ResizePaneUp",
-      "ctrl-shift-h": [
-        "workspace::MoveItemToPaneInDirection",
-        { "direction": "left" },
-      ],
-      "ctrl-shift-l": [
-        "workspace::MoveItemToPaneInDirection",
-        { "direction": "right" },
-      ],
-      "ctrl-shift-j": [
-        "workspace::MoveItemToPaneInDirection",
-        { "direction": "down" },
-      ],
-      "ctrl-shift-k": [
-        "workspace::MoveItemToPaneInDirection",
-        { "direction": "up" },
-      ],
-      "ctrl-{": "pane::SwapItemLeft",
-      "ctrl-}": "pane::SwapItemRight",
+      // Redundant with Workspace baseline above; uncomment if regression observed.
+      // "ctrl-shift-h": ["workspace::MoveItemToPaneInDirection", { "direction": "left" }],
+      // "ctrl-shift-l": ["workspace::MoveItemToPaneInDirection", { "direction": "right" }],
+      // "ctrl-shift-j": ["workspace::MoveItemToPaneInDirection", { "direction": "down" }],
+      // "ctrl-shift-k": ["workspace::MoveItemToPaneInDirection", { "direction": "up" }],
+      // "ctrl-{": "pane::SwapItemLeft",
+      // "ctrl-}": "pane::SwapItemRight",
       "ctrl-space": "terminal::ToggleViMode",
-    },
-  },
-
-  // --- Image viewer ---
-  {
-    "context": "ImageViewer",
-    "bindings": {
-      "ctrl-h": "workspace::ActivatePaneLeft",
-      "ctrl-l": "workspace::ActivatePaneRight",
-      "ctrl-j": "workspace::ActivatePaneDown",
-      "ctrl-k": "workspace::ActivatePaneUp",
-      "ctrl-left": ["workspace::SendKeystrokes", "1 0 ctrl-w <"],
-      "ctrl-right": ["workspace::SendKeystrokes", "1 0 ctrl-w >"],
-      "ctrl-down": ["workspace::SendKeystrokes", "5 ctrl-w -"],
-      "ctrl-up": ["workspace::SendKeystrokes", "5 ctrl-w +"],
-      "ctrl-shift-h": [
-        "workspace::MoveItemToPaneInDirection",
-        { "direction": "left" },
-      ],
-      "ctrl-shift-l": [
-        "workspace::MoveItemToPaneInDirection",
-        { "direction": "right" },
-      ],
-      "ctrl-shift-j": [
-        "workspace::MoveItemToPaneInDirection",
-        { "direction": "down" },
-      ],
-      "ctrl-shift-k": [
-        "workspace::MoveItemToPaneInDirection",
-        { "direction": "up" },
-      ],
-      "ctrl-{": "pane::SwapItemLeft",
-      "ctrl-}": "pane::SwapItemRight",
     },
   },
 
@@ -209,14 +178,6 @@
   {
     "context": "ProjectPanel && not_editing",
     "bindings": {
-      "ctrl-h": "workspace::ActivatePaneLeft",
-      "ctrl-l": "workspace::ActivatePaneRight",
-      "ctrl-j": "workspace::ActivatePaneDown",
-      "ctrl-k": "workspace::ActivatePaneUp",
-      "ctrl-left": ["workspace::SendKeystrokes", "1 0 ctrl-w <"],
-      "ctrl-right": ["workspace::SendKeystrokes", "1 0 ctrl-w >"],
-      "ctrl-down": ["workspace::SendKeystrokes", "5 ctrl-w -"],
-      "ctrl-up": ["workspace::SendKeystrokes", "5 ctrl-w +"],
       "q": "workspace::ToggleLeftDock",
     },
   },
@@ -227,15 +188,63 @@
     "bindings": {
       "h": ["workspace::SendKeystrokes", "left"],
       "l": ["workspace::SendKeystrokes", "right"],
-      "ctrl-h": "workspace::ActivatePaneLeft",
-      "ctrl-l": "workspace::ActivatePaneRight",
-      "ctrl-j": "workspace::ActivatePaneDown",
-      "ctrl-k": "workspace::ActivatePaneUp",
-      "ctrl-left": ["workspace::SendKeystrokes", "1 0 ctrl-w <"],
-      "ctrl-right": ["workspace::SendKeystrokes", "1 0 ctrl-w >"],
-      "ctrl-down": ["workspace::SendKeystrokes", "5 ctrl-w -"],
-      "ctrl-up": ["workspace::SendKeystrokes", "5 ctrl-w +"],
       "q": "workspace::ToggleLeftDock",
+    },
+  },
+
+  // ==================================================================================
+  // Agent panel (ACP threads — i.e. claude-acp via agent_servers)
+  //
+  // Strategy: scroll the conversation directly via the agent::ScrollOutput*
+  // actions, which Zed handles in BOTH the AcpThread (conversation pane) and
+  // its Editor child (composer). So you don't have to change focus to scroll
+  // — the thread scrolls underneath while you keep typing.
+  //
+  // Context inheritance: parent bindings DO propagate to children unless
+  // overridden. So bare keys (j/k/[[/etc.) bound on plain `AcpThread` would
+  // hijack typing in the composer. They go on `AcpThread && !Editor` so they
+  // only fire when the conversation pane is focused. Modifier-keyed
+  // bindings can stay on bare `AcpThread` — they don't conflict with typing
+  // and we want them inherited by the composer (one binding works from both).
+  //
+  // Note: agent::FocusUp/Down/Left/Right are declared in the agent_ui crate
+  // but never wired to handlers. Bindings to them silently no-op. Don't use.
+  // ==================================================================================
+
+  // Modifier-keyed scroll/exit on the conversation pane. Most are inherited
+  // by the composer, but Editor binds ctrl-d (Delete) by default so we have
+  // to re-bind on AcpThread > Editor below to override.
+  {
+    "context": "AcpThread",
+    "bindings": {
+      "ctrl-u": "agent::ScrollOutputPageUp",
+      "ctrl-d": "agent::ScrollOutputPageDown",
+      "ctrl-y": "agent::ScrollOutputLineUp",
+      "ctrl-e": "agent::ScrollOutputLineDown",
+      "ctrl-shift-u": "agent::ScrollOutputToTop",
+      "ctrl-shift-d": "agent::ScrollOutputToBottom",
+      "ctrl-{": "agent::ScrollOutputToPreviousMessage",
+      "ctrl-}": "agent::ScrollOutputToNextMessage",
+      "ctrl-j": "agent::ToggleFocus", // Gets you back into the editor
+    },
+  },
+
+  // Composer overrides — bindings the parent AcpThread loses to in this context.
+  // Why each one needs an explicit re-bind:
+  //   - ctrl-d   → Editor default: editor::Delete
+  //   - ctrl-y   → Editor default: editor::KillRingYank
+  //   - ctrl-e   → Editor default: editor::MoveToEndOfLine
+  //   - ctrl-u   → vim default: editor::DeleteToBeginningOfLine (insert mode)
+  //   - ctrl-shift-d → Zed default in AcpThread > Editor itself: git::Diff
+  // ctrl-shift-u inherits cleanly (no conflicting default).
+  {
+    "context": "AcpThread > Editor",
+    "bindings": {
+      "ctrl-u": "agent::ScrollOutputPageUp",
+      "ctrl-d": "agent::ScrollOutputPageDown",
+      "ctrl-y": "agent::ScrollOutputLineUp",
+      "ctrl-e": "agent::ScrollOutputLineDown",
+      "ctrl-shift-d": "agent::ScrollOutputToBottom",
     },
   },
 ]

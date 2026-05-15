@@ -7,48 +7,252 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "project_panel": {
+    "dock": "left",
+  },
+  "outline_panel": {
+    "dock": "left",
+  },
+  "collaboration_panel": {
+    "dock": "right",
+  },
+  "agent": {
+    "tool_permissions": {
+      "tools": {
+        "mcp:subtext-local:live-net-list": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:live-act-click": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:doc-update": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:doc-read": {
+          "default": "allow"
+        },
+        "mcp:Atlassian-Rovo-MCP:createJiraIssue": {
+          "default": "allow"
+        },
+        "mcp:Atlassian-Rovo-MCP:getVisibleJiraProjects": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:review-inspect": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:comment-resolve": {
+          "default": "allow"
+        },
+        "delete_path": {
+          "default": "allow"
+        },
+        "move_path": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:artifact-url": {
+          "default": "allow"
+        },
+        "fetch": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:review-close": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:review-view": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:review-open": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:live-disconnect": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:doc-close": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:doc-update": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:live-act-hover": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:live-act-keypress": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:live-eval-script": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:doc-attach": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:comment-add": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:live-view-screenshot": {
+          "default": "allow"
+        },
+        "mcp:subtext-tunnel:tunnel-disconnect": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:live-act-wait-for": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:live-view-navigate": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:live-act-fill": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:live-view-snapshot": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:live-act-click": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:live-view-new": {
+          "default": "allow"
+        },
+        "mcp:subtext-tunnel:tunnel-connect": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:doc-create": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:live-tunnel": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:live-connect": {
+          "default": "allow"
+        },
+        "create_directory": {
+          "default": "allow"
+        },
+        "mcp:Atlassian-Rovo-MCP:getJiraIssue": {
+          "default": "allow"
+        },
+        "mcp:Atlassian-Rovo-MCP:getAccessibleAtlassianResources": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:live-view-snapshot": {
+          "default": "allow",
+        },
+        "mcp:subtext-local:live-act-wait-for": {
+          "default": "allow",
+        },
+        "mcp:subtext-local:live-connect": {
+          "default": "allow",
+        },
+        "terminal": {
+          "default": "allow",
+        },
+        "mcp:subtext-local:live-view-new": {
+          "default": "allow",
+        },
+        "mcp:subtext-tunnel-local:tunnel-connect": {
+          "default": "allow",
+        },
+        "mcp:subtext-local:live-tunnel": {
+          "default": "allow",
+        },
+        "mcp:subtext-tunnel-local:tunnel-disconnect": {
+          "default": "allow",
+        },
+        "mcp:subtext-local:live-view-screenshot": {
+          "default": "allow",
+        },
+      },
+    },
+    "default_model": {
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6-latest",
+      "enable_thinking": true,
+      "effort": "high",
+    },
+    "sidebar_side": "right",
+    "play_sound_when_agent_done": "when_hidden",
+    "dock": "right",
+    "favorite_models": [],
+    "model_parameters": [],
+  },
   "ssh_connections": [
     {
       "host": "hearth",
       "args": [],
       "projects": [
         {
-          "paths": [
-            "/home/joel"
-          ]
+          "paths": ["/home/joel"],
         },
         {
-          "paths": [
-            "/home/joel/src/calcifer"
-          ]
-        }
-      ]
-    }
+          "paths": ["/home/joel/src/calcifer"],
+        },
+      ],
+    },
   ],
   "icon_theme": {
     "mode": "dark",
     "light": "Zed (Default)",
-    "dark": "Zed (Default)"
+    "dark": "Zed (Default)",
   },
   "terminal": {
-    "font_size": 14.0
+    "font_size": 12.0,
   },
   "git_panel": {
+    "dock": "right",
     "tree_view": true,
   },
   "agent_buffer_font_size": 12.0,
-  "agent_ui_font_size": 14.0,
+  "agent_ui_font_size": 16.0,
   "buffer_line_height": "standard",
   "agent_servers": {
     "claude-acp": {
       "type": "registry",
     },
   },
+  "context_servers": {
+    "Atlassian-Rovo-MCP": {
+      "enabled": true,
+      "remote": false,
+      "command": "npx",
+      "args": [
+        "mcp-remote@latest",
+        "https://mcp.atlassian.com/v1/mcp/authv2"
+      ]
+    },
+    "subtext-tunnel": {
+      "enabled": true,
+      "command": "npx",
+      "args": ["-y", "@fullstory/subtext-tunnel@latest"],
+    },
+    "subtext-tunnel-local": {
+      "enabled": false,
+      "command": "node",
+      "args": ["/Users/joel/src/fs/subtext/tunnel/build/src/index.js"],
+    },
+    "subtext-local": {
+      "enabled": true,
+      "url": "https://api.fullstory.test:8043/mcp/subtext",
+      "headers": {
+        "Authorization": "Bearer REPLACE_ME",
+      },
+    },
+    "subtext-staging": {
+      "enabled": true,
+      "url": "https://api.staging.fullstory.com/mcp/subtext",
+      "headers": {
+        "Authorization": "Bearer REPLACE_ME",
+      },
+    },
+    "chrome-devtools-mcp-zed": {
+      "enabled": false,
+      "remote": false,
+      "settings": {},
+    },
+  },
   "buffer_font_family": ".ZedMono",
   "vim_mode": true,
   "base_keymap": "VSCode",
-  "ui_font_size": 14.0,
-  "buffer_font_size": 14.0,
+  "ui_font_size": 15.0,
+  "buffer_font_size": 12.0,
   "theme": {
     "mode": "dark",
     "light": "Ayu Dark",
