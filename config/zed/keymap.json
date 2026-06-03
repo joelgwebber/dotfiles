@@ -236,6 +236,10 @@
   //   - ctrl-e   → Editor default: editor::MoveToEndOfLine
   //   - ctrl-u   → vim default: editor::DeleteToBeginningOfLine (insert mode)
   //   - ctrl-shift-d → Zed default in AcpThread > Editor itself: git::Diff
+  //   - ctrl-h   → vim insert default: editor::Backspace
+  //   - ctrl-j   → vim insert default: editor::Newline
+  //   - ctrl-k   → vim insert default: digraph prefix (no-op in Zed, but not pane nav)
+  //   - ctrl-l   → workspace baseline excludes Editor, so insert mode never sees pane nav
   // ctrl-shift-u inherits cleanly (no conflicting default).
   {
     "context": "AcpThread > Editor",
@@ -245,6 +249,10 @@
       "ctrl-y": "agent::ScrollOutputLineUp",
       "ctrl-e": "agent::ScrollOutputLineDown",
       "ctrl-shift-d": "agent::ScrollOutputToBottom",
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-l": "workspace::ActivatePaneRight",
+      "ctrl-j": "workspace::ActivatePaneDown",
+      "ctrl-k": "workspace::ActivatePaneUp",
     },
   },
 ]
