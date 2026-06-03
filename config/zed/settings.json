@@ -19,6 +19,84 @@
   "agent": {
     "tool_permissions": {
       "tools": {
+        "skill": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:doc-read": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:doc-create": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:doc-list": {
+          "default": "allow"
+        },
+        "copy_path": {
+          "default": "allow"
+        },
+        "write_file": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:live-view-inspect": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:live-log-list": {
+          "default": "allow"
+        },
+        "mcp:mcp-server-context7:resolve-library-id": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:artifact-upload": {
+          "default": "allow"
+        },
+        "mcp:Atlassian-Rovo-MCP:createIssueLink": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:live-log-get": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:live-log-list": {
+          "default": "allow"
+        },
+        "save_file": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:live-view-inspect": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:live-net-get": {
+          "default": "allow"
+        },
+        "restore_file_from_disk": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:live-act-fill": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:live-view-list": {
+          "default": "allow"
+        },
+        "mcp:Atlassian-Rovo-MCP:editJiraIssue": {
+          "default": "allow"
+        },
+        "mcp:Atlassian-Rovo-MCP:search": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:live-disconnect": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:doc-attach": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:live-eval-script": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:live-view-navigate": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:doc-list": {
+          "default": "allow"
+        },
         "mcp:subtext-local:live-net-list": {
           "default": "allow"
         },
@@ -163,10 +241,10 @@
       },
     },
     "default_model": {
-      "provider": "anthropic",
-      "model": "claude-sonnet-4-6-latest",
-      "enable_thinking": true,
       "effort": "high",
+      "provider": "anthropic",
+      "model": "claude-opus-4-8",
+      "enable_thinking": true,
     },
     "sidebar_side": "right",
     "play_sound_when_agent_done": "when_hidden",
@@ -180,13 +258,27 @@
       "args": [],
       "projects": [
         {
-          "paths": ["/home/joel"],
+          "paths": [
+            "/home/joel"
+          ]
         },
         {
-          "paths": ["/home/joel/src/calcifer"],
+          "paths": [
+            "/home/joel/src"
+          ]
         },
-      ],
-    },
+        {
+          "paths": [
+            "/home/joel/src/calcifer"
+          ]
+        },
+        {
+          "paths": [
+            "/home/joel/src/muckraker"
+          ]
+        }
+      ]
+    }
   ],
   "icon_theme": {
     "mode": "dark",
@@ -219,7 +311,7 @@
       ]
     },
     "subtext-tunnel": {
-      "enabled": true,
+      "enabled": false,
       "command": "npx",
       "args": ["-y", "@fullstory/subtext-tunnel@latest"],
     },
@@ -231,16 +323,10 @@
     "subtext-local": {
       "enabled": true,
       "url": "https://api.fullstory.test:8043/mcp/subtext",
-      "headers": {
-        "Authorization": "Bearer REPLACE_ME",
-      },
     },
     "subtext-staging": {
-      "enabled": true,
+      "enabled": false,
       "url": "https://api.staging.fullstory.com/mcp/subtext",
-      "headers": {
-        "Authorization": "Bearer REPLACE_ME",
-      },
     },
     "chrome-devtools-mcp-zed": {
       "enabled": false,
