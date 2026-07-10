@@ -175,10 +175,15 @@
   },
 
   // --- Project panel ---
+  // space → project_panel::Open must be re-declared here because the user
+  // keymap loads after defaults. At the same tree depth, the later binding
+  // wins, so without this the VimControl space→cmd-space alias above would
+  // fire instead (causing a which-key delay before the preview opens).
   {
     "context": "ProjectPanel && not_editing",
     "bindings": {
       "q": "workspace::ToggleLeftDock",
+      "space": "project_panel::Open",
     },
   },
 
@@ -189,6 +194,16 @@
       "h": ["workspace::SendKeystrokes", "left"],
       "l": ["workspace::SendKeystrokes", "right"],
       "q": "workspace::ToggleLeftDock",
+    },
+  },
+  // Same override rationale as ProjectPanel above: re-declare the default
+  // space→git::ToggleStaged so the user keymap wins over VimControl's alias.
+  // Scoped to ChangesList (the file list) so it doesn't leak into the
+  // commit message editor or branch selector.
+  {
+    "context": "GitPanel && ChangesList && !GitBranchSelector",
+    "bindings": {
+      "space": "git::ToggleStaged",
     },
   },
 
