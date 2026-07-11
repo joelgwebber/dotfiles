@@ -188,22 +188,59 @@
   },
 
   // --- Git panel ---
+  //
+  // IMPORTANT: bare character key bindings on plain `GitPanel` leak into the
+  // commit editor in vim INSERT mode. Insert mode has no Editor-level binding
+  // for unmodified character keys, so they bubble up the context tree and
+  // the GitPanel binding fires instead of typing the character. To prevent
+  // this, every bare-key binding must be scoped to either `!CommitEditor` or
+  // a more specific sub-context (ChangesList, etc.).
+  //
+  // Navigation scheme (mirrors the AcpThread ctrl-j/k pattern):
+  //   ctrl-j  from ChangesList  → git_panel::FocusEditor  (descend)
+  //   ctrl-k  from CommitEditor → git_panel::FocusChanges (ascend)
+  //   ctrl-h/l from CommitEditor → pane nav (exit the panel)
+
+  // q to close the dock — restricted to !CommitEditor so it doesn't fire
+  // when typing in the commit message.
   {
-    "context": "GitPanel",
+    "context": "GitPanel && !CommitEditor",
     "bindings": {
-      "h": ["workspace::SendKeystrokes", "left"],
-      "l": ["workspace::SendKeystrokes", "right"],
       "q": "workspace::ToggleLeftDock",
     },
   },
-  // Same override rationale as ProjectPanel above: re-declare the default
-  // space→git::ToggleStaged so the user keymap wins over VimControl's alias.
-  // Scoped to ChangesList (the file list) so it doesn't leak into the
-  // commit message editor or branch selector.
+
+  // Changes list: vim-style navigation + stage toggle.
+  // h/l use direct action names instead of SendKeystrokes.
+  // space re-declares the default so the user keymap beats the
+  // VimControl space→cmd-space alias defined earlier in this file.
   {
     "context": "GitPanel && ChangesList && !GitBranchSelector",
     "bindings": {
       "space": "git::ToggleStaged",
+      "j": "git_panel::NextEntry",
+      "k": "git_panel::PreviousEntry",
+      "h": "git_panel::CollapseSelectedEntry",
+      "l": "git_panel::ExpandSelectedEntry",
+      "ctrl-j": "git_panel::FocusEditor",
+    },
+  },
+
+  // Commit editor: intra-panel nav back to the changes list, plus pane-exit
+  // keys. Same rationale as AcpThread > Editor: the Editor context in insert
+  // mode doesn’t bind these keys, so without explicit overrides they’d fall
+  // back to undesirable parent actions:
+  //   ctrl-k → editor::KillRingCut
+  //   ctrl-h → editor::Backspace
+  //   ctrl-l → editor::ScrollCursorCenter
+  //   ctrl-j → editor::JoinLines
+  {
+    "context": "CommitEditor > Editor",
+    "bindings": {
+      "ctrl-k": "git_panel::FocusChanges",
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-l": "workspace::ActivatePaneRight",
+      "ctrl-j": "workspace::ActivatePaneDown",
     },
   },
 
