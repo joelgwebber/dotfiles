@@ -77,6 +77,8 @@
       "cmd-space a a": "agent::ToggleFocus",
       "cmd-space a t": "multi_workspace::ToggleWorkspaceSidebar", // [t]hreads sidebar
       "cmd-space a s": "agents_sidebar::ToggleThreadSwitcher", // thread [s]witcher
+      "cmd-space a n": "agent::ToggleNewThreadMenu", // [n]ew thread (incl. "from summary" fork)
+      "cmd-space a m": "agent::ToggleOptionsMenu", // [m]enu: model, settings, etc.
 
       // Terminal
       "cmd-space t t": "terminal_panel::ToggleFocus",
@@ -304,6 +306,7 @@
       "ctrl-{": "agent::ScrollOutputToPreviousMessage",
       "ctrl-}": "agent::ScrollOutputToNextMessage",
       "ctrl-j": "agent::ToggleFocus", // Gets you back into the editor
+      "ctrl-n": "agent::ToggleNewThreadMenu", // fork / new-from-summary
     },
   },
 
