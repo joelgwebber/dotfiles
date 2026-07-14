@@ -203,10 +203,36 @@
 
   // q to close the dock — restricted to !CommitEditor so it doesn't fire
   // when typing in the commit message.
+  // Note: git panel is docked RIGHT (see settings.json git_panel.dock),
+  // so this must be ToggleRightDock, not ToggleLeftDock.
   {
     "context": "GitPanel && !CommitEditor",
     "bindings": {
-      "q": "workspace::ToggleLeftDock",
+      "q": "workspace::ToggleRightDock",
+    },
+  },
+
+  // Git history (GitGraph context): ctrl-l/h for intentional pane exit.
+  //
+  // Without this, ctrl-l from within the history fires the Workspace
+  // baseline ActivatePaneRight, which has nowhere to go from the right
+  // dock and wraps back to the leftmost editor pane — looks like a
+  // "bounce". Explicitly binding ctrl-h/l here makes the direction clear
+  // and prevents the surprise wrap.
+  //
+  // Note: the focus-snapping-to-editor when the history first gains focus
+  // is Zed’s auto-preview behavior (it opens the selected commit’s diff
+  // in a split and that editor claims focus). That is application-level
+  // behavior that keymaps cannot prevent. If it becomes a problem,
+  // check for a Zed setting like "git_panel.auto_follow" or file a
+  // Zed issue.
+  {
+    "context": "GitGraph",
+    "bindings": {
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-l": "workspace::ActivatePaneLeft", // both directions exit left; nowhere to go right
+      "ctrl-j": "workspace::ActivatePaneDown",
+      "ctrl-k": "workspace::ActivatePaneUp",
     },
   },
 
