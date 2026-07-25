@@ -214,20 +214,20 @@
     },
   },
 
-  // Git history (GitGraph context): ctrl-l/h for intentional pane exit.
+  // Git panel pane-exit bindings (GitGraph / ChangesList).
   //
-  // Without this, ctrl-l from within the history fires the Workspace
-  // baseline ActivatePaneRight, which has nowhere to go from the right
-  // dock and wraps back to the leftmost editor pane — looks like a
-  // "bounce". Explicitly binding ctrl-h/l here makes the direction clear
-  // and prevents the surprise wrap.
+  // Root cause of the "bounce": when ctrl-l moves focus to the git panel
+  // via workspace::ActivatePaneRight, Zed re-dispatches the key event in
+  // the newly-focused context. Without an explicit binding, ctrl-l bubbles
+  // up to the Workspace baseline and fires ActivatePaneRight *again*.
+  // From the rightmost dock that wraps back to the leftmost editor pane —
+  // the visible "bounce".
   //
-  // Note: the focus-snapping-to-editor when the history first gains focus
-  // is Zed’s auto-preview behavior (it opens the selected commit’s diff
-  // in a split and that editor claims focus). That is application-level
-  // behavior that keymaps cannot prevent. If it becomes a problem,
-  // check for a Zed setting like "git_panel.auto_follow" or file a
-  // Zed issue.
+  // Fix: explicitly bind ctrl-l (and ctrl-h for symmetry) to
+  // ActivatePaneLeft in every git panel context. Since the git panel is
+  // in the RIGHT dock, the main editor is always to the LEFT, so both
+  // ctrl-h and ctrl-l should exit left. This matches the GitGraph fix
+  // and makes the ChangesList behave identically.
   {
     "context": "GitGraph",
     "bindings": {
@@ -242,6 +242,7 @@
   // h/l use direct action names instead of SendKeystrokes.
   // space re-declares the default so the user keymap beats the
   // VimControl space→cmd-space alias defined earlier in this file.
+  // ctrl-h/l exit the panel (see pane-exit comment above).
   {
     "context": "GitPanel && ChangesList && !GitBranchSelector",
     "bindings": {
@@ -251,23 +252,27 @@
       "h": "git_panel::CollapseSelectedEntry",
       "l": "git_panel::ExpandSelectedEntry",
       "ctrl-j": "git_panel::FocusEditor",
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-l": "workspace::ActivatePaneLeft",
     },
   },
 
   // Commit editor: intra-panel nav back to the changes list, plus pane-exit
   // keys. Same rationale as AcpThread > Editor: the Editor context in insert
-  // mode doesn’t bind these keys, so without explicit overrides they’d fall
+  // mode doesn't bind these keys, so without explicit overrides they'd fall
   // back to undesirable parent actions:
   //   ctrl-k → editor::KillRingCut
   //   ctrl-h → editor::Backspace
   //   ctrl-l → editor::ScrollCursorCenter
   //   ctrl-j → editor::JoinLines
+  // ctrl-l is ActivatePaneLeft (not Right) because the git panel is in the
+  // RIGHT dock — the main editor is always to the left.
   {
     "context": "CommitEditor > Editor",
     "bindings": {
       "ctrl-k": "git_panel::FocusChanges",
       "ctrl-h": "workspace::ActivatePaneLeft",
-      "ctrl-l": "workspace::ActivatePaneRight",
+      "ctrl-l": "workspace::ActivatePaneLeft",
       "ctrl-j": "workspace::ActivatePaneDown",
     },
   },
