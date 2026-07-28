@@ -203,14 +203,20 @@
   //   ctrl-k  from CommitEditor → git_panel::FocusChanges (ascend)
   //   ctrl-h/l from CommitEditor → pane nav (exit the panel)
 
-  // q to close the dock — restricted to !CommitEditor so it doesn't fire
-  // when typing in the commit message.
-  // Note: git panel is docked RIGHT (see settings.json git_panel.dock),
-  // so this must be ToggleRightDock, not ToggleLeftDock.
+  // Broad git-panel bindings — restricted to !CommitEditor so bare keys
+  // don't leak into the commit message editor (see IMPORTANT comment above).
+  // Note: git panel is docked RIGHT (settings.json git_panel.dock: right),
+  // so pane exits always go LEFT toward the main editor.
+  //
+  // ctrl-h/l here are a fallback for panel states where neither the
+  // GitGraph nor ChangesList contexts are active (e.g. history tab with a
+  // clean working tree). More specific contexts defined below override these.
   {
     "context": "GitPanel && !CommitEditor",
     "bindings": {
       "q": "workspace::ToggleRightDock",
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-l": "workspace::ActivatePaneLeft",
     },
   },
 
