@@ -74,7 +74,7 @@ vim.opt.sw = 2
 vim.opt.et = true
 
 -- Default shell.
-vim.opt.shell = 'zsh'
+-- vim.opt.shell = 'zsh'
 
 -- Wrap text at 100 columns (for 'gq').
 vim.opt.textwidth = 100
