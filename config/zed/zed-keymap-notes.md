@@ -10,11 +10,65 @@ References:
 
 ## Leader scheme
 
-`cmd-space` is the canonical leader, working from any context. In vim normal mode,
-bare `space` is aliased to `cmd-space` via `SendKeystrokes`, so muscle memory from
-nvim still works. The alias is necessary because Zed's terminal and panel contexts
-eat bare keystrokes before the keymap system sees them; `cmd-` keys are processed at
-the OS level and reach Zed's action dispatch first.
+`cmd-space` is the **canonical leader namespace** — every leader binding is defined
+exactly once under the `Workspace` block keyed on `cmd-space`. Physical keys only
+*alias* into that namespace via `SendKeystrokes`, so there's a single source of truth
+regardless of platform:
+
+| Surface | Physical key | Mechanism |
+|---------|--------------|-----------|
+| Editor, vim normal mode | bare `space` | `space` → `cmd-space` (`VimControl && !menu`) |
+| Anywhere, macOS | `cmd-space` | native — hits the canonical block directly |
+| Anywhere, Linux | `alt-space` | `alt-space` → `cmd-space` (`os == linux`) |
+
+The alias is necessary because Zed's terminal and panel contexts eat bare keystrokes
+before the keymap system sees them; `cmd-` keys are processed at the OS level and
+reach Zed's action dispatch first.
+
+### Cross-platform (Mac + Linux/Omarchy) with one keymap
+
+The same `keymap.json` is used on both OSes. The split is handled with Zed's `os`
+context attribute (`os == macos` / `os == linux`) rather than an external templating
+layer.
+
+**The general rule:** on Linux, Zed resolves `cmd-` to the **Super** key, and
+Omarchy/Hyprland + the IME grab a pile of Super chords before Zed ever sees them
+(`Super+Space` → Omarchy menu, `Super+;` → quick-phrase/emoji picker, …). So **any
+bare `cmd-X` binding is unreachable on Linux**, and we give each one an `alt-X`
+equivalent (unbound in Omarchy's defaults) in the `os == linux` blocks.
+
+There are **two flavors** of remap, and which to use depends on where `cmd-X` is defined:
+
+| Flavor | When | How | Example |
+|--------|------|-----|---------|
+| **Alias** | `cmd-X` is defined in *this* file | `alt-X` → `cmd-X` via `SendKeystrokes` (funnels into the one canonical binding; dispatched internally so it bypasses the compositor/IME grab) | `alt-space` → `cmd-space`; `alt-;` → `cmd-;` |
+| **Direct bind** | `cmd-X` is only a Zed *macOS default* (not in this file) | bind `alt-X` straight to the action | `alt-{`/`alt-}` → `pane::Activate{Previous,Next}Item` |
+
+Why the split: an alias only works if `cmd-X` actually resolves to something on Linux.
+For bindings this file owns (leader, `cmd-;`) it does. But Zed's Linux default keymap
+maps some actions to *different* keys than macOS — e.g. tab switching is `cmd-{`/`cmd-}`
+on macOS but `ctrl-pageup`/`ctrl-pagedown` on Linux — so there is no `cmd-{` binding on
+Linux to alias into (an alias would dispatch `cmd-}` and hit nothing). For those, bind
+the underlying action directly.
+
+Current Linux remaps (in the `os == linux` blocks):
+
+| Physical key (Linux) | Behavior | Flavor |
+|----------------------|----------|--------|
+| `alt-space` | leader namespace (`cmd-space`) | alias |
+| `alt-;` | `command_palette::Toggle` (`cmd-;`) | alias |
+| `alt-{` / `alt-}` | previous / next tab | direct bind |
+
+Gotchas worth remembering:
+- `os` is an attribute of the `Workspace` (root) node, so a bare `os == linux`
+  predicate matches from any focus. To combine it with a leaf context you must use
+  `>` (ancestor), e.g. `os == linux > Terminal` — **not** `Terminal && os == linux`,
+  since `&&` only combines predicates evaluated on the same node.
+- Terminal needs its own `os == linux > Terminal` copy of these aliases because the
+  terminal forwards `alt-*` combos to the PTY (as meta-<key>) before the
+  Workspace-level binding fires (same reason ctrl-hjkl need Terminal overrides).
+- To change the leader (or any aliased key) on a platform, edit the alias blocks —
+  never the canonical `cmd-*` bindings.
 
 ## Pane navigation, resizing, and tab management
 
@@ -247,7 +301,7 @@ cmd-modified keystrokes before action dispatch.
 
 | Keys | Action | Notes |
 |------|--------|-------|
-| `cmd-;` | `command_palette::Toggle` | Universal escape hatch from any context. Overridden in Editor too because default toggles line numbers |
+| `cmd-;` (macOS) / `alt-;` (Linux) | `command_palette::Toggle` | Universal escape hatch from any context. Overridden in Editor too because default toggles line numbers. On Linux `Super+;` is grabbed by the IME quick-phrase/emoji picker, so `alt-;` aliases into `cmd-;` (see Leader scheme) |
 
 ## Not Mapped (no Zed equivalent)
 

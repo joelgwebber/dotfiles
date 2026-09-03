@@ -9,6 +9,67 @@
   },
 
   // ==================================================================================
+  // Linux (Omarchy) physical remaps: alt-<key> → cmd-<key>  (OS-conditional)
+  //
+  // On Linux, Zed resolves `cmd-` to the Super key. Omarchy/Hyprland and the IME grab a
+  // pile of Super chords (Super+Space → Omarchy menu, Super+; → quick-phrase/emoji
+  // picker, Super+{/} → nothing useful), so those keystrokes never reach Zed. We give
+  // each one an `alt-*` equivalent. `alt-*` combos are unbound in Omarchy's defaults.
+  //
+  //   Physical key (Linux)   →  behavior
+  //   --------------------      ---------------------------------------------------------
+  //   alt-space              →  cmd-space   (alias into the leader namespace)
+  //   alt-;                  →  cmd-;       (alias → command_palette::Toggle)
+  //   alt-{ / alt-}          →  previous / next tab   (direct action bind — see below)
+  //
+  // TWO flavors of remap live here, and which one to use depends on where `cmd-X` is
+  // defined:
+  //
+  //  1. ALIAS  (alt-X → cmd-X via SendKeystrokes): use when the `cmd-X` binding is
+  //     defined in THIS file (the leader, cmd-;). There's one source of truth and alt
+  //     just funnels into it. SendKeystrokes dispatches `cmd-X` *internally*, bypassing
+  //     the compositor/IME grab, so the canonical binding fires.
+  //
+  //  2. DIRECT action bind: use when `cmd-X` is a Zed *macOS default* that this file
+  //     never defines. Zed's Linux default keymap maps that action to a *different* key
+  //     (tab switching is `cmd-{`/`cmd-}` on macOS but `ctrl-pageup`/`ctrl-pagedown` on
+  //     Linux), so on Linux there is no `cmd-X` binding to alias into — an alias would
+  //     dispatch `cmd-}` and hit nothing. Bind the underlying action directly instead.
+  //     (`cmd-{`/`cmd-}` → pane::Activate{Previous,Next}Item, so alt-{/} match it.)
+  //
+  // To make a future `cmd-X` work on Linux: if `cmd-X` is defined above, add
+  // `alt-X` → cmd-X (alias); if it's only a Zed macOS default, bind `alt-X` straight to
+  // the action. macOS is unaffected either way — it keeps hitting `cmd-*` natively.
+  //
+  // `os == linux` is an attribute of the Workspace (root) node, so a bare `os == linux`
+  // predicate matches from any focus — exactly what we want for these universal keys.
+  {
+    "context": "os == linux",
+    "bindings": {
+      "alt-space": ["workspace::SendKeystrokes", "cmd-space"],
+      "alt-;": ["workspace::SendKeystrokes", "cmd-;"],
+      "alt-{": "pane::ActivatePreviousItem",
+      "alt-}": "pane::ActivateNextItem",
+    },
+  },
+
+  // Terminal needs an explicit copy: the terminal grabs these alt-combos and forwards
+  // them to the PTY (as meta-<key>) before the Workspace-level binding can fire, the
+  // same way it does for ctrl-hjkl (see the Terminal block far below). The context is
+  // spelled `os == linux > Terminal` rather than `Terminal && os == linux` because `os`
+  // lives on an ancestor node and `&&` only combines predicates evaluated on the *same*
+  // node, whereas `>` matches "ancestor is os == linux AND this node is Terminal".
+  {
+    "context": "os == linux > Terminal",
+    "bindings": {
+      "alt-space": ["workspace::SendKeystrokes", "cmd-space"],
+      "alt-;": ["workspace::SendKeystrokes", "cmd-;"],
+      "alt-{": "pane::ActivatePreviousItem",
+      "alt-}": "pane::ActivateNextItem",
+    },
+  },
+
+  // ==================================================================================
   // Vim-specific bindings (g* motions, LSP, diagnostics — only meaningful in editor)
   // ==================================================================================
   {
@@ -33,9 +94,13 @@
   },
 
   // ==================================================================================
-  // Universal leader bindings (cmd-space)
-  // In vim normal mode, bare "space" aliases to "cmd-space" (see above),
-  // so these work as "space ..." from the editor and "cmd-space ..." from anywhere.
+  // Universal leader bindings — canonical `cmd-space` namespace (single source of truth)
+  //
+  // These are the ONLY place leader bindings are defined. They are reached via:
+  //   - "space ..."     in vim normal mode (bare space → cmd-space alias, above)
+  //   - "cmd-space ..." directly on macOS
+  //   - "alt-space ..." on Linux (alt-space → cmd-space alias, above)
+  // To change the leader on a platform, edit the alias blocks above — never this block.
   // ==================================================================================
   {
     "context": "Workspace",
