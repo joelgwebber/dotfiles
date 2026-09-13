@@ -4,7 +4,7 @@ title: Standardize on fish as the login shell
 type: task
 priority: 1
 created: '2026-09-13T20:26:05Z'
-updated: '2026-09-13T20:33:35Z'
+updated: '2026-09-13T20:33:51Z'
 ---
 
 User has chsh'd to fish on this Mac (fish 4.9.3, /opt/homebrew/bin/fish, already in /etc/shells) and already runs fish on the Linux box. Port the zsh config and clean up the accumulated mess in the process.
