@@ -4,7 +4,7 @@ title: Migrate dotfiles from hand-rolled symlinks to chezmoi
 type: task
 priority: 1
 created: '2026-09-13T18:03:58Z'
-updated: '2026-09-13T18:20:38Z'
+updated: '2026-09-13T18:24:09Z'
 ---
 
 Replace the hand-maintained symlink farm (README 'Symlinks' section) with chezmoi management.
@@ -48,3 +48,13 @@ Backup of pre-migration state (live files, symlink map, uncommitted patch, runti
 /private/tmp/claude-502/-Users-joel/05874c0a-8a4e-4167-9a17-6a513592ecf0/scratchpad/pre-chezmoi-backup
 
 Spun off: dots-2260 (tmux, needs human), dots-c09d (AGENTS.md bd->yaks), dots-1c34 ('time' in brew eval), dots-e225 (bin/bw-cleanup uninstalled).
+
+---
+▸ 2026-09-13T18:24:09Z [Joel Webber]
+REBASE NOTE: the push hit upstream commits from the Linux machine (a46ea57 'Turning off nvim stuff', c037a65 'Tweaking keymaps on Linux') that this Mac didn't have.
+
+One real conflict: config/nvim/lua/plugins/snacks.lua. Both machines were disabling nvim things, but to different degrees -- Linux commented out only the '~/src/snacks.nvim' dev-checkout line (plugin stays enabled); this Mac had the entire plugin spec commented out. vinyl.lua and baleia.lua agreed on both sides and auto-merged.
+
+Resolved (user, 2026-09-13): keep the Mac version -- snacks.nvim fully disabled. The Linux keymap.json/zed-keymap-notes.md work replayed through the renames intact (keymap.json 415 lines, notes now at docs/).
+
+Worth noting for later: the two machines are drifting on which nvim plugins are on. If that keeps happening, nvim plugin specs are a candidate for chezmoi templating on .chezmoi.os, the same way .zshrc now gates the FullStory block.
