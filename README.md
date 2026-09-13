@@ -59,6 +59,36 @@ fish — under zsh they only existed interactively.
 `load-work-env` runs, because `.fsprofile` and `environment.inc` check them and honour
 an inherited value.
 
+## Agent skills (`~/.agents`)
+
+Deliberately partial. `~/.agents/skills` holds three kinds of thing, and only two
+of them belong in a repo:
+
+| kind | example | synced? |
+|---|---|---|
+| installed by `npx skills` | `subtext-*`, `find-skills` | **no** — reproduced from `.skill-lock.json` |
+| hand-authored, generic | `changesets`, `github-stacked-prs` | yes, as files |
+| hand-authored, internal | `sightkick-*`, `fsta-sightmap-browser` | **no** — see below |
+| symlink into a source repo | `yaks*` | yes, as relative symlinks |
+
+Installed skills are tracked in `.skill-lock.json` by source + folder hash, so
+syncing the 5KB lock reproduces all eleven of them with `npx skills update`.
+Tracking their files instead would fight that updater, which owns them.
+
+The internal ones stay local because **this repo is public** and they document
+unreleased work (`fullstorydev/sightmap` is a private repo) plus a staging hostname.
+They're listed in `home/.chezmoiignore` so a stray `chezmoi add -r ~/.agents` can't
+sweep them in.
+
+The `yaks*` entries are symlinks into the dev checkout at `~/src/rs/yaks`. Their
+sources use chezmoi's `symlink_` prefix, where the source file's *contents* are the
+link target — kept **relative** (`../../src/rs/yaks/skills/yaks`) so they resolve on
+any machine with that checkout, rather than baking in `/Users/joel`.
+
+Note `.skill-lock.json` carries `installedAt`/`updatedAt` timestamps and folder
+hashes, so running `npx skills update` on either machine produces a real diff here.
+That's expected churn, not drift.
+
 ## New machine
 
 ```sh

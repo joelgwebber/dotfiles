@@ -1,0 +1,140 @@
+{
+  "version": 3,
+  "skills": {
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/vercel-labs/skills.git",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "skillFolderHash": "76a98a285cb0434f3d39e1a873823556330e398b",
+      "installedAt": "2026-06-19T15:58:43.414Z",
+      "updatedAt": "2026-07-25T22:20:30.222Z"
+    },
+    "yak": {
+      "source": "joelgwebber/yaks",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/joelgwebber/yaks.git",
+      "skillPath": "skills/yak/SKILL.md",
+      "skillFolderHash": "5202ee90d330a24461baf062a5935bffa7a47bbd",
+      "installedAt": "2026-06-19T20:00:13.210Z",
+      "updatedAt": "2026-07-25T22:20:31.848Z"
+    },
+    "yak-tracker": {
+      "source": "joelgwebber/yaks",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/joelgwebber/yaks.git",
+      "skillPath": "skills/yak-tracker/SKILL.md",
+      "skillFolderHash": "37808a6f3939c48fb17450be56ebf36d80385bcf",
+      "installedAt": "2026-06-19T20:00:13.213Z",
+      "updatedAt": "2026-07-26T00:34:50.852Z"
+    },
+    "sightmap-authoring": {
+      "source": "fullstorydev/subtext",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/fullstorydev/subtext.git",
+      "skillPath": "skills/sightmap-authoring/SKILL.md",
+      "skillFolderHash": "91c7812d7028795fc4c0ab7303e25ec666132a65",
+      "installedAt": "2026-07-26T00:35:38.112Z",
+      "updatedAt": "2026-07-28T15:56:47.726Z"
+    },
+    "sightmap-browser": {
+      "source": "fullstorydev/subtext",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/fullstorydev/subtext.git",
+      "skillPath": "skills/sightmap-browser/SKILL.md",
+      "skillFolderHash": "86573c66507f0df7e2116ab1829b4df484c88d17",
+      "installedAt": "2026-07-26T00:35:38.114Z",
+      "updatedAt": "2026-07-28T15:56:47.731Z"
+    },
+    "subtext-privacy": {
+      "source": "fullstorydev/subtext",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/fullstorydev/subtext.git",
+      "skillPath": "skills/subtext-privacy/SKILL.md",
+      "skillFolderHash": "bb81abd843560ba8d61afcb7e4624c6c9cf8e291",
+      "installedAt": "2026-07-28T15:56:47.732Z",
+      "updatedAt": "2026-07-28T15:56:47.732Z"
+    },
+    "subtext-review": {
+      "source": "fullstorydev/subtext",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/fullstorydev/subtext.git",
+      "skillPath": "skills/subtext-review/SKILL.md",
+      "skillFolderHash": "9718eb4120c7d32a444d8ee315f36c101643fa54",
+      "installedAt": "2026-07-28T15:56:47.733Z",
+      "updatedAt": "2026-07-28T15:56:47.733Z"
+    },
+    "subtext-session": {
+      "source": "fullstorydev/subtext",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/fullstorydev/subtext.git",
+      "skillPath": "skills/subtext-session/SKILL.md",
+      "skillFolderHash": "2c545a21097fea0da26496a652ef63042437cd23",
+      "installedAt": "2026-07-28T15:56:47.733Z",
+      "updatedAt": "2026-07-28T15:56:47.733Z"
+    },
+    "subtext-setup-plugin": {
+      "source": "fullstorydev/subtext",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/fullstorydev/subtext.git",
+      "skillPath": "skills/subtext-setup-plugin/SKILL.md",
+      "skillFolderHash": "2c5bb992c7ac481c7b5af4d646b9986420ce6ad8",
+      "installedAt": "2026-07-28T15:56:47.734Z",
+      "updatedAt": "2026-07-28T15:56:47.734Z"
+    },
+    "subtext-shared": {
+      "source": "fullstorydev/subtext",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/fullstorydev/subtext.git",
+      "skillPath": "skills/subtext-shared/SKILL.md",
+      "skillFolderHash": "cc3283f25440c9d2ec569a86e0f589c636077e91",
+      "installedAt": "2026-07-28T15:56:47.734Z",
+      "updatedAt": "2026-07-28T15:56:47.734Z"
+    },
+    "subtext-sightmap": {
+      "source": "fullstorydev/subtext",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/fullstorydev/subtext.git",
+      "skillPath": "skills/subtext-sightmap/SKILL.md",
+      "skillFolderHash": "226e788738c9aab04410ad9f9527e4d642ad5ac9",
+      "installedAt": "2026-07-28T15:56:47.735Z",
+      "updatedAt": "2026-07-28T15:56:47.735Z"
+    },
+    "subtext-telemetry": {
+      "source": "fullstorydev/subtext",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/fullstorydev/subtext.git",
+      "skillPath": "skills/subtext-telemetry/SKILL.md",
+      "skillFolderHash": "cc01cc9058b18465b8f9446c5efb645abb9d40d1",
+      "installedAt": "2026-07-28T15:56:47.735Z",
+      "updatedAt": "2026-07-28T15:56:47.735Z"
+    },
+    "subtext-using-subtext": {
+      "source": "fullstorydev/subtext",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/fullstorydev/subtext.git",
+      "skillPath": "skills/subtext-using-subtext/SKILL.md",
+      "skillFolderHash": "ff5bbf489a83485d63b78aab12ef96af63f08db8",
+      "installedAt": "2026-07-28T15:56:47.736Z",
+      "updatedAt": "2026-07-28T15:56:47.736Z"
+    }
+  },
+  "dismissed": {
+    "findSkillsPrompt": true
+  },
+  "lastSelectedAgents": [
+    "amp",
+    "antigravity",
+    "antigravity-cli",
+    "cline",
+    "codex",
+    "cursor",
+    "deepagents",
+    "gemini-cli",
+    "github-copilot",
+    "kimi-code-cli",
+    "opencode",
+    "warp",
+    "zed"
+  ]
+}

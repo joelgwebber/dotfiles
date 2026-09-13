@@ -1,0 +1,14 @@
+# ~/.agents: deliberately partial. See README "Agent skills".
+#
+# These three are hand-authored (so NOT reproducible from .skill-lock.json) but
+# document internal, unreleased work -- sightkick, and fullstorydev/sightmap
+# which is a private repo -- plus a staging hostname and an SSO workaround.
+# This repo is public, so they stay local. Listed here so a stray
+# `chezmoi add -r ~/.agents` can't sweep them in.
+.agents/skills/fsta-sightmap-browser
+.agents/skills/sightkick-authoring
+.agents/skills/sightkick-debug
+
+# The remaining skills under ~/.agents/skills are installed by `npx skills` and
+# reproduce from .skill-lock.json, so they are intentionally unmanaged too --
+# tracking their files would fight `npx skills update`, which owns them.
