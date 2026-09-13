@@ -16,10 +16,10 @@ home/            <- chezmoi source state (the only part that lands in ~)
   dot_config/      -> ~/.config/{nvim,kitty,zed,git}
   dot_claude/      -> ~/.claude/settings.json
   dot_serena/      -> ~/.serena/serena_config.yml
+  dot_local/bin/   -> ~/.local/bin  (on PATH via .shared.sh)
   Library/Fonts/   -> ~/Library/Fonts  (macOS only, see .chezmoiignore)
 docs/            <- notes, not config
 sieve/           <- server-side mail filters, deployed by hand
-bin/             <- scripts, not currently installed anywhere
 .yaks/           <- task tracker
 ```
 
