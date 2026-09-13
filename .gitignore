@@ -1,2 +1,11 @@
 .DS_Store
 __pycache__/
+
+# nvim local artifacts (these rules used to live in config/nvim/.gitignore;
+# ~/.config/nvim is no longer a git repo, so they belong here now)
+home/dot_config/nvim/tags
+home/dot_config/nvim/test.sh
+home/dot_config/nvim/.luarc.json
+home/dot_config/nvim/nvim
+home/dot_config/nvim/spell/
+home/dot_config/nvim/lazy-lock.json

@@ -1,0 +1,60 @@
+{{- /* Managed by chezmoi -- edit with `chezmoi edit ~/.zshrc`, then `chezmoi apply`. */ -}}
+{{ if eq .chezmoi.os "darwin" -}}
+eval "time $(/opt/homebrew/bin/brew shellenv)"
+{{ else -}}
+eval "time $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+{{ end -}}
+eval "$(pyenv virtualenv-init -)"
+
+# API keys. Deliberately NOT managed by chezmoi: this repo is public.
+# Absent on a fresh machine until recreated by hand -- see README.
+[ -f ~/.s3kr1tz.sh ] && source ~/.s3kr1tz.sh
+source ~/.shared.sh
+
+bindkey '^R' history-incremental-search-backward
+
+export PATH="$HOME/depot_tools:$HOME/.local/bin:$PATH"
+eval "$(direnv hook zsh)"
+{{- if .work }}
+
+# ---- FullStory ----
+export PATH="$HOME/src/fs/fsdev/tools/go/bin:$PATH"
+
+# To make node happy with fullstory.test:8043
+export NODE_EXTRA_CA_CERTS=~/.local/share/mkcert/rootCA.pem
+
+export FS_SKIP_COMP=1
+export FS_SKIP_CD=1
+export SKIP_FS_PS1=1
+
+alias logcatfs="adb logcat -v color -s 'fullstory:*' 'zygote:E' 'System.out:*' 'System.err:*' 'AndroidRuntime:*' 'SystemWebChromeClient:*' 'CordovaWebViewImpl:*'"
+alias logcatc="adb logcat -c"
+
+[ -f ~/.fsprofile ] && source ~/.fsprofile
+{{- end }}
+{{- if eq .chezmoi.os "darwin" }}
+
+export ANDROID_SDK_ROOT=~/Library/Android/sdk
+export PATH=$PATH:$ANDROID_SDK_ROOT/emulator
+export PATH=$PATH:$ANDROID_SDK_ROOT/platform-tools
+{{- end }}
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+[ -s "$BUN_INSTALL/_bun" ] && source "$BUN_INSTALL/_bun"
+
+# Added by Antigravity
+export PATH="$HOME/.antigravity/antigravity/bin:$PATH"
+
+# pnpm
+{{- if eq .chezmoi.os "darwin" }}
+export PNPM_HOME="$HOME/Library/pnpm"
+{{- else }}
+export PNPM_HOME="$HOME/.local/share/pnpm"
+{{- end }}
+case ":$PATH:" in
+  *":$PNPM_HOME/bin:"*) ;;
+  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
+esac
+# pnpm end

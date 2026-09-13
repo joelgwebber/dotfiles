@@ -74,6 +74,96 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -x ~/.span/bin/hook-dispatcher ] && ~/.span/bin/hook-dispatcher claude postToolUseEvents || true"
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -x ~/.span/bin/hook-dispatcher ] && ~/.span/bin/hook-dispatcher claude postToolUseFailureEvents || true"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -x ~/.span/bin/hook-dispatcher ] && ~/.span/bin/hook-dispatcher claude preCompactEventsEnhanced || true"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -x ~/.span/bin/hook-dispatcher ] && ~/.span/bin/hook-dispatcher claude preToolUseEvents || true"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -x ~/.span/bin/hook-dispatcher ] && ~/.span/bin/hook-dispatcher claude sessionEndEvents || true"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -x ~/.span/bin/hook-dispatcher ] && ~/.span/bin/hook-dispatcher claude stopEventsEnhanced || true"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -x ~/.span/bin/hook-dispatcher ] && ~/.span/bin/hook-dispatcher claude subagentStartEvents || true"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -x ~/.span/bin/hook-dispatcher ] && ~/.span/bin/hook-dispatcher claude subagentStopEvents || true"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -x ~/.span/bin/hook-dispatcher ] && ~/.span/bin/hook-dispatcher claude userPromptSubmitEvents || true"
+          }
+        ]
+      }
     ]
   },
   "statusLine": {
@@ -96,5 +186,6 @@
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark",
   "editorMode": "vim",
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "tui": "fullscreen"
 }
