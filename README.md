@@ -13,7 +13,7 @@ home/            <- chezmoi source state (the only part that lands in ~)
   dot_shared.sh    -> ~/.shared.sh
   dot_vimrc        -> ~/.vimrc
   dot_gitconfig    -> ~/.gitconfig
-  dot_config/      -> ~/.config/{nvim,kitty,zed,git}
+  dot_config/      -> ~/.config/{fish,nvim,kitty,zed,git}
   dot_claude/      -> ~/.claude/settings.json
   dot_local/bin/   -> ~/.local/bin  (on PATH via .shared.sh)
 docs/            <- notes, not config
@@ -25,6 +25,39 @@ sieve/           <- server-side mail filters, deployed by hand
 Source-name prefixes are chezmoi's: `dot_` becomes a leading `.`, `.tmpl` marks a template.
 Note that files literally starting with `.` inside `home/` are **ignored** by chezmoi (except
 `.chezmoi*`), which is why `~/.config/nvim/.stylua.toml` is stored as `dot_stylua.toml`.
+
+## Shells
+
+fish is the login shell on both machines. zsh is kept fully working as a fallback,
+so anything shared has to survive in both.
+
+```
+~/.config/fish/
+  conf.d/00-path.fish    PATH, Homebrew, bun, pnpm    } sourced for EVERY fish,
+  conf.d/10-env.fish     EDITOR, ls/ll/grep aliases   } interactive or not
+  conf.d/20-tools.fish   pyenv, direnv
+  conf.d/30-work.fish    FullStory env (work machines only, templated)
+  config.fish            vi bindings + the interactive-only loaders
+  functions/             fish_prompt, _prompt_path, load-secrets, load-work-env
+```
+
+Two bridges exist because fish can't source POSIX shell:
+
+- **`load-secrets`** parses `~/.s3kr1tz.sh`. That file stays POSIX `export K=V` so zsh
+  can still source it directly and there's only ever one copy of the keys on disk.
+- **`load-work-env`** runs `~/.fsprofile` in bash and imports the resulting environment.
+  It's FullStory-managed (`### DO NOT EDIT ###`) bash that sources more bash, so it can't
+  be ported — only imported. PATH is deliberately excluded from the import so it can't
+  clobber what `00-path.fish` built. The aliases `environment.inc` defines don't survive
+  an env import and are re-declared in `30-work.fish`.
+
+Both loaders run only in interactive shells, matching what `.zshrc` did. Scripts that
+need them can call either by name. PATH and `EDITOR`, by contrast, now apply to every
+fish — under zsh they only existed interactively.
+
+`FS_SKIP_COMP`/`FS_SKIP_CD`/`SKIP_FS_PS1` and `NODE_EXTRA_CA_CERTS` are set *before*
+`load-work-env` runs, because `.fsprofile` and `environment.inc` check them and honour
+an inherited value.
 
 ## New machine
 

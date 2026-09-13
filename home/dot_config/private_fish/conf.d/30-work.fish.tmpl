@@ -1,0 +1,29 @@
+{{ if .work -}}
+# ---- FullStory ----
+# These three must be set BEFORE ~/.fsprofile is imported: it checks them to
+# skip completions.inc, the auto-cd, and ps1.inc, all of which are bash-only.
+set -gx FS_SKIP_COMP 1
+set -gx FS_SKIP_CD 1
+set -gx SKIP_FS_PS1 1
+
+# environment.inc sets this with :- so an inherited value wins. Setting it here
+# means the bash subshell in load-work-env sees ours and keeps it.
+set -gx NODE_EXTRA_CA_CERTS ~/.local/share/mkcert/rootCA.pem
+
+fish_add_path --global --move --path ~/src/fs/fsdev/tools/go/bin
+
+# environment.inc defines these as bash aliases, which don't survive an env
+# import, so they're re-declared here.
+alias fs 'cd $FS_HOME'
+alias fsdev 'cd $FSDEV_HOME'
+alias terraform '$FSDEV_HOME/etc/terraform.sh'
+alias tofu '$FSDEV_HOME/etc/terraform.sh'
+alias kubectl '$FSDEV_HOME/etc/kubectl.sh'
+
+alias logcatfs "adb logcat -v color -s 'fullstory:*' 'zygote:E' 'System.out:*' 'System.err:*' 'AndroidRuntime:*' 'SystemWebChromeClient:*' 'CordovaWebViewImpl:*'"
+alias logcatc 'adb logcat -c'
+
+ulimit -n 10000
+
+status is-interactive; and load-work-env
+{{ end -}}
