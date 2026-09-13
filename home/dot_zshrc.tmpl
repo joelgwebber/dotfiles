@@ -1,8 +1,8 @@
 {{- /* Managed by chezmoi -- edit with `chezmoi edit ~/.zshrc`, then `chezmoi apply`. */ -}}
 {{ if eq .chezmoi.os "darwin" -}}
-eval "time $(/opt/homebrew/bin/brew shellenv)"
+eval "$(/opt/homebrew/bin/brew shellenv)"
 {{ else -}}
-eval "time $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 {{ end -}}
 eval "$(pyenv virtualenv-init -)"
 

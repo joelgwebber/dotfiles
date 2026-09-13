@@ -1,3 +1,0 @@
-{{ if ne .chezmoi.os "darwin" }}
-Library/Fonts
-{{ end }}
