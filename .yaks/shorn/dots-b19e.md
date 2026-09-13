@@ -4,7 +4,7 @@ title: Migrate dotfiles from hand-rolled symlinks to chezmoi
 type: task
 priority: 1
 created: '2026-09-13T18:03:58Z'
-updated: '2026-09-13T18:14:39Z'
+updated: '2026-09-13T18:20:38Z'
 ---
 
 Replace the hand-maintained symlink farm (README 'Symlinks' section) with chezmoi management.
@@ -29,3 +29,22 @@ DECISIONS (user, 2026-09-13):
 4. Scope: all four areas - (a) the 6 working symlinks + resolve the 2 broken, (b) shell+git configs incl. templating the FullStory/Android blocks, (c) Claude settings merge, (d) fonts -> ~/Library/Fonts.
 
 Rejected: age encryption (public repo), Bitwarden template (bw is installed, but vault-unlock friction not worth it for a quick hack), making the repo private.
+
+---
+▸ 2026-09-13T18:20:38Z [Joel Webber]
+DONE. Committed as 5f9e7eb (migration) on top of d6b444b (drift checkpoint).
+
+Result: zero symlinks from $HOME into this repo. chezmoi manages 115 entries; 'chezmoi status' is clean.
+
+Verified post-apply:
+- interactive zsh starts clean; EDITOR=nvim (proves ~/.shared.sh sourcing), FS_SKIP_COMP=1 (work template branch), fsdev on PATH
+- nvim --headless loads, lazy.nvim resolves
+- ~/.serena runtime data (348M language_servers + 1.7M logs) relocated out of the repo intact
+- 42 Monaspace fonts actually installed to ~/Library/Fonts for the first time; the 9 pre-existing fonts untouched
+- ~/.claude/settings.json is the lossless union: 12 top-level keys, 10 hook events, nothing dropped from either fork
+- credential sweep over staged files clean; s3kr1tz never was tracked
+
+Backup of pre-migration state (live files, symlink map, uncommitted patch, runtime data) at:
+/private/tmp/claude-502/-Users-joel/05874c0a-8a4e-4167-9a17-6a513592ecf0/scratchpad/pre-chezmoi-backup
+
+Spun off: dots-2260 (tmux, needs human), dots-c09d (AGENTS.md bd->yaks), dots-1c34 ('time' in brew eval), dots-e225 (bin/bw-cleanup uninstalled).
