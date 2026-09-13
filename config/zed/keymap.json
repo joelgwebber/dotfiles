@@ -237,7 +237,7 @@
       // "ctrl-shift-k": ["workspace::MoveItemToPaneInDirection", { "direction": "up" }],
       // "ctrl-{": "pane::SwapItemLeft",
       // "ctrl-}": "pane::SwapItemRight",
-      "ctrl-space": "terminal::ToggleViMode",
+      "ctrl-shift-space": "terminal::ToggleViMode",
     },
   },
 

@@ -171,4 +171,4 @@ vim.filetype.add { extension = { grue = 'grue' } }
 require 'config.keymaps' -- Global key mappings
 require 'config.autocmds' -- Autocommands
 
-vim.cmd 'colorscheme j15r-blue'
+vim.cmd 'colorscheme j15r-dark'

@@ -7,7 +7,30 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "helix_mode": false,
+  "proxy": "",
+  "diff_view_style": "split",
+  "preferred_line_length": 100,
+  "minimap": {
+    "max_width_columns": 100,
+  },
+  "languages": {
+    "Markdown": {
+      "show_edit_predictions": false,
+      "completions": {
+        "lsp": true,
+      },
+      "enable_language_server": true,
+      "show_completion_documentation": false,
+    },
+    "Proto": {
+      "language_servers": ["protols", "!buf", "!protobuf-language-server"],
+    },
+  },
+  "show_completions_on_input": false,
   "project_panel": {
+    "auto_fold_dirs": false,
+    "bold_folder_labels": true,
     "dock": "left",
   },
   "outline_panel": {
@@ -17,199 +40,394 @@
     "dock": "right",
   },
   "agent": {
+    "terminal_init_command": "",
+    "auto_compact": {
+      "threshold": "shell"
+    },
+    "sandbox_permissions": {
+      "allow_unsandboxed": true,
+      "network_hosts": [
+        "api.github.com",
+        "github.com"
+      ]
+    },
+    "default_profile": "write",
     "tool_permissions": {
       "tools": {
-        "skill": {
+        "mcp:notion:notion-query-data-sources": {
           "default": "allow"
+        },
+        "mcp:subtext-staging:review-zoom": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:review-snapshot": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:review-summary": {
+          "default": "allow"
+        },
+        "mcp:subtext-staging:review-list-sessions": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:review-summary": {
+          "default": "allow"
+        },
+        "mcp:subtext:review-open": {
+          "default": "allow"
+        },
+        "mcp:subtext:review-list-sessions": {
+          "default": "allow"
+        },
+        "mcp:Atlassian-Rovo-MCP:addTeamworkGraphContext": {
+          "default": "allow"
+        },
+        "mcp:Atlassian-Rovo-MCP:getIssueLinkTypes": {
+          "default": "allow"
+        },
+        "mcp:subtext:review-close": {
+          "default": "allow"
+        },
+        "mcp:chrome-devtools-mcp-zed:emulate": {
+          "default": "allow"
+        },
+        "mcp:notion:notion-move-pages": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:review-close": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:review-snapshot": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:review-zoom": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:review-view": {
+          "default": "allow"
+        },
+        "mcp:notion:notion-get-comments": {
+          "default": "allow"
+        },
+        "mcp:subtext-local:review-list-sessions": {
+          "default": "allow",
+        },
+        "mcp:subtext-local:review-focus": {
+          "default": "allow",
+        },
+        "mcp:miro:layout_read": {
+          "default": "allow",
+        },
+        "mcp:some-remote-server:doc-close": {
+          "default": "allow",
+        },
+        "mcp:some-remote-server:doc-update": {
+          "default": "allow",
+        },
+        "mcp:some-remote-server:doc-create": {
+          "default": "allow",
+        },
+        "mcp:chrome-devtools-mcp-zed:select_page": {
+          "default": "allow",
+        },
+        "mcp:chrome-devtools-mcp-zed:resize_page": {
+          "default": "allow",
+        },
+        "mcp:Atlassian-Rovo-MCP:atlassianUserInfo": {
+          "default": "allow",
+        },
+        "mcp:notion:notion-update-page": {
+          "default": "allow",
+        },
+        "mcp:Atlassian-Rovo-MCP:transitionJiraIssue": {
+          "default": "allow",
+        },
+        "mcp:some-remote-server:update_segment": {
+          "default": "allow",
+        },
+        "mcp:some-remote-server:get_sessions": {
+          "default": "allow",
+        },
+        "mcp:some-remote-server:build_segment": {
+          "default": "allow",
+        },
+        "mcp:some-remote-server:get_segment": {
+          "default": "allow",
+        },
+        "mcp:some-remote-server:get_account_info": {
+          "default": "allow",
+        },
+        "mcp:notion:notion-get-users": {
+          "default": "allow",
+        },
+        "mcp:Atlassian-Rovo-MCP:getJiraProjectIssueTypesMetadata": {
+          "default": "allow",
+        },
+        "mcp:notion:notion-create-pages": {
+          "default": "allow",
+        },
+        "mcp:notion:notion-fetch": {
+          "default": "allow",
+        },
+        "mcp:notion:notion-search": {
+          "default": "allow",
+        },
+        "mcp:subtext-local:review-open": {
+          "default": "allow",
+        },
+        "mcp:chrome-devtools-mcp-zed:wait_for": {
+          "default": "allow",
+        },
+        "mcp:chrome-devtools-mcp-zed:type_text": {
+          "default": "allow",
+        },
+        "mcp:chrome-devtools-mcp-zed:press_key": {
+          "default": "allow",
+        },
+        "mcp:chrome-devtools-mcp-zed:list_pages": {
+          "default": "allow",
+        },
+        "mcp:chrome-devtools-mcp-zed:click": {
+          "default": "allow",
+        },
+        "mcp:chrome-devtools-mcp-zed:fill": {
+          "default": "allow",
+        },
+        "mcp:chrome-devtools-mcp-zed:take_snapshot": {
+          "default": "allow",
+        },
+        "mcp:chrome-devtools-mcp-zed:evaluate_script": {
+          "default": "allow",
+        },
+        "mcp:chrome-devtools-mcp-zed:navigate_page": {
+          "default": "allow",
+        },
+        "mcp:chrome-devtools-mcp-zed:take_screenshot": {
+          "default": "allow",
+        },
+        "mcp:chrome-devtools-mcp-zed:list_network_requests": {
+          "default": "allow",
+        },
+        "mcp:chrome-devtools-mcp-zed:get_console_message": {
+          "default": "allow",
+        },
+        "mcp:chrome-devtools-mcp-zed:list_console_messages": {
+          "default": "allow",
+        },
+        "mcp:chrome-devtools-mcp-zed:new_page": {
+          "default": "allow",
+        },
+        "mcp:Atlassian-Rovo-MCP:getTransitionsForJiraIssue": {
+          "default": "allow",
+        },
+        "mcp:Atlassian-Rovo-MCP:searchJiraIssuesUsingJql": {
+          "default": "allow",
+        },
+        "mcp:Atlassian-Rovo-MCP:addCommentToJiraIssue": {
+          "default": "allow",
+        },
+        "mcp:Atlassian-Rovo-MCP:lookupJiraAccountId": {
+          "default": "allow",
+        },
+        "mcp:subtext-local:live-act-scroll": {
+          "default": "allow",
+        },
+        "edit_file": {
+          "default": "allow",
+        },
+        "mcp:mcp-server-context7:query-docs": {
+          "default": "allow",
+        },
+        "skill": {
+          "default": "allow",
         },
         "mcp:subtext-local:doc-read": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-local:doc-create": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-local:doc-list": {
-          "default": "allow"
+          "default": "allow",
         },
         "copy_path": {
-          "default": "allow"
+          "default": "allow",
         },
         "write_file": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:live-view-inspect": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:live-log-list": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:mcp-server-context7:resolve-library-id": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:artifact-upload": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:Atlassian-Rovo-MCP:createIssueLink": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-local:live-log-get": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-local:live-log-list": {
-          "default": "allow"
+          "default": "allow",
         },
         "save_file": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-local:live-view-inspect": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-local:live-net-get": {
-          "default": "allow"
+          "default": "allow",
         },
         "restore_file_from_disk": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-local:live-act-fill": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-local:live-view-list": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:Atlassian-Rovo-MCP:editJiraIssue": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:Atlassian-Rovo-MCP:search": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-local:live-disconnect": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-local:doc-attach": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-local:live-eval-script": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-local:live-view-navigate": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:doc-list": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-local:live-net-list": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-local:live-act-click": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-local:doc-update": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:doc-read": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:Atlassian-Rovo-MCP:createJiraIssue": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:Atlassian-Rovo-MCP:getVisibleJiraProjects": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:review-inspect": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:comment-resolve": {
-          "default": "allow"
+          "default": "allow",
         },
         "delete_path": {
-          "default": "allow"
+          "default": "allow",
         },
         "move_path": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:artifact-url": {
-          "default": "allow"
+          "default": "allow",
         },
         "fetch": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:review-close": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:review-view": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:review-open": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:live-disconnect": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:doc-close": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:doc-update": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:live-act-hover": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:live-act-keypress": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:live-eval-script": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:doc-attach": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:comment-add": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:live-view-screenshot": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-tunnel:tunnel-disconnect": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:live-act-wait-for": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:live-view-navigate": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:live-act-fill": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:live-view-snapshot": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:live-act-click": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:live-view-new": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-tunnel:tunnel-connect": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:doc-create": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:live-tunnel": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-staging:live-connect": {
-          "default": "allow"
+          "default": "allow",
         },
         "create_directory": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:Atlassian-Rovo-MCP:getJiraIssue": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:Atlassian-Rovo-MCP:getAccessibleAtlassianResources": {
-          "default": "allow"
+          "default": "allow",
         },
         "mcp:subtext-local:live-view-snapshot": {
           "default": "allow",
@@ -246,6 +464,10 @@
       "model": "claude-opus-4-8",
       "enable_thinking": true,
     },
+    "thread_summary_model": {
+      "provider": "anthropic",
+      "model": "claude-opus-4-8",
+    },
     "sidebar_side": "right",
     "play_sound_when_agent_done": "when_hidden",
     "dock": "right",
@@ -258,27 +480,19 @@
       "args": [],
       "projects": [
         {
-          "paths": [
-            "/home/joel"
-          ]
+          "paths": ["/home/joel"],
         },
         {
-          "paths": [
-            "/home/joel/src"
-          ]
+          "paths": ["/home/joel/src"],
         },
         {
-          "paths": [
-            "/home/joel/src/calcifer"
-          ]
+          "paths": ["/home/joel/src/calcifer"],
         },
         {
-          "paths": [
-            "/home/joel/src/muckraker"
-          ]
-        }
-      ]
-    }
+          "paths": ["/home/joel/src/muckraker"],
+        },
+      ],
+    },
   ],
   "icon_theme": {
     "mode": "dark",
@@ -301,44 +515,38 @@
     },
   },
   "context_servers": {
-    "Atlassian-Rovo-MCP": {
+    "subtext": {
+      "enabled": false,
+      "url": "https://api.fullstory.com/mcp/subtext"
+    },
+    "miro": {
       "enabled": true,
+      "url": "https://mcp.miro.com/",
+    },
+    "notion": {
+      "enabled": true,
+      "url": "https://mcp.notion.com/mcp",
+    },
+    "Atlassian-Rovo-MCP": {
+      "enabled": false,
       "remote": false,
       "command": "npx",
-      "args": [
-        "mcp-remote@latest",
-        "https://mcp.atlassian.com/v1/mcp/authv2"
-      ]
-    },
-    "subtext-tunnel": {
-      "enabled": false,
-      "command": "npx",
-      "args": ["-y", "@fullstory/subtext-tunnel@latest"],
-    },
-    "subtext-tunnel-local": {
-      "enabled": false,
-      "command": "node",
-      "args": ["/Users/joel/src/fs/subtext/tunnel/build/src/index.js"],
+      "args": ["mcp-remote@latest", "https://mcp.atlassian.com/v1/mcp/authv2"],
     },
     "subtext-local": {
-      "enabled": true,
+      "enabled": false,
       "url": "https://api.fullstory.test:8043/mcp/subtext",
     },
     "subtext-staging": {
-      "enabled": false,
+      "enabled": true,
       "url": "https://api.staging.fullstory.com/mcp/subtext",
-    },
-    "chrome-devtools-mcp-zed": {
-      "enabled": false,
-      "remote": false,
-      "settings": {},
     },
   },
   "buffer_font_family": ".ZedMono",
   "vim_mode": true,
   "base_keymap": "VSCode",
-  "ui_font_size": 15.0,
-  "buffer_font_size": 12.0,
+  "ui_font_size": 14.0,
+  "buffer_font_size": 11.0,
   "theme": {
     "mode": "dark",
     "light": "Ayu Dark",

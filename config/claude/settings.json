@@ -89,18 +89,9 @@
     "atlassian@claude-plugins-official": true,
     "notion@claude-plugins-official": true,
     "playground@claude-plugins-official": true,
-    "subtext@subtext-marketplace": true,
     "clangd-lsp@claude-plugins-official": true
   },
-  "extraKnownMarketplaces": {
-    "subtext-marketplace": {
-      "source": {
-        "source": "git",
-        "url": "https://github.com/fullstorydev/subtext.git"
-      },
-      "autoUpdate": true
-    }
-  },
+  "extraKnownMarketplaces": {},
   "alwaysThinkingEnabled": true,
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark",
