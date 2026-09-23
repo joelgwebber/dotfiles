@@ -89,6 +89,10 @@ Note `.skill-lock.json` carries `installedAt`/`updatedAt` timestamps and folder
 hashes, so running `npx skills update` on either machine produces a real diff here.
 That's expected churn, not drift.
 
+Claude Code doesn't look in `~/.agents`, so `~/.claude` points back at it:
+`~/.claude/skills` is a relative symlink to `../.agents/skills`, and
+`~/.claude/CLAUDE.md` pulls in `~/.agents/AGENTS.md` with an `@` import.
+
 ## New machine
 
 ```sh
