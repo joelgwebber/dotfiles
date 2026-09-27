@@ -4,7 +4,7 @@ title: Enable a post-mortem capture path for hard locks
 type: task
 priority: 2
 created: '2026-09-24T03:01:49Z'
-updated: '2026-09-27T17:47:10Z'
+updated: '2026-09-27T18:08:11Z'
 parent: dots-df8e
 labels:
 - linux
@@ -50,3 +50,9 @@ Install verified 2026-09-27. All targets correct: nmi_watchdog=1, watchdog=1, so
 printk showing '7 4 1 7' is the intended value from this file, not an anomaly - it countermands the CachyOS '3 3 3 3'.
 
 REMAINING GAP: no pstore backing. efi_pstore.pstore_disable=0 is still absent from the cmdline, so the next panic will auto-reboot (panic=20) but leave no record across the reboot. That is now the single highest-value thing left, because hardlockup_panic=1 means the next hang is the first one that CAN be captured.
+
+![add-pstore-cmdline](artifacts/dots-d532/add-pstore-cmdline.sh)
+
+---
+▸ 2026-09-27T18:08:11Z [claude]
+Ready-to-run script to add efi_pstore.pstore_disable=0 to KERNEL_CMDLINE[default] and run limine-update. Backs up /etc/default/limine first, verifies the edit applied (restores on failure), prints a diff, then regenerates entries. Guarded by a grep so re-running is a no-op. Adds ONLY the pstore flag so the in-flight pcie_aspm=off experiment is not disturbed. sed verified against a copy of the real file - produces the intended line exactly.
