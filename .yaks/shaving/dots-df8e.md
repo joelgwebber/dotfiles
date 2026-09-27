@@ -4,7 +4,7 @@ title: Diagnose idle hard-locks on j15r
 type: task
 priority: 1
 created: '2026-09-24T02:59:30Z'
-updated: '2026-09-27T22:05:15Z'
+updated: '2026-09-27T22:30:51Z'
 labels:
 - linux
 ---
@@ -74,3 +74,7 @@ EVIDENCE LOSS: the BIOS flash cleared EFI NVRAM, which is where efi_pstore recor
 WHAT A MEANINGFUL TEST LOOKS LIKE NOW: the two idle hangs took 13h06m and 6h20m, and hang #3 took 15m under load. So a credible 'fixed' signal needs multiple multi-hour runs, including at least one long idle stretch, not just a quiet evening. Current uptime is minutes.
 
 pcie_aspm=off is still on the cmdline despite being falsified by hang #3. Recommend leaving it for one observation period so the BIOS is the only changed variable, then dropping it - the new BIOS is the first one to expose PCIe ASPM Control in setup (added in v17), so the platform's own handling now has 4 years of fixes behind it.
+
+---
+▸ 2026-09-27T22:30:51Z [claude]
+New child dots-dfbf: 4x32GB at XMP as a candidate root cause. Raised because the post-flash dmidecode shows all four DIMMs fell back to JEDEC 2133 / 1.2 V. Two consequences: (1) memory instability on a 4-DIMM AM4 config fits the no-logs/no-MCE/no-NMI signature better than anything else considered so far, including the greeter; (2) the observation window starting now is confounded - it is 'new BIOS AND underclocked memory', not 'new BIOS'. Recommended re-enabling A-XMP in the same BIOS trip as Power Supply Idle Control to keep it a single variable.

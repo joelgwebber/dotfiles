@@ -4,7 +4,7 @@ title: Enable a post-mortem capture path for hard locks
 type: task
 priority: 2
 created: '2026-09-24T03:01:49Z'
-updated: '2026-09-27T20:56:28Z'
+updated: '2026-09-27T22:30:31Z'
 parent: dots-df8e
 labels:
 - linux
@@ -75,3 +75,15 @@ REOPENED. I sheared this on the evidence that efi_pstore registered, but the fir
 Also: the detector WAS armed during the hung boot. Boot -1 logged 'NMI watchdog: Enabled. Permanently consumes one hw-PMU counter.' and 'pstore: Registered efi_pstore as persistent store backend' at 16:10:17. It still did not recover: the gap from last log (16:25:39) to next boot (16:31:49) is 6m10s, not the ~20s that kernel.panic=20 would produce, which points to a manual power cycle rather than a panic-and-reboot.
 
 TODO: (a) sudo ls -la /sys/fs/pstore/ and read any record - EFI records persist so it should still be there; (b) systemctl enable --now systemd-pstore.service so future records are archived readably and drained out of NVRAM.
+
+---
+▸ 2026-09-27T22:30:31Z [claude]
+pstore side is COMPLETE and good going forward. Audited: efi_pstore.pstore_disable=0 on cmdline, 'Registered efi_pstore as persistent store backend' in this boot, systemd-pstore.service enabled, /var/lib/systemd/pstore present and empty. Defaults are the right ones - Storage=external (archives to disk, survives journal rotation) and Unlink=yes (drains records out of EFI NVRAM after archiving, so NVRAM cannot fill up). Nothing further needed.
+
+BUT pstore only fires on a PANIC, and hang #3 did not panic - the NMI watchdog was armed and never fired. So pstore may well capture nothing next time either.
+
+THE REMAINING GAP IS A HARDWARE WATCHDOG, for recovery rather than post-mortem:
+  /dev/watchdog*        absent
+  sp5100_tco            available at /lib/modules/.../sp5100_tco.ko.zst but NOT loaded
+  RuntimeWatchdogUSec   0 (systemd's runtime watchdog disabled)
+The SP5100 TCO is an AMD chipset timer independent of whether the CPU can still execute, so it can reset a totally wedged box that the NMI watchdog cannot see. Worth trying: load sp5100_tco (may need sp5100_tco.force=1 on some MSI boards) and set RuntimeWatchdogSec to something generous like 60s in /etc/systemd/system.conf.d/. Tradeoff to state plainly: a spurious fire during a long legitimate stall causes an unexpected reset, hence the generous timeout. It yields automatic recovery, not a log - it complements pstore rather than replacing it.
