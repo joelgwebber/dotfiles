@@ -4,7 +4,7 @@ title: noctalia-greeter floods journal at 60 msg/s
 type: bug
 priority: 1
 created: '2026-09-24T03:01:49Z'
-updated: '2026-09-24T03:03:15Z'
+updated: '2026-09-27T17:47:10Z'
 parent: dots-df8e
 labels:
 - linux
@@ -18,3 +18,7 @@ Root-caused. 92012/92034 msgs = one wlroots line at exactly 60/s: 'types/output/
 ---
 ▸ 2026-09-24T03:03:15Z [claude]
 Needs sudo: 'systemctl edit greetd.service' to add LogRateLimitIntervalSec=30s / LogRateLimitBurst=200. Open question for you: also file the WLR_LOG-is-ignored bug upstream against noctalia-greeter 1.5.0?
+
+---
+▸ 2026-09-27T17:47:10Z [claude]
+Raised priority context: per dots-df8e, both captured hard hangs happened while this compositor was the only thing running, and neither logged-in boot hung. The 60fps spin is no longer just a log-volume problem - it is the prime suspect's environment. NOCTALIA_GREETER_IDLE_TIMEOUT (read by the binary, unexplored) is now the interesting lever: if it parks the compositor it changes exactly the condition under which the machine dies.

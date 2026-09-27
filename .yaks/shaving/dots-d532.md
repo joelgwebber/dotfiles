@@ -4,7 +4,7 @@ title: Enable a post-mortem capture path for hard locks
 type: task
 priority: 2
 created: '2026-09-24T03:01:49Z'
-updated: '2026-09-27T17:33:00Z'
+updated: '2026-09-27T17:47:10Z'
 parent: dots-df8e
 labels:
 - linux
@@ -42,3 +42,11 @@ State check 2026-09-27: cmdline is now 'splash rw rootflags=subvol=/@ root=UUID=
 Second-kill-switch prediction CONFIRMED empirically: kernel.watchdog flipped 0 -> 1 (softlockup detector now live), but kernel.nmi_watchdog is STILL 0 and kernel.printk is STILL '3 3 3 3', because 70-cachyos-settings.conf re-pins both every boot. /etc/sysctl.d/ is empty, so the override was never installed. The attached 90-lockup-diag.conf is now the only remaining blocker for hard-lockup detection.
 
 Also still missing: efi_pstore.pstore_disable=0 on the cmdline, so a panic has nowhere to land across a reboot. kernel.panic is still 0 (no auto-reboot).
+
+---
+▸ 2026-09-27T17:47:10Z [claude]
+Install verified 2026-09-27. All targets correct: nmi_watchdog=1, watchdog=1, soft_watchdog=1, hardlockup_panic=1, softlockup_panic=1, panic=20, panic_on_oops=1, printk=7 4 1 7. Kernel confirms the hard-lockup detector actually initialised on the AMD PMU: 'NMI watchdog: Enabled. Permanently consumes one hw-PMU counter.' (perf-based init was the open risk; it did not fail.)
+
+printk showing '7 4 1 7' is the intended value from this file, not an anomaly - it countermands the CachyOS '3 3 3 3'.
+
+REMAINING GAP: no pstore backing. efi_pstore.pstore_disable=0 is still absent from the cmdline, so the next panic will auto-reboot (panic=20) but leave no record across the reboot. That is now the single highest-value thing left, because hardlockup_panic=1 means the next hang is the first one that CAN be captured.
