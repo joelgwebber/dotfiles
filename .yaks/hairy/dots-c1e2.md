@@ -4,7 +4,7 @@ title: Update MSI MS-7D53 BIOS from 1.40 (2022)
 type: task
 priority: 2
 created: '2026-09-24T03:01:49Z'
-updated: '2026-09-24T03:03:15Z'
+updated: '2026-09-27T20:27:22Z'
 parent: dots-df8e
 labels:
 - linux
@@ -18,3 +18,7 @@ BIOS 1.40 dated 2022-09-01 on MS-7D53. No capsule path: /sys/firmware/efi/esrt a
 ---
 ▸ 2026-09-24T03:03:15Z [claude]
 Needs physical action: M-FLASH from a FAT32 USB stick, plus setting Power Supply Idle Control = Typical Current Idle. Nothing I can do from the OS.
+
+---
+▸ 2026-09-27T20:27:22Z [claude]
+Still open: BIOS reads 1.40 / 09/01/2022 as of Sep 27.

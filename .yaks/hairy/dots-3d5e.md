@@ -4,7 +4,7 @@ title: noctalia-greeter floods journal at 60 msg/s
 type: bug
 priority: 1
 created: '2026-09-24T03:01:49Z'
-updated: '2026-09-27T17:47:10Z'
+updated: '2026-09-27T20:27:21Z'
 parent: dots-df8e
 labels:
 - linux
@@ -22,3 +22,7 @@ Needs sudo: 'systemctl edit greetd.service' to add LogRateLimitIntervalSec=30s /
 ---
 ▸ 2026-09-27T17:47:10Z [claude]
 Raised priority context: per dots-df8e, both captured hard hangs happened while this compositor was the only thing running, and neither logged-in boot hung. The 60fps spin is no longer just a log-volume problem - it is the prime suspect's environment. NOCTALIA_GREETER_IDLE_TIMEOUT (read by the binary, unexplored) is now the interesting lever: if it parks the compositor it changes exactly the condition under which the machine dies.
+
+---
+▸ 2026-09-27T20:27:21Z [claude]
+Still open as of Sep 27 16:25 - no greetd.service rate-limit drop-in installed. Note the flood rate is unchanged; boot 0 shows only 398 lines purely because joel logged in within ~7s of the greeter starting. Boots -2 and -1 logged 41106 and 45900 lines respectively. This is now the last untested variable in dots-df8e: every post-fix boot has been short and logged-in, i.e. never in the condition under which the machine actually died.

@@ -4,11 +4,11 @@ title: Enable a post-mortem capture path for hard locks
 type: task
 priority: 2
 created: '2026-09-24T03:01:49Z'
-updated: '2026-09-27T18:08:11Z'
+updated: '2026-09-27T20:27:21Z'
 parent: dots-df8e
 labels:
 - linux
-needs: human
+verify: journalctl -b -k | grep -q 'Registered efi_pstore as persistent store backend' && test "$(sysctl -n kernel.nmi_watchdog)" = 1 && test "$(sysctl -n kernel.hardlockup_panic)" = 1 && test "$(sysctl -n kernel.panic)" = 20
 ---
 
 ---
@@ -56,3 +56,11 @@ REMAINING GAP: no pstore backing. efi_pstore.pstore_disable=0 is still absent fr
 ---
 ▸ 2026-09-27T18:08:11Z [claude]
 Ready-to-run script to add efi_pstore.pstore_disable=0 to KERNEL_CMDLINE[default] and run limine-update. Backs up /etc/default/limine first, verifies the edit applied (restores on failure), prints a diff, then regenerates entries. Guarded by a grep so re-running is a no-op. Adds ONLY the pstore flag so the in-flight pcie_aspm=off experiment is not disturbed. sed verified against a copy of the real file - produces the intended line exactly.
+
+---
+▸ 2026-09-27T20:27:08Z [claude]
+Done. Capture path is fully live and survives reboot: 'nowatchdog'/'quiet' off the cmdline, efi_pstore.pstore_disable=0 added, and boot 0 (Sep 27 16:10:17) logs both 'NMI watchdog: Enabled. Permanently consumes one hw-PMU counter.' and 'pstore: Registered efi_pstore as persistent store backend'. Sysctls confirmed after reboot: nmi_watchdog=1, hardlockup_panic=1, panic=20, printk=7 4 1 7. The next hard lock should now panic, auto-reboot after 20s, and leave a record in /sys/fs/pstore.
+
+---
+▸ 2026-09-27T20:27:08Z [Joel Webber]
+verify: `journalctl -b -k | grep -q 'Registered efi_pstore as persistent store backend' && test "$(sysctl -n kernel.nmi_watchdog)" = 1 && test "$(sysctl -n kernel.hardlockup_panic)" = 1 && test "$(sysctl -n kernel.panic)" = 20` -> PASS (exit 0)
