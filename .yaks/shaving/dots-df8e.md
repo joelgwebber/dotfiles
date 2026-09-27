@@ -4,7 +4,7 @@ title: Diagnose idle hard-locks on j15r
 type: task
 priority: 1
 created: '2026-09-24T02:59:30Z'
-updated: '2026-09-27T20:56:28Z'
+updated: '2026-09-27T22:05:15Z'
 labels:
 - linux
 ---
@@ -64,3 +64,13 @@ NMI HARD-LOCKUP DETECTOR DID NOT FIRE despite being armed. A CPU spinning with i
 Ruled out again for this hang: no Xid/NVRM, no MCE, no thermal, no AER, no OOM (0 across all boots; 125Gi RAM, 6.4G peak is nothing).
 
 This promotes dots-c1e2 (BIOS 1.40 from 2022 + Power Supply Idle Control) to the top remaining lever.
+
+---
+▸ 2026-09-27T22:05:15Z [claude]
+NEW BASELINE Sep 27 17:55. BIOS 1.40 (AGESA 1.2.0.7, 2022) -> 1.D4 (AGESA 1.2.0.12, 2026), microcode 0x0a20102e -> 0x0a201030. dots-c1e2 shorn. This resets the observation window: every prior hang was on 4-year-old firmware, so the hang history is no longer directly comparable.
+
+EVIDENCE LOSS: the BIOS flash cleared EFI NVRAM, which is where efi_pstore records live. If hang #3 (Sep 27 16:25:39) left a record, it is gone - we never read it, because /sys/fs/pstore needs root and systemd-pstore.service was disabled at the time. That specific post-mortem is unrecoverable. systemd-pstore.service is now 'enabled', so future records will be archived to /var/lib/systemd/pstore (currently empty) instead of only sitting in NVRAM.
+
+WHAT A MEANINGFUL TEST LOOKS LIKE NOW: the two idle hangs took 13h06m and 6h20m, and hang #3 took 15m under load. So a credible 'fixed' signal needs multiple multi-hour runs, including at least one long idle stretch, not just a quiet evening. Current uptime is minutes.
+
+pcie_aspm=off is still on the cmdline despite being falsified by hang #3. Recommend leaving it for one observation period so the BIOS is the only changed variable, then dropping it - the new BIOS is the first one to expose PCIe ASPM Control in setup (added in v17), so the platform's own handling now has 4 years of fixes behind it.

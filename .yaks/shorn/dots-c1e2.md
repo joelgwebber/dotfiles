@@ -4,11 +4,12 @@ title: Update MSI MS-7D53 BIOS from 1.40 (2022)
 type: task
 priority: 2
 created: '2026-09-24T03:01:49Z'
-updated: '2026-09-27T21:14:02Z'
+updated: '2026-09-27T22:02:53Z'
 parent: dots-df8e
 labels:
 - linux
 needs: human
+verify: test "$(cat /sys/class/dmi/id/bios_version)" = '1.D4'
 ---
 
 ---
@@ -51,3 +52,19 @@ TWO CHANGELOG ENTRIES DIRECTLY RELEVANT TO dots-df8e:
 TPM RISK CLEARED: v1D1 updates TPM firmware and MSI recommends a BitLocker backup first. Verified not applicable here - no /etc/crypttab entries, no LUKS devices, no systemd-cryptenroll units, Secure Boot disabled, 'Measured OS: no'. Nothing is sealed to this TPM.
 
 No intermediate version is required per MSI's notes and the changelog history; v14 -> v1D4 direct is fine.
+
+---
+▸ 2026-09-27T22:02:52Z [claude]
+FLASHED SUCCESSFULLY. bios_version 1.40 -> 1.D4, bios_date 09/01/2022 -> 08/14/2026 (matches the E7D53AMS.1D4 ROM's internal date). First boot on it: Sep 27 17:55:34, clean, no new kernel errata.
+
+CPU MICROCODE WAS BUMPED TOO - not mentioned in MSI's changelog but visible in the journal: 0x0a20102e across boots -4..-1, 0x0a201030 on boot 0. So the AGESA jump 1.2.0.7 -> 1.2.0.12 delivered new Zen 3 microcode, which is a more substantive change than the release notes' 'PS/2 S3 resume' line suggests.
+
+Cmdline survived intact (it lives in limine.conf on the ESP, not NVRAM). Sysctls intact (nmi_watchdog=1, hardlockup_panic=1, panic=20, printk=7 4 1 7). NMI watchdog re-armed and efi_pstore re-registered on the new BIOS.
+
+NVRAM WAS cleared, exactly as predicted: 'Boot0004 Limine' is gone. The machine booted via the fallback path (BootCurrent 0001 = UEFI OS -> EFI/BOOT/BOOTX64.EFI), which is why it came up at all. Needs 'sudo limine-install' to re-register the named entry. Also Boot0002 is the still-inserted SanDisk Cruzer Glide - pull the stick.
+
+Still unverified from the OS and needing joel: whether Power Supply Idle Control was set to Typical Current Idle, and whether the memory profile (XMP/EXPO) survived the settings reset - 'sudo dmidecode -t 17' is the check.
+
+---
+▸ 2026-09-27T22:02:52Z [Joel Webber]
+verify: `test "$(cat /sys/class/dmi/id/bios_version)" = '1.D4'` -> PASS (exit 0)
