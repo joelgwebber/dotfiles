@@ -4,7 +4,7 @@ title: Update MSI MS-7D53 BIOS from 1.40 (2022)
 type: task
 priority: 2
 created: '2026-09-24T03:01:49Z'
-updated: '2026-09-27T20:27:22Z'
+updated: '2026-09-27T20:56:29Z'
 parent: dots-df8e
 labels:
 - linux
@@ -22,3 +22,7 @@ Needs physical action: M-FLASH from a FAT32 USB stick, plus setting Power Supply
 ---
 ▸ 2026-09-27T20:27:22Z [claude]
 Still open: BIOS reads 1.40 / 09/01/2022 as of Sep 27.
+
+---
+▸ 2026-09-27T20:56:29Z [claude]
+Promoted: with pcie_aspm=off falsified and the NMI detector failing to catch hang #3, a platform/firmware-level freeze is now the leading theory, which makes the 4-year-old AGESA and the Power Supply Idle Control setting the most promising untried lever.

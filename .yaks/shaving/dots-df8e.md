@@ -4,7 +4,7 @@ title: Diagnose idle hard-locks on j15r
 type: task
 priority: 1
 created: '2026-09-24T02:59:30Z'
-updated: '2026-09-27T20:27:44Z'
+updated: '2026-09-27T20:56:28Z'
 labels:
 - linux
 ---
@@ -46,3 +46,21 @@ What a real test looks like: leave it at the greeter (or logged-in-idle) for 13h
 RED HERRING ruled out: 'clocksource: Watchdog remote CPU N read timed out' occurs exactly once per substantial boot on a random CPU (9, 25, 12, 27, 5, 13 across boots -6,-5,-4,-2,-1,0). It appears in cleanly-shut-down boots just as often as in the two hang boots, never escalated, never marked TSC unstable, and the clocksource stayed tsc throughout. It does not discriminate hangs - not a predictor.
 
 Still clean since the fixes: no lockup/panic events, no Xid/NVRM, no MCE, no thermal, and all PCIe AER counters still zero even with pcie_aspm=off now active.
+
+---
+▸ 2026-09-27T20:56:28Z [claude]
+HANG #3, and it breaks the greeter hypothesis.
+
+Boot -1: 16:10:17 -> 16:25:39, only 15m22s of uptime. Ended abruptly mid-line ('Started app-niri-alacritty-52071.scope'), no shutdown sequence. Unclean shutdown independently confirmed on the next boot: 'systemd-journald: File .../system.journal corrupted or uncleanly shut down, renaming and replacing.'
+
+WHY THIS BREAKS THE HYPOTHESIS: this one happened while LOGGED IN to niri and under real load - not at the greeter. An alacritty scope reported 34min 2.263s CPU over 9min 43.079s wall clock, 6.4G memory peak at 16:21:05 (that was almost certainly my own journalctl scanning of the 1.8G journal set during the previous session). Profile is the opposite of the first two hangs: 15 minutes vs 6h20m/13h06m, active vs idle, in-session vs at-greeter.
+
+So either there are two distinct failure modes, or the 2-for-2 greeter correlation was coincidence. Either way the greeter is no longer the leading suspect on its own. Recorded as a correction to the earlier note.
+
+pcie_aspm=off IS FALSIFIED as a fix: it was active on the cmdline for this boot and the machine hung anyway. It costs idle power for no demonstrated benefit - reasonable to drop now.
+
+NMI HARD-LOCKUP DETECTOR DID NOT FIRE despite being armed. A CPU spinning with interrupts disabled would be caught by the perf-NMI watchdog; it wasn't, and there were NO kernel messages at all in the final 10 minutes. That points away from a simple CPU lockup and toward something that halts the whole platform including NMI delivery - firmware/SMI freeze or a bus-level wedge. Caveat: cannot yet distinguish 'never fired' from 'fired but could not write or reboot' - only /sys/fs/pstore settles that (see dots-d532).
+
+Ruled out again for this hang: no Xid/NVRM, no MCE, no thermal, no AER, no OOM (0 across all boots; 125Gi RAM, 6.4G peak is nothing).
+
+This promotes dots-c1e2 (BIOS 1.40 from 2022 + Power Supply Idle Control) to the top remaining lever.

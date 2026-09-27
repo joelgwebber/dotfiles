@@ -4,7 +4,7 @@ title: Enable a post-mortem capture path for hard locks
 type: task
 priority: 2
 created: '2026-09-24T03:01:49Z'
-updated: '2026-09-27T20:27:21Z'
+updated: '2026-09-27T20:56:28Z'
 parent: dots-df8e
 labels:
 - linux
@@ -64,3 +64,14 @@ Done. Capture path is fully live and survives reboot: 'nowatchdog'/'quiet' off t
 ---
 ▸ 2026-09-27T20:27:08Z [Joel Webber]
 verify: `journalctl -b -k | grep -q 'Registered efi_pstore as persistent store backend' && test "$(sysctl -n kernel.nmi_watchdog)" = 1 && test "$(sysctl -n kernel.hardlockup_panic)" = 1 && test "$(sysctl -n kernel.panic)" = 20` -> PASS (exit 0)
+
+---
+▸ 2026-09-27T20:56:28Z [claude]
+REOPENED. I sheared this on the evidence that efi_pstore registered, but the first real hang shows the capture path is incomplete in two ways:
+
+1. systemd-pstore.service is DISABLED (loaded, inactive, preset: enabled). Nothing archives /sys/fs/pstore into /var/lib/systemd/pstore, which is empty. Records also stay in EFI NVRAM instead of being drained to disk.
+2. /sys/fs/pstore is root-only, so the record - if any - cannot be read without sudo. I cannot confirm whether the Sep 27 16:25:39 hang left one.
+
+Also: the detector WAS armed during the hung boot. Boot -1 logged 'NMI watchdog: Enabled. Permanently consumes one hw-PMU counter.' and 'pstore: Registered efi_pstore as persistent store backend' at 16:10:17. It still did not recover: the gap from last log (16:25:39) to next boot (16:31:49) is 6m10s, not the ~20s that kernel.panic=20 would produce, which points to a manual power cycle rather than a panic-and-reboot.
+
+TODO: (a) sudo ls -la /sys/fs/pstore/ and read any record - EFI records persist so it should still be there; (b) systemctl enable --now systemd-pstore.service so future records are archived readably and drained out of NVRAM.
