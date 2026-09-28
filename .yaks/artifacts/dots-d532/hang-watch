@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# hang-watch -- record whether the previous boot ended cleanly (dots-d532).
+#
+# WHY THIS EXISTS: the sp5100_tco driver on this board does not advertise
+# WDIOF_CARDRESET (its options mask is 0x8180 = KEEPALIVEPING|MAGICCLOSE|
+# SETTIMEOUT), so /sys/class/watchdog/watchdog0/bootstatus is always 0 and the
+# kernel cannot tell us the watchdog caused a reset. This infers it instead.
+#
+# HOW IT CLASSIFIES: a clean shutdown always logs journald announcing its own
+# stop ("Stopping Flush Journal to Persistent Storage") plus filesystem
+# unmounts. A hard lock ends mid-stream with none of that. Validated against
+# this machine's boot history: it flags exactly the two known hangs
+# (2026-09-27 16:25:39 and 21:41:37) and none of the deliberate reboots.
+#
+# NOTE on the PID: only systemd[1] markers count. "systemd[<n>]: Reached target
+# Shutdown." with n != 1 is a USER manager ending a session, which happens
+# during normal operation -- matching on that gives false "clean" verdicts.
+#
+# Usage:
+#   hang-watch             classify the previous boot, append to the log
+#   hang-watch --history   print every retained boot (no writes)
+
+set -uo pipefail
+
+LOGFILE=${HANG_WATCH_LOG:-/var/log/hang-watch.log}
+GREP=/usr/bin/grep
+
+# Markers that only ever appear during a real system shutdown.
+SHUTDOWN_RE='Stopping Flush Journal to Persistent Storage|last unmount of filesystem|systemd\[1\]: Unmounted /|systemd-shutdown\[|Journal stopped'
+
+# A watchdog reset returns quickly: 60s timeout + POST. Anything longer than
+# this and a human almost certainly power-cycled it. Heuristic, not proof.
+WATCHDOG_GAP_MAX=${HANG_WATCH_GAP_MAX:-300}
+
+boot_start() { journalctl -b "$1" -o short-unix --no-pager 2>/dev/null | head -1 | awk '{print int($1)}'; }
+boot_end()   { journalctl -b "$1" -o short-unix -n1 --no-pager 2>/dev/null | awk '{print int($1)}'; }
+
+ended_clean() {
+  # Deliberately `grep -c`, not `grep -q`: with `-q` grep exits on the first
+  # match, journalctl takes SIGPIPE, and `set -o pipefail` then reports the
+  # whole pipeline as failed -- turning every clean boot into a false HANG.
+  local n
+  n=$(journalctl -b "$1" -n 500 --no-pager 2>/dev/null | "$GREP" -cE "$SHUTDOWN_RE")
+  [ "${n:-0}" -gt 0 ]
+}
+
+hms() { printf '%dh%02dm%02ds' $(( $1/3600 )) $(( ($1%3600)/60 )) $(( $1%60 )); }
+
+classify() {
+  # $1 = boot index of the boot to judge; $2 = start epoch of the boot after it
+  local b=$1 next_start=${2:-} start end dur gap
+  start=$(boot_start "$b"); end=$(boot_end "$b")
+  [ -z "$start" ] && return 1
+  dur=$(( end - start ))
+  if ended_clean "$b"; then
+    printf 'CLEAN     ran %s  ended %s\n' "$(hms "$dur")" "$(date -d "@$end" '+%F %T')"
+    return 0
+  fi
+  if [ -n "$next_start" ]; then
+    gap=$(( next_start - end ))
+    if [ "$gap" -le "$WATCHDOG_GAP_MAX" ]; then
+      printf 'HANG      ran %s  froze %s  recovered by WATCHDOG after %ds\n' \
+        "$(hms "$dur")" "$(date -d "@$end" '+%F %T')" "$gap"
+    else
+      printf 'HANG      ran %s  froze %s  sat dead %s until powered on by hand\n' \
+        "$(hms "$dur")" "$(date -d "@$end" '+%F %T')" "$(hms "$gap")"
+    fi
+  else
+    printf 'HANG      ran %s  froze %s\n' "$(hms "$dur")" "$(date -d "@$end" '+%F %T')"
+  fi
+}
+
+current_boot_index() {
+  journalctl --list-boots -o json 2>/dev/null \
+    | python3 -c 'import sys,json;print(json.load(sys.stdin)[-1]["index"])' 2>/dev/null || echo 0
+}
+
+if [ "${1:-}" = "--history" ]; then
+  cur=$(current_boot_index)
+  # Oldest retained boot index, as a negative number.
+  oldest=$(journalctl --list-boots -o json 2>/dev/null \
+    | python3 -c 'import sys,json;print(json.load(sys.stdin)[0]["index"])' 2>/dev/null || echo -10)
+  for b in $(seq "$oldest" "$cur"); do
+    if [ "$b" = "$cur" ]; then
+      printf 'boot %-4s RUNNING   up %s\n' "$b" "$(hms $(( $(date +%s) - $(boot_start "$b") )))"
+    else
+      printf 'boot %-4s %s\n' "$b" "$(classify "$b" "$(boot_start $(( b + 1 )) )")"
+    fi
+  done
+  exit 0
+fi
+
+# Default: judge the previous boot, once, and record it.
+verdict=$(classify -1 "$(boot_start 0)")
+[ -z "$verdict" ] && { echo "hang-watch: no previous boot in the journal"; exit 0; }
+
+line="$(date '+%F %T')  $verdict  [bootstatus=$(cat /sys/class/watchdog/watchdog0/bootstatus 2>/dev/null || echo n/a)]"
+echo "$line"                     # goes to the journal via the unit
+echo "$line" >> "$LOGFILE" 2>/dev/null || true

@@ -4,7 +4,7 @@ title: Enable a post-mortem capture path for hard locks
 type: task
 priority: 2
 created: '2026-09-24T03:01:49Z'
-updated: '2026-09-28T12:22:27Z'
+updated: '2026-09-28T19:28:12Z'
 parent: dots-df8e
 labels:
 - linux
@@ -101,3 +101,35 @@ THE VALUE LEFT HERE IS THE HARDWARE WATCHDOG, and it is now worth more than furt
   #   [Manager]
   #   RuntimeWatchdogSec=60
 Tradeoff as before: a spurious fire during a long legitimate stall causes an unexpected reset, hence 60s rather than something tight. It buys automatic recovery, not diagnosis.
+
+![hang-watch](artifacts/dots-d532/hang-watch)
+
+---
+▸ 2026-09-28T19:28:00Z [claude]
+Boot-time hang detector. Needed because sp5100_tco does NOT advertise WDIOF_CARDRESET (options mask 0x8180 = KEEPALIVEPING|MAGICCLOSE|SETTIMEOUT), so bootstatus is permanently 0 and the kernel cannot report a watchdog-caused reset. This infers it from the journal instead.
+
+Classification marker was arrived at empirically after two wrong guesses: 'Stopping Flush Journal to Persistent Storage' is journald announcing its own stop, so it is always written before the journal closes, unlike 'systemd-shutdown[1]' or 'Reached target Shutdown' which happen after journald is gone and never reach disk. Also: only systemd[1] counts - 'systemd[994]: Reached target Shutdown.' is a USER manager ending a session during normal operation, and matching it marked every hang as clean.
+
+One real bug found while testing: 'grep -q' inside a 'set -o pipefail' script makes journalctl take SIGPIPE and the pipeline report failure, turning every clean boot into a false HANG. Uses 'grep -c' instead; comment in the script explains why.
+
+Validated against the full retained history: flags exactly the five hangs and none of the deliberate reboots.
+
+![hang-watch](artifacts/dots-d532/hang-watch.service)
+
+---
+▸ 2026-09-28T19:28:00Z [claude]
+Oneshot unit, After/Requires systemd-journal-flush.service so the persistent journal is readable. Install: sudo install -m755 .yaks/artifacts/dots-d532/hang-watch /usr/local/bin/hang-watch && sudo install -m644 .yaks/artifacts/dots-d532/hang-watch.service /etc/systemd/system/ && sudo systemctl enable hang-watch.service
+
+---
+▸ 2026-09-28T19:28:12Z [claude]
+WATCHDOG IS INSTALLED BUT NOT ARMED. /dev/watchdog and /dev/watchdog0 exist, sp5100_tco loaded cleanly ('Using 0xfeb00000 for watchdog MMIO address', 'initialized. heartbeat=60 sec'), and /etc/systemd/system.conf.d/watchdog.conf correctly contains '[Manager] RuntimeWatchdogSec=60'. But systemctl still reports RuntimeWatchdogUSec=0 and /sys/class/watchdog/watchdog0/state is 'inactive' - nothing is pinging it, so it will never fire.
+
+Cause: changes to system.conf are only picked up by re-executing PID 1. Fix: 'sudo systemctl daemon-reexec' (or reboot), then confirm RuntimeWatchdogUSec=1min and state=active.
+
+FULL HANG HISTORY recovered by hang-watch --history, which found a FIFTH hang I had never analysed (Sep 23, predating the retention fix):
+  1. 2026-09-23 02:25:21  after 10h41m41s  sat dead 19h01m
+  2. 2026-09-24 21:33:01  after 13h05m28s  sat dead 38h11m
+  3. 2026-09-26 18:03:23  after  6h19m30s  sat dead 19h02m
+  4. 2026-09-27 16:25:39  after  0h15m22s  sat dead  0h06m
+  5. 2026-09-27 21:41:37  after  2h11m11s  sat dead 10h31m
+Every deliberate reboot in the same window classifies CLEAN. Cumulative dead time is roughly four days - which is the argument for arming the watchdog regardless of diagnosis.
