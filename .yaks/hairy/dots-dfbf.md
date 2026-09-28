@@ -4,7 +4,7 @@ title: 4x32GB at XMP may be the real hard-lock cause
 type: task
 priority: 1
 created: '2026-09-27T22:30:31Z'
-updated: '2026-09-28T19:59:41Z'
+updated: '2026-09-28T21:18:14Z'
 parent: dots-df8e
 labels:
 - linux
@@ -49,3 +49,18 @@ If memtest86+ passes a full overnight run, memory is largely cleared and power d
 ---
 ▸ 2026-09-28T19:59:41Z [claude]
 Prerequisite for the memtest run: joel can't see the limine menu long enough to pick an entry (his monitor switches inputs on reboot). Per limine 12.9.0's CONFIG.md, 'timeout' is a GLOBAL option and 'timeout: no' disables automatic boot entirely, so the menu waits indefinitely - which is what's needed to select the memtest86+ entry. Editing /boot/limine.conf is safe here: ENABLE_ENROLL_LIMINE_CONFIG is not set in /etc/default/limine or /etc/limine-entry-tool.conf, so it defaults to no and limine-enroll-config is not required. limine-update only rewrites its own machine-id-tagged OS entry, so a global option at the top of the file survives.
+
+---
+▸ 2026-09-28T21:18:14Z [claude]
+WHY NO MEMTEST ENTRY APPEARED - nothing was ever going to create one:
+  * memtest86+-efi ships exactly 3 payload files: /boot/memtest86+/memtest.efi and /etc/grub.d/60_memtest86+-efi. It is a GRUB-only package; the generator script is for grub-mkconfig.
+  * limine-entry-tool has ZERO memtest support: 'grep -ci memtest' returns 0 for limine-entry-tool, limine-update, limine-mkinitcpio and limine-install.
+  * No pacman hook mentions memtest.
+So limine-update had nothing to do. The entry must be hand-written.
+
+ENTRY TO APPEND AT THE END of /boot/limine.conf (single leading slash = top-level entry; a double slash would make it a sub-entry of the Snapshots directory):
+  /Memtest86+
+      protocol: efi
+      path: boot():/memtest86+/memtest.efi
+
+Syntax verified against limine 12.9.0's CONFIG.md: 'EFI Chainload protocol' takes 'path' (alias image_path); 'protocol: efi' has aliases uefi/efi_chainload. 'boot():/...' resolves to the partition containing the config file on the boot drive, which is the ESP - and since /boot IS the ESP (nvme0n1p1, vfat), /boot/memtest86+/memtest.efi is /memtest86+/memtest.efi in limine's namespace. Survives limine-update, which only rewrites its own machine-id-tagged OS entry.
