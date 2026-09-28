@@ -4,7 +4,7 @@ title: noctalia-greeter floods journal at 60 msg/s
 type: bug
 priority: 1
 created: '2026-09-24T03:01:49Z'
-updated: '2026-09-27T20:27:21Z'
+updated: '2026-09-28T12:22:27Z'
 parent: dots-df8e
 labels:
 - linux
@@ -26,3 +26,7 @@ Raised priority context: per dots-df8e, both captured hard hangs happened while 
 ---
 ▸ 2026-09-27T20:27:21Z [claude]
 Still open as of Sep 27 16:25 - no greetd.service rate-limit drop-in installed. Note the flood rate is unchanged; boot 0 shows only 398 lines purely because joel logged in within ~7s of the greeter starting. Boots -2 and -1 logged 41106 and 45900 lines respectively. This is now the last untested variable in dots-df8e: every post-fix boot has been short and logged-in, i.e. never in the condition under which the machine actually died.
+
+---
+▸ 2026-09-28T12:22:27Z [claude]
+EXONERATED as a hang suspect. Hang #4 happened in a logged-in idle niri session with the greeter long exited, and hang #3 under load - so hangs occur with or without this compositor running. See the state table on dots-df8e. This reverts to what it originally was: a real log-volume bug (77227 lines in boot -1, ~21 minutes at the greeter) with a broken WLR_LOG knob, worth fixing for tidiness at p3-ish urgency, not for stability.

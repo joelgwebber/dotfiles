@@ -4,7 +4,7 @@ title: 4x32GB at XMP may be the real hard-lock cause
 type: task
 priority: 1
 created: '2026-09-27T22:30:31Z'
-updated: '2026-09-28T00:01:51Z'
+updated: '2026-09-28T12:22:27Z'
 parent: dots-df8e
 labels:
 - linux
@@ -35,3 +35,13 @@ The hypothesis gets STRONGER though: a config that cannot train its own rated pr
 NEEDED to settle it (root): sudo dmidecode -t 17 | grep -E 'Size|Speed|Part Number|Manufacturer|Rank|Configured' - the part number gives the rated spec, which tells us whether 2133 is a fallback or actually the kit's rating.
 
 FASTER PATH THAN WAITING: no memory stress tool is installed; memtester and stress-ng are both in the repos (cachyos-extra-v3 / extra). Given hang #3 happened under load, a stress run is a plausible reproducer, and a reproducible hang is worth far more than days of waiting. Risk to state plainly: it may hard-lock the box - which is the point.
+
+---
+▸ 2026-09-28T12:22:27Z [claude]
+NOW THE TOP CANDIDATE, and note the shift: hang #4 occurred at the JEDEC 2133/1.2V fallback, so 'XMP too aggressive' is eliminated. What remains is a genuinely faulty DIMM, or an IMC/fabric marginal even at base speed on a 4x32GB load. That is consistent with everything: zero logs, no MCE (non-ECC), nothing for the NMI watchdog to see, and failures in both idle and load.
+
+DECISIVE TEST: memtest86+. Not installed; extra/memtest86+-efi 7.20-2 is in the repos. It runs outside the OS, so it removes every software variable at once, and limine-entry-tool should pick up a boot entry for it automatically. An overnight pass over 128GB is exactly the test this needs.
+
+BLOCKED ON: pacman is still stale (db Sep 13, kernel still 7.2.4-3 - the -Syu has not been run), so nothing installs. 'sudo pacman -Syu' first, then 'sudo pacman -S memtest86+-efi' (and stress-ng while there), then 'sudo limine-update' and reboot into the memtest entry.
+
+If memtest86+ passes a full overnight run, memory is largely cleared and power delivery becomes the leading suspect.

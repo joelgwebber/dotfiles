@@ -4,7 +4,7 @@ title: Enable a post-mortem capture path for hard locks
 type: task
 priority: 2
 created: '2026-09-24T03:01:49Z'
-updated: '2026-09-27T22:30:31Z'
+updated: '2026-09-28T12:22:27Z'
 parent: dots-df8e
 labels:
 - linux
@@ -87,3 +87,17 @@ THE REMAINING GAP IS A HARDWARE WATCHDOG, for recovery rather than post-mortem:
   sp5100_tco            available at /lib/modules/.../sp5100_tco.ko.zst but NOT loaded
   RuntimeWatchdogUSec   0 (systemd's runtime watchdog disabled)
 The SP5100 TCO is an AMD chipset timer independent of whether the CPU can still execute, so it can reset a totally wedged box that the NMI watchdog cannot see. Worth trying: load sp5100_tco (may need sp5100_tco.force=1 on some MSI boards) and set RuntimeWatchdogSec to something generous like 60s in /etc/systemd/system.conf.d/. Tradeoff to state plainly: a spurious fire during a long legitimate stall causes an unexpected reset, hence the generous timeout. It yields automatic recovery, not a log - it complements pstore rather than replacing it.
+
+---
+▸ 2026-09-28T12:22:27Z [claude]
+PSTORE IS A DEAD END - closing out its original premise. Hangs #3 and #4 both ran with the NMI watchdog armed and efi_pstore registered, and both left /sys/fs/pstore empty ('systemd-pstore.service: skipped, unmet condition check ConditionDirectoryNotEmpty'). The kernel never panics, so there is nothing for pstore to capture. The setup itself is correct and worth keeping - it costs nothing and would catch a genuine oops - but it should not be expected to explain these hangs.
+
+THE VALUE LEFT HERE IS THE HARDWARE WATCHDOG, and it is now worth more than further capture attempts: the machine sat dead from 21:41 to 08:12 (10.5h) after hang #4. sp5100_tco would have reset it within a minute. Still unloaded, RuntimeWatchdogUSec still 0.
+
+  echo 'sp5100_tco' | sudo tee /etc/modules-load.d/sp5100_tco.conf
+  sudo modprobe sp5100_tco          # may need sp5100_tco.force=1 on MSI boards
+  ls /dev/watchdog                   # confirm it appeared
+  # then, in /etc/systemd/system.conf.d/watchdog.conf:
+  #   [Manager]
+  #   RuntimeWatchdogSec=60
+Tradeoff as before: a spurious fire during a long legitimate stall causes an unexpected reset, hence 60s rather than something tight. It buys automatic recovery, not diagnosis.

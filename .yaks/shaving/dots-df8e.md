@@ -4,7 +4,7 @@ title: Diagnose idle hard-locks on j15r
 type: task
 priority: 1
 created: '2026-09-24T02:59:30Z'
-updated: '2026-09-28T00:01:51Z'
+updated: '2026-09-28T12:22:06Z'
 labels:
 - linux
 ---
@@ -84,3 +84,24 @@ New child dots-dfbf: 4x32GB at XMP as a candidate root cause. Raised because the
 Post-BIOS-settings state, Sep 27 19:30 boot: BIOS 1.D4, Power Supply Idle Control set to Typical Current Idle (not verifiable from the OS - it affects VRM idle current, not the exposed ACPI C-states; cpuidle shows POLL/C1/C2 under acpi_idle, and I have no pre-change baseline to compare anyway). limine-install ran - 'Boot0000* Limine' is restored and the USB stick entry is gone. Both reboots clean, no unclean-shutdown markers. Minor: BootOrder is 0001,0000 so the fallback still boots first; harmless since both point at Limine on the same ESP, but 'sudo efibootmgr -o 0000,0001' would put the named entry first.
 
 Uptime 30m. Nothing proven yet - see the calibration note above (13h06m / 6h20m / 15m-under-load).
+
+---
+▸ 2026-09-28T12:22:06Z [claude]
+HANG #4. Boot -1: Sep 27 19:30:26 -> 21:41:37 = 2h11m11s. Ends abruptly on 'snapperd.service: Deactivated successfully' with no shutdown sequence. It sat dead from 21:41 until joel powered it on at 08:12 next morning (10.5h), so panic=20 did NOT auto-reboot it - i.e. no panic.
+
+THE BIOS UPDATE DID NOT FIX IT. Hang #4 ran on BIOS 1.D4 (AGESA 1.2.0.12, microcode 0x0a201030) WITH Power Supply Idle Control set to Typical Current Idle. Both are now eliminated as complete explanations.
+
+THE GREETER HYPOTHESIS IS DEFINITIVELY DEAD. Full state table:
+  #1 Sep 24 08:27:33->21:33:01  13h06m  at greeter, never logged in
+  #2 Sep 26 11:43:53->18:03:23   6h20m  at greeter, never logged in
+  #3 Sep 27 16:10:17->16:25:39  15m22s  logged in, heavy load
+  #4 Sep 27 19:30:26->21:41:37   2h11m  logged in, IDLE (greeter exited, niri session up)
+Hangs now observed in all three states - at greeter, logged-in-idle, and logged-in-under-load. No software state correlates. Times-to-hang 13h06m/6h20m/15m/2h11m show no pattern.
+
+PSTORE HAS NOW FAILED TWICE. Hangs #3 and #4 both ran with the NMI watchdog armed and efi_pstore registered (verified in each boot's log). /sys/fs/pstore was EMPTY at next boot both times - systemd-pstore.service logged 'skipped, unmet condition check ConditionDirectoryNotEmpty=/sys/fs/pstore'. No kernel messages in the final 20 minutes of #4 either. Conclusion: the kernel never gets a chance to panic. This is not a CPU lockup the kernel can observe; it is a platform-level freeze.
+
+Note on evidence: boot 0 shows NO journald corruption or btrfs replay this time (unlike #3). That does not mean a clean shutdown - btrfs is CoW and nothing was writing at 21:41, so the tree was already consistent. The abrupt log end with no shutdown sequence is the reliable signal.
+
+ELIMINATED: nvme_core.default_ps_max_latency_us=0, pcie_aspm=off, BIOS 1.40->1.D4, Power Supply Idle Control, the greeter/compositor, aggressive memory speed (it hangs at JEDEC 2133/1.2V fallback), thermal (Tctl 44C idle, no thermal events ever), OOM (zero ever), GPU (no Xid/NVRM in any hang), MCE (none), PCIe AER (all counters zero).
+
+STILL STANDING: a faulty DIMM or an IMC marginal at any speed (dots-dfbf, untested); power delivery / PSU, which fits a zero-log freeze in both idle and load, and 5950X + RTX 4090 is a brutal transient load; motherboard VRM. Worth asking joel what PSU this is - model, wattage, age - since nothing in the OS can see it.
