@@ -4,7 +4,7 @@ title: Diagnose idle hard-locks on j15r
 type: task
 priority: 1
 created: '2026-09-24T02:59:30Z'
-updated: '2026-09-27T22:30:51Z'
+updated: '2026-09-28T00:01:51Z'
 labels:
 - linux
 ---
@@ -78,3 +78,9 @@ pcie_aspm=off is still on the cmdline despite being falsified by hang #3. Recomm
 ---
 ▸ 2026-09-27T22:30:51Z [claude]
 New child dots-dfbf: 4x32GB at XMP as a candidate root cause. Raised because the post-flash dmidecode shows all four DIMMs fell back to JEDEC 2133 / 1.2 V. Two consequences: (1) memory instability on a 4-DIMM AM4 config fits the no-logs/no-MCE/no-NMI signature better than anything else considered so far, including the greeter; (2) the observation window starting now is confounded - it is 'new BIOS AND underclocked memory', not 'new BIOS'. Recommended re-enabling A-XMP in the same BIOS trip as Power Supply Idle Control to keep it a single variable.
+
+---
+▸ 2026-09-28T00:01:51Z [claude]
+Post-BIOS-settings state, Sep 27 19:30 boot: BIOS 1.D4, Power Supply Idle Control set to Typical Current Idle (not verifiable from the OS - it affects VRM idle current, not the exposed ACPI C-states; cpuidle shows POLL/C1/C2 under acpi_idle, and I have no pre-change baseline to compare anyway). limine-install ran - 'Boot0000* Limine' is restored and the USB stick entry is gone. Both reboots clean, no unclean-shutdown markers. Minor: BootOrder is 0001,0000 so the fallback still boots first; harmless since both point at Limine on the same ESP, but 'sudo efibootmgr -o 0000,0001' would put the named entry first.
+
+Uptime 30m. Nothing proven yet - see the calibration note above (13h06m / 6h20m / 15m-under-load).
