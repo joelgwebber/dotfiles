@@ -4,7 +4,7 @@ title: 4x32GB at XMP may be the real hard-lock cause
 type: task
 priority: 1
 created: '2026-09-27T22:30:31Z'
-updated: '2026-09-28T12:22:27Z'
+updated: '2026-09-28T19:59:41Z'
 parent: dots-df8e
 labels:
 - linux
@@ -45,3 +45,7 @@ DECISIVE TEST: memtest86+. Not installed; extra/memtest86+-efi 7.20-2 is in the 
 BLOCKED ON: pacman is still stale (db Sep 13, kernel still 7.2.4-3 - the -Syu has not been run), so nothing installs. 'sudo pacman -Syu' first, then 'sudo pacman -S memtest86+-efi' (and stress-ng while there), then 'sudo limine-update' and reboot into the memtest entry.
 
 If memtest86+ passes a full overnight run, memory is largely cleared and power delivery becomes the leading suspect.
+
+---
+▸ 2026-09-28T19:59:41Z [claude]
+Prerequisite for the memtest run: joel can't see the limine menu long enough to pick an entry (his monitor switches inputs on reboot). Per limine 12.9.0's CONFIG.md, 'timeout' is a GLOBAL option and 'timeout: no' disables automatic boot entirely, so the menu waits indefinitely - which is what's needed to select the memtest86+ entry. Editing /boot/limine.conf is safe here: ENABLE_ENROLL_LIMINE_CONFIG is not set in /etc/default/limine or /etc/limine-entry-tool.conf, so it defaults to no and limine-enroll-config is not required. limine-update only rewrites its own machine-id-tagged OS entry, so a global option at the top of the file survives.
