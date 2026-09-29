@@ -4,7 +4,7 @@ title: 4x32GB at XMP may be the real hard-lock cause
 type: task
 priority: 1
 created: '2026-09-27T22:30:31Z'
-updated: '2026-09-28T21:18:14Z'
+updated: '2026-09-29T03:07:28Z'
 parent: dots-df8e
 labels:
 - linux
@@ -64,3 +64,13 @@ ENTRY TO APPEND AT THE END of /boot/limine.conf (single leading slash = top-leve
       path: boot():/memtest86+/memtest.efi
 
 Syntax verified against limine 12.9.0's CONFIG.md: 'EFI Chainload protocol' takes 'path' (alias image_path); 'protocol: efi' has aliases uefi/efi_chainload. 'boot():/...' resolves to the partition containing the config file on the boot drive, which is the ESP - and since /boot IS the ESP (nvme0n1p1, vfat), /boot/memtest86+/memtest.efi is /memtest86+/memtest.efi in limine's namespace. Survives limine-update, which only rewrites its own machine-id-tagged OS entry.
+
+---
+▸ 2026-09-29T03:07:28Z [claude]
+The hand-written limine entry is probably correct; the panic is a Secure Boot LoadImage denial, not a config error - see dots-5c4f. Disable Secure Boot and retry.
+
+PLAN B if it still panics with Secure Boot off (two routes that avoid Limine's LoadImage entirely):
+  1. Register memtest.efi as its own UEFI boot entry so the FIRMWARE loads it directly:
+     sudo efibootmgr -c -d /dev/nvme0n1 -p 1 -L 'Memtest86+' -l '\memtest86+\memtest.efi'
+     (mind the literal '+' in the directory name)
+  2. Write memtest86+'s own USB image to the Cruzer Glide and boot it directly. Most reliable - no bootloader in the path at all - and the stick is already FAT32 from the BIOS flash.
