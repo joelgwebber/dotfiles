@@ -4,7 +4,7 @@ title: 4x32GB at XMP may be the real hard-lock cause
 type: task
 priority: 1
 created: '2026-09-27T22:30:31Z'
-updated: '2026-09-29T03:07:28Z'
+updated: '2026-09-29T12:20:43Z'
 parent: dots-df8e
 labels:
 - linux
@@ -74,3 +74,15 @@ PLAN B if it still panics with Secure Boot off (two routes that avoid Limine's L
      sudo efibootmgr -c -d /dev/nvme0n1 -p 1 -L 'Memtest86+' -l '\memtest86+\memtest.efi'
      (mind the literal '+' in the directory name)
   2. Write memtest86+'s own USB image to the Cruzer Glide and boot it directly. Most reliable - no bootloader in the path at all - and the stick is already FAT32 from the BIOS flash.
+
+---
+▸ 2026-09-29T12:20:43Z [claude]
+memtest86+ PASSED TWICE (2026-09-29, after disabling Secure Boot per dots-5c4f). Bad DIMM cells are largely ruled out - that was the main thing this yak was about, so dropping to p3 rather than shearing.
+
+WHAT MEMTEST DOES NOT CLEAR, so the memory subsystem is not fully exonerated:
+  * It ran at the 2133/1.2V fallback, not at a rated profile.
+  * It is a largely linear sweep with modest CPU/IMC contention - it does not reproduce 32 threads hammering the memory controller simultaneously.
+  * It draws very little power, so it exercises neither Infinity Fabric under load nor transient power delivery.
+stress-ng --vm --verify is the complement and is now worth running: it targets exactly the IMC-under-contention and power-envelope cases memtest cannot reach.
+
+Also untested and adjacent: FCLK/UCLK ratios and SoC voltages with 4x32GB. Worth confirming what the BIOS picked rather than leaving it on auto.

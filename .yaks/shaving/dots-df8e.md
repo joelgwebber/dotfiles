@@ -4,7 +4,7 @@ title: Diagnose idle hard-locks on j15r
 type: task
 priority: 1
 created: '2026-09-24T02:59:30Z'
-updated: '2026-09-28T12:22:06Z'
+updated: '2026-09-29T12:21:11Z'
 labels:
 - linux
 ---
@@ -105,3 +105,29 @@ Note on evidence: boot 0 shows NO journald corruption or btrfs replay this time 
 ELIMINATED: nvme_core.default_ps_max_latency_us=0, pcie_aspm=off, BIOS 1.40->1.D4, Power Supply Idle Control, the greeter/compositor, aggressive memory speed (it hangs at JEDEC 2133/1.2V fallback), thermal (Tctl 44C idle, no thermal events ever), OOM (zero ever), GPU (no Xid/NVRM in any hang), MCE (none), PCIe AER (all counters zero).
 
 STILL STANDING: a faulty DIMM or an IMC marginal at any speed (dots-dfbf, untested); power delivery / PSU, which fits a zero-log freeze in both idle and load, and 5950X + RTX 4090 is a brutal transient load; motherboard VRM. Worth asking joel what PSU this is - model, wattage, age - since nothing in the OS can see it.
+
+---
+▸ 2026-09-29T12:21:11Z [claude]
+STATUS 2026-09-29. No hang since #5 (Sep 27 21:41:37) - hang-watch reports boots -7..-1 all CLEAN. But exposure is thin again: those seven boots ran 42m, 1h00m, 28s, 7m, 5m, 57m, 8m - about 3h20m total, longest 1h00m, against hangs that took 15m to 13h06m. Not evidence of a fix.
+
+Good news: watchdog is now genuinely armed (RuntimeWatchdogUSec=1min), hang-watch is installed and working, and Secure Boot is back off.
+
+memtest86+ passed twice - see dots-dfbf. Memory integrity largely cleared; memory-under-load is not.
+
+REMAINING CANDIDATES, ranked by fit x cost:
+
+1. 12VHPWR / GPU POWER CONNECTOR. Intermittent contact on a 4090's 12VHPWR is a well-known failure, and momentary power loss to the GPU wedges the whole machine instantly with no time to log anything - which matches all five hangs, idle and load alike. Free to inspect while the case is open for the PSU. Higher risk if a 3x8-pin -> 12VHPWR adapter is in use rather than a native cable.
+
+2. PSU TRANSIENT RESPONSE, not wattage. 'Well above the combined needs' does not cover this: a 4090 draws sub-millisecond transients around twice its TDP, and a PSU's OCP/OPP can trip on those at any nominal rating. Also relevant: unit age/degradation, and whether the GPU is fed from split rails. And at the other end, some PSUs regulate poorly at the very low draw of a 4090 at idle - which would cover the idle hangs.
+
+3. VANILLA KERNEL TEST. CachyOS kernels carry heavy scheduler/mm patching, and a bug there can hard-lock with zero logs. linux-cachyos-lts 6.18.52 is already installed so booting it is free, but core/linux-lts 6.18.54 is the better test because it removes CachyOS's patches entirely rather than just changing version.
+
+4. BIOS: CURVE OPTIMIZER / PBO / FCLK. A CO undervolt is the classic Zen 3 random-freeze cause and is worst at idle, which fits hangs #1, #2 and #5. The flash reset defaults, so this only matters if something was re-applied afterwards - needs asking. Also worth pinning FCLK explicitly instead of auto with 4 DIMMs.
+
+5. CORSAIR MP600 BOOT DRIVE. Phison E16, firmware EGFM11.3, and it is the root device - a controller lockup takes the system down with nothing logged. The APST workaround addresses power-state latency, not a controller wedge. Worth checking Corsair for a newer firmware; a longer test is booting from one of the SN850X drives instead.
+
+6. VOLTAGE / VRM MONITORING. There is currently no rail visibility at all - only CPU and NVMe temps. nct6683 is available with force=1 (mainline, 'Set to one to enable support for unknown vendors'), and AUR nct6687d is the better-maintained option for MSI. Caveat worth stating: force=1 on an unknown vendor can report bogus values and concurrent EC access is not risk-free. Paired with logging sensors every few seconds, it would make the PSU theory measurable instead of speculative.
+
+7. TAKE THE 4090 OUT OF THE EQUATION. Most decisive single test left: run headless over SSH with the card removed, or at minimum blacklist nvidia and stay on the console. Surviving several days that way would narrow this enormously.
+
+Eliminated so far: nvme APST, pcie_aspm, BIOS 1.40->1.D4, Power Supply Idle Control, the greeter, memory speed, bad DIMM cells, thermal, OOM, GPU driver faults (no Xid), MCE, PCIe AER.
