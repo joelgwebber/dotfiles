@@ -4,7 +4,7 @@ title: Enable a post-mortem capture path for hard locks
 type: task
 priority: 2
 created: '2026-09-24T03:01:49Z'
-updated: '2026-09-28T19:28:12Z'
+updated: '2026-09-30T10:54:33Z'
 parent: dots-df8e
 labels:
 - linux
@@ -133,3 +133,19 @@ FULL HANG HISTORY recovered by hang-watch --history, which found a FIFTH hang I 
   4. 2026-09-27 16:25:39  after  0h15m22s  sat dead  0h06m
   5. 2026-09-27 21:41:37  after  2h11m11s  sat dead 10h31m
 Every deliberate reboot in the same window classifies CLEAN. Cumulative dead time is roughly four days - which is the argument for arming the watchdog regardless of diagnosis.
+
+---
+▸ 2026-09-30T10:54:33Z [claude]
+THE WATCHDOG HAS NEVER ACTUALLY WORKED - and hang #6 proves it. /usr/lib/modprobe.d/blacklist.conf (owned by cachyos-settings 1:1.4.1-1) contains 'blacklist sp5100_tco', so systemd-modules-load refuses it every boot:
+  Sep 29 08:16:27 systemd-modules-load[558]: Module 'sp5100_tco' is deny-listed (by kmod)
+  Sep 29 08:16:39 systemd[1]: Failed to open any watchdog device before the initial transaction completed: No such file or directory
+Right now the module is NOT loaded and /dev/watchdog does not exist, even though RuntimeWatchdogUSec=1min is configured - systemd has nothing to ping. The Sep 28 success was only because I/joel modprobe'd it by hand; it did not survive the reboot. Hence hang #6 sitting dead 12h44m.
+
+FIX (two parts, because systemd opens the watchdog at PID1 startup, before systemd-modules-load runs):
+  1. Shadow the distro blacklist. /etc takes precedence over /usr/lib for the SAME filename, and the file has only two entries, so write /etc/modprobe.d/blacklist.conf containing just:
+       # Blacklist the Intel TCO Watchdog/Timer module
+       blacklist iTCO_wdt
+     i.e. keep the Intel one (irrelevant on AMD) and drop the sp5100_tco line.
+  2. Load it from the initramfs so /dev/watchdog exists before PID 1: set MODULES=(sp5100_tco) in /etc/mkinitcpio.conf (currently empty) then 'sudo mkinitcpio -P'.
+Verify after reboot: ls /dev/watchdog; systemctl show -p RuntimeWatchdogUSec; cat /sys/class/watchdog/watchdog0/state (want 'active'); wdctl.
+Caveat: CachyOS blacklists both TCO watchdogs deliberately and sp5100_tco has a history of spurious resets on some boards. With a 60s timeout that risk is low, but it is not zero.

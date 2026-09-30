@@ -4,7 +4,7 @@ title: Diagnose idle hard-locks on j15r
 type: task
 priority: 1
 created: '2026-09-24T02:59:30Z'
-updated: '2026-09-29T12:21:11Z'
+updated: '2026-09-30T10:55:00Z'
 labels:
 - linux
 ---
@@ -131,3 +131,29 @@ REMAINING CANDIDATES, ranked by fit x cost:
 7. TAKE THE 4090 OUT OF THE EQUATION. Most decisive single test left: run headless over SSH with the card removed, or at minimum blacklist nvidia and stay on the console. Surviving several days that way would narrow this enormously.
 
 Eliminated so far: nvme APST, pcie_aspm, BIOS 1.40->1.D4, Power Supply Idle Control, the greeter, memory speed, bad DIMM cells, thermal, OOM, GPU driver faults (no Xid), MCE, PCIe AER.
+
+---
+▸ 2026-09-30T10:55:00Z [claude]
+HANG #6 + the stress-ng result reorder the leaderboard substantially.
+
+HANG #6: Sep 29 08:16:24 -> 08:33:23, only 16m59s, logged in. Sat dead 12h44m01s because the watchdog was never armed (see dots-d532 - sp5100_tco is deny-listed by cachyos-settings). Post-BIOS-1.D4, post-Power-Supply-Idle-Control, post-Secure-Boot-off, on kernel 7.2.8. Last line: 'plocate-updatedb.service: Consumed 19.573s CPU time over 21.285s wall clock time, 1.6G memory peak' - it froze at the exact instant that job FINISHED.
+
+THE LOAD->IDLE PATTERN, now visible across the set:
+  #5 froze exactly at 'snapperd.service: Deactivated successfully'    (job ending -> idle)
+  #6 froze exactly at 'plocate-updatedb ... Consumed 19.573s CPU'     (job ending -> idle)
+  #3 froze shortly after a heavy journalctl burst subsided
+  #1, #2 froze during long idle at the greeter
+NEVER during sustained load.
+
+WHAT THE 9.5h stress-ng RUN ACTUALLY PROVES: 32 threads pegged for 9h34m with no hang. So sustained all-core load, CPU VRM, and thermals are fine. But cpu0 STILL entered C2 1,723,227 times during it (1787s total, ~1ms average), so brief per-core idle dips are demonstrably harmless. What never happened under load is ALL CORES IDLE SIMULTANEOUSLY - which is the hardware precondition for package C6.
+
+NEW #1 SUSPECT: PACKAGE DEEP IDLE (PC6). It explains all six hangs and the 9.5h survival, and it explains why Power Supply Idle Control did not help - that setting governs VRM current behaviour at idle, it does not stop the package entering PC6.
+DECISIVE TEST, free and no reboot needed (state2/disable is root-writable):
+  echo 1 | sudo tee /sys/devices/system/cpu/cpu*/cpuidle/state2/disable
+then leave the machine idle overnight. Surviving a long idle with C2 disabled implicates PC6; hanging anyway exonerates it. Costs idle power and temps, fully reversible with echo 0. Note only 3 states exist (POLL/C1/C2) under acpi_idle, and there is no package-level sysfs knob - blocking core CC6 is what prevents PC6. turbostat is not installed; installing it would let 'Pkg%pc6' be measured directly.
+
+IMPORTANT: the stress test does NOT discriminate between PC6 instability and PSU low-load regulation - both predict exactly 'fails at idle, survives load'. So the PSU check is still live, but it should be about behaviour at very low draw, not wattage headroom or 4090 transients.
+
+MEMORY IS NOT CLEARED BY THIS RUN: '--vm 32' without --vm-bytes uses the 256 MB default, which the man page states is the TOTAL shared across workers (8 GB even on the per-worker reading) - a rounding error against 125 GB. The run was effectively a CPU/cache soak. A real contention test is still outstanding: stress-ng --vm 32 --vm-bytes 90% --verify.
+
+12VHPWR weakened but unchecked - the GPU idled all night with the display on and nothing happened, but it was never stressed. Vanilla-kernel test now more specifically about the acpi_idle path.
