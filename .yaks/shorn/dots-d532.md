@@ -4,7 +4,7 @@ title: Enable a post-mortem capture path for hard locks
 type: task
 priority: 2
 created: '2026-09-24T03:01:49Z'
-updated: '2026-09-30T10:54:33Z'
+updated: '2026-10-01T02:26:31Z'
 parent: dots-df8e
 labels:
 - linux
@@ -149,3 +149,29 @@ FIX (two parts, because systemd opens the watchdog at PID1 startup, before syste
   2. Load it from the initramfs so /dev/watchdog exists before PID 1: set MODULES=(sp5100_tco) in /etc/mkinitcpio.conf (currently empty) then 'sudo mkinitcpio -P'.
 Verify after reboot: ls /dev/watchdog; systemctl show -p RuntimeWatchdogUSec; cat /sys/class/watchdog/watchdog0/state (want 'active'); wdctl.
 Caveat: CachyOS blacklists both TCO watchdogs deliberately and sp5100_tco has a history of spurious resets on some boards. With a 60s timeout that risk is low, but it is not zero.
+
+---
+▸ 2026-10-01T02:26:15Z [Joel Webber]
+verify: `journalctl -b -k | grep -q 'Registered efi_pstore as persistent store backend' && test "$(sysctl -n kernel.nmi_watchdog)" = 1 && test "$(sysctl -n kernel.hardlockup_panic)" = 1 && test "$(sysctl -n kernel.panic)" = 20` -> PASS (exit 0)
+
+---
+▸ 2026-10-01T02:26:31Z [Joel Webber]
+SHORN - the whole capture path is live and verified on boot 0 (2026-09-30 22:12).
+
+WATCHDOG NOW GENUINELY WORKS, which was the last broken piece:
+  /dev/watchdog + /dev/watchdog0 present from boot (not hand-modprobed)
+  /sys/class/watchdog/watchdog0/identity = SP5100 TCO timer
+  /sys/class/watchdog/watchdog0/state    = active
+  RuntimeWatchdogUSec = 1min
+  lsmod: sp5100_tco loaded, refcount 2
+So both halves of the Sep 30 fix worked: /etc/modprobe.d/blacklist.conf successfully shadows the cachyos-settings deny-list (keeping only iTCO_wdt), and MODULES=(sp5100_tco) + mkinitcpio -P gets it into the initramfs so the device exists before PID 1 opens it. No "deny-listed (by kmod)" and no "Failed to open any watchdog device" this boot.
+
+FULL PATH, all four layers:
+  1. detectors armed    nmi_watchdog=1, hardlockup_panic=1, softlockup_panic=1, panic_on_oops=1, panic=20 via /etc/sysctl.d/90-lockup-diag.conf (verify PASS)
+  2. panic recorded     efi_pstore.pstore_disable=0 on the cmdline, systemd-pstore.service enabled, archives to /var/lib/systemd/pstore
+  3. freeze survived    sp5100_tco armed at 60s, so a platform freeze now self-reboots instead of sitting dead
+  4. freeze classified  hang-watch oneshot, validated against the full retained history - flags all 6 hangs, zero false positives across 14 deliberate reboots
+
+Cumulative dead time this bought back: roughly 4 days across hangs #1-#6, the worst sitting 38h11m.
+
+CARRIED FORWARD to the new revisit yak, not lost: with the watchdog finally live, a spurious sp5100_tco reset and a real hang are now indistinguishable in hang-watch output - both read HANG ... sat dead ~Ns. CachyOS deny-lists this module deliberately and it has a history of spurious resets on some boards. A reset with a dead time near the 60s timeout, and no other symptom, should be read as suspect-the-watchdog first.

@@ -1,269 +1,245 @@
-# Idle Hard-Lock Notes (j15r)
+# Idle Hard-Lock Notes (j15r) — resolved
 
-Investigation into the intermittent hard hangs on `j15r` after long idle periods.
-Tracked as `dots-df8e` and children. Last updated 2026-09-27.
+Investigation into the intermittent hard hangs on `j15r`. **Resolved 2026-09-30** with a
+workaround, not a true fix. Tracked as `dots-df8e` (shorn); follow-up is `dots-e579`.
 
-Machine: MSI MS-7D53 (MPG X570S EDGE MAX WIFI), Ryzen 9 5950X, RTX 4090 (nvidia
-615.71.09 open kernel module), 3× NVMe, CachyOS, Limine bootloader, niri + noctalia
-under greetd.
+Machine: MSI MS-7D53 (MPG X570S EDGE MAX WIFI), BIOS 1.D4 (AGESA 1.2.0.12), Ryzen 9
+5950X, 4×32GB DDR4, RTX 4090 (nvidia 615.71.09 open kernel module), 3× NVMe, CachyOS,
+Limine bootloader, niri + noctalia under greetd.
 
-## Status
+## Verdict
+
+**Package deep idle (PC6).** The platform freezes when *all* cores happen to be idle at
+once, which is the hardware precondition for the package entering C6. Worked around by
+keeping the cores out of CC6 entirely:
+
+```
+processor.max_cstate=1
+```
+
+in `KERNEL_CMDLINE[default]` in `/etc/default/limine`, then `sudo limine-update`.
+
+This is stronger than the `/sys/.../state2/disable` toggle it replaced: `max_cstate=1`
+stops `acpi_idle` **registering** C2 at all, so there is no state to re-enable and no
+window at boot before a script runs. Confirmation that it took:
+
+```console
+$ ls /sys/devices/system/cpu/cpu0/cpuidle/
+state0  state1          # POLL and C1 only — state2 is gone, not merely disabled
+```
 
 | | |
 |---|---|
-| **Leading hypothesis** | The hangs happen at the **noctalia greeter**, not in a niri session. 2-for-2 on captured hangs. |
-| **Fixed** | Journal retention (4G, ~6 boots). Lockup detectors + panic-on-lockup live. |
-| **Open** | `efi_pstore.pstore_disable=0` not yet on the cmdline — a panic still leaves no record. Greeter log flood. BIOS 1.40 from 2022. |
-| **Ruled out so far** | GPU faults (no Xid/NVRM), MCE, thermal, PCIe AER — all silent before both hangs. |
+| **Cause** | Package C6 entry, almost certainly SoC/AGESA behaviour on this CPU + board + memory combination |
+| **Workaround** | `processor.max_cstate=1` — deployed, verified |
+| **Cost** | ~12 W and ~2 °C at idle, continuously (measured back-to-back) |
+| **Confidence** | ~97%, not proof — see [Honest limits](#honest-limits) |
+| **Still open** | Retest after a future AGESA; look for a narrower PC6-only knob in AMD CBS (`dots-e579`) |
 
-Current kernel cmdline:
+Not a fix. The machine is burning 12 W to avoid a platform bug, and the right long-term
+move is to retest on newer firmware rather than carry this forever.
+
+## The six hangs
+
+Every one of them: stops **abruptly mid-line**, no shutdown sequence, no panic, no pstore
+record, and nothing at all in the final minutes of the journal.
+
+| # | Froze | Ran | State |
+|---|---|---|---|
+| 1 | 2026-09-23 02:25:21 | 10h41m41s | — |
+| 2 | 2026-09-24 21:33:01 | 13h05m28s | at greeter, never logged in |
+| 3 | 2026-09-26 18:03:23 | 6h19m30s | at greeter, never logged in |
+| 4 | 2026-09-27 16:25:39 | 15m22s | logged in, heavy load |
+| 5 | 2026-09-27 21:41:37 | 2h11m11s | logged in, idle |
+| 6 | 2026-09-29 08:33:23 | 16m59s | logged in |
+
+Roughly **four days** of cumulative dead time, the worst single instance sitting dead for
+38h11m. Times-to-hang span 15 minutes to 13 hours with no pattern, which is why no
+timer-based or workload-based theory ever fit.
+
+## How it was cracked
+
+**1. Journal retention first — nothing else was possible before it.** `SystemMaxUse` was
+effectively the vendor's 50M. (A hand-written `SystemMaxUse=26` was inert twice over:
+unsuffixed systemd sizes are *bytes*, and it sat in `journald.conf` where the vendor
+drop-in overrode it anyway.) Raising it to 4G took retention from **1 boot to 9+** and the
+very next look at the journal contained two captured hangs.
+
+**2. A 9h34m `stress-ng --vm 32` run survived.** 32 threads pegged, no hang. That
+eliminated sustained load, CPU VRM and thermals in a single shot.
+
+**3. The crucial detail inside that run.** `cpu0` still entered C2 **1,723,227 times**
+during it — about 1 ms average. So brief *per-core* idle is demonstrably harmless. What
+never happens under load is **all cores idle simultaneously**, which is exactly the
+precondition for package C6. This is the observation that turned "survives load" from a
+dead end into a hypothesis.
+
+**4. Hangs #5 and #6 froze at the precise instant a job finished:**
 
 ```
-splash rw rootflags=subvol=/@ root=UUID=8967db38-... nvme_core.default_ps_max_latency_us=0 pcie_aspm=off
+#5  snapperd.service: Deactivated successfully
+#6  plocate-updatedb.service: Consumed 19.573s CPU time over 21.285s wall clock
 ```
 
-## 1. Two captured hangs, and what they have in common
+A load→idle transition — the moment the package first becomes eligible for PC6.
 
-This is the payoff from fixing journal retention (§2) — the very next look at the
-journal had two hangs in it.
+**5. Two long clean runs.** 24h09m genuinely idle (load 0.08, 58% C1 residency, C2
+counters frozen) with C2 disabled by hand, then 24h53m09s with `max_cstate=1` on the
+cmdline. The previous longest-ever run before a hang was 13h06m.
 
-| Boot | Ran | How it ended |
+This also retroactively explains why **Power Supply Idle Control = Typical Current Idle**
+didn't help: it governs VRM current behaviour at idle, it does not stop the package
+entering PC6.
+
+## Honest limits
+
+- **~97%, not certain.** Six hangs over ~45h of pre-fix uptime puts MTTF near 7h, so a
+  24h survival is about `exp(-24/7)` ≈ 3% likely by chance. Strong, but it is one clean
+  run against a bug whose own intervals ranged over three orders of magnitude.
+- **Three variables changed in one reboot.** `processor.max_cstate=1` went on while
+  `pcie_aspm=off` and `nvme_core.default_ps_max_latency_us=0` both came off. Both removals
+  were individually falsified beforehand (hangs occurred with each active), so the risk is
+  attributional rather than real — but if a hang recurs, that has to be untangled before
+  concluding the C-state theory is wrong.
+- **The one test that would settle it** is to take the flag off and leave the machine idle.
+  A hang inside ~13h converts 97% into known. It is now survivable, because the watchdog
+  finally works.
+
+## Eliminated, each by evidence
+
+`nvme_core.default_ps_max_latency_us=0` and `pcie_aspm=off` (hangs with each active) ·
+BIOS 1.40 → 1.D4 and the microcode bump 0x0a20102e → 0x0a201030 (hang #4 after) · Power
+Supply Idle Control (hang #4 after) · the noctalia greeter and compositor · memory speed
+(hangs happened at the JEDEC 2133/1.2 V fallback) · bad DIMM cells (memtest86+ passed
+twice) · thermal (Tctl 44 °C idle, no events ever) · OOM (zero, ever; 125 GiB RAM) · GPU
+driver faults (no Xid/NVRM in any hang) · MCE · PCIe AER (all counters zero).
+
+**One red herring worth naming:** `clocksource: Watchdog remote CPU N read timed out`
+appears exactly once per substantial boot on a random CPU — including in boots that shut
+down cleanly. It never escalated and the clocksource stayed `tsc`. It does not discriminate
+hangs.
+
+**Two corrections to the record.** The greeter was called the leading suspect on a 2-for-2
+correlation and had to be retracted when #4 hit under load and #5 logged-in-idle; n=2 on a
+confounded variable ("never logged in" vs "nobody touched the machine") was too thin to lead
+with. And `dots-d532` was sheared early, then regrown, because "configured" turned out not to
+mean "working" three separate times — see below.
+
+## Post-mortem capture path (`dots-d532`, shorn)
+
+Four independent layers, all live and verified. Worth keeping even now that the hangs have
+stopped, because it is the safety net for this diagnosis being wrong or partial.
+
+| Layer | Mechanism |
+|---|---|
+| Detect | `nmi_watchdog=1`, `hardlockup_panic=1`, `softlockup_panic=1`, `panic_on_oops=1`, `panic=20` via `/etc/sysctl.d/90-lockup-diag.conf` |
+| Record | `efi_pstore.pstore_disable=0` on the cmdline; `systemd-pstore.service` enabled, archiving to `/var/lib/systemd/pstore` |
+| Survive | `sp5100_tco` hardware watchdog at 60s, so a platform freeze self-reboots instead of sitting dead overnight |
+| Classify | `hang-watch` oneshot unit — validated against the full retained history, flags all 6 hangs with zero false positives across 14 deliberate reboots |
+
+### The watchdog took three attempts
+
+Each failure looked like success from the outside:
+
+1. **`RuntimeWatchdogUSec=0`** despite `/etc/systemd/system.conf.d/watchdog.conf` being
+   correct — `system.conf` is only re-read when PID 1 re-executes (`systemctl daemon-reexec`).
+2. **`sp5100_tco` deny-listed** by `cachyos-settings` in `/usr/lib/modprobe.d/blacklist.conf`,
+   so it never loaded at boot. An earlier hand-`modprobe` had masked this. **This is why hang
+   #6 sat dead for 12h44m.** Fixed by shadowing the file at `/etc/modprobe.d/blacklist.conf`
+   with only the `iTCO_wdt` line kept.
+3. **Loaded too late** — systemd opens the watchdog at PID 1 startup, before
+   `systemd-modules-load` runs. Needed `MODULES=(sp5100_tco)` in `/etc/mkinitcpio.conf` plus
+   `sudo mkinitcpio -P`.
+
+Verify all three at once:
+
+```console
+$ cat /sys/class/watchdog/watchdog0/identity   # SP5100 TCO timer
+$ cat /sys/class/watchdog/watchdog0/state      # active
+$ systemctl show -p RuntimeWatchdogUSec        # RuntimeWatchdogUSec=1min
+```
+
+**New ambiguity this introduces:** `sp5100_tco` does not advertise `WDIOF_CARDRESET`
+(options mask `0x8180`), so `bootstatus` is permanently 0 and the kernel cannot report a
+watchdog-caused reset — `hang-watch` infers it from the journal instead. A spurious reset
+and a real hang therefore read identically (`HANG … sat dead ~Ns`). CachyOS deny-lists this
+module deliberately and it has a history of spurious resets on some boards, so a reset whose
+dead time is near the 60s timeout, with no other symptom, means **suspect the watchdog
+first**.
+
+## Reference: things that made this non-obvious
+
+### Two CachyOS kill switches
+
+`/usr/lib/sysctl.d/70-cachyos-settings.conf` quietly undoes the diagnosis:
+
+- `kernel.nmi_watchdog = 0` — so removing `nowatchdog` from the cmdline is **not enough**;
+  this re-disables the detector every boot.
+- `kernel.printk = 3 3 3 3` — hides kernel messages from the console, which would hide a
+  panic too, on top of `splash`. Want `7 4 1 7` while diagnosing.
+
+Plus `blacklist sp5100_tco` in `/usr/lib/modprobe.d/blacklist.conf` (above).
+
+### `sysctl.d` precedence is *not* like journald's
+
+This bit twice, so it is worth stating both rules side by side:
+
+- **`sysctl.d`** — every file across `/etc`, `/run`, `/usr/local/lib` and `/usr/lib` is
+  sorted together **by basename**, and the lexicographically **latest wins**. Directory
+  priority only applies to files of the *same name* (full masking). So beating
+  `70-cachyos-settings.conf` requires a basename sorting after it — hence
+  `90-lockup-diag.conf`. Useful bands: 10–40 for `/usr`, 60–90 for `/etc`.
+- **`foo.conf` + `foo.conf.d/` drop-ins** (journald, systemd) — **drop-ins win**, even a
+  vendor drop-in over an admin edit to the main file. Hence
+  `/etc/systemd/journald.conf.d/10-local.conf` rather than editing `journald.conf`.
+
+And: **unsuffixed systemd size values are bytes.** `SystemMaxUse=26` means 26 bytes.
+
+### Measuring idle power on AMD
+
+AMD implements the RAPL MSRs, so `/sys/class/powercap/intel-rapl:0/energy_uj` works here
+(`intel_rapl_msr` is loaded). Root-only, and the counter wraps at `max_energy_range_uj`.
+The A/B script is `.yaks/artifacts/dots-df8e/cstate-cost`; it restores the safe state from
+an `EXIT` trap so a Ctrl-C cannot leave the machine exposed. Note it toggles `state2`,
+which no longer exists under `max_cstate=1`, so re-running it means taking the cmdline flag
+off first.
+
+Measured, back to back, same ambient:
+
+| | Package power | Tctl |
 |---|---|---|
-| −4 | Sep 23 22:29:22 → Sep 24 02:40:26 | **clean** — real shutdown markers |
-| −3 | Sep 24 08:27:33 → **21:33:01** (13h06m) | **hang** — stops mid-line, no shutdown sequence |
-| −2 | Sep 26 11:43:53 → **18:03:23** (6h20m) | **hang** — stops mid-line, no shutdown sequence |
-
-Both hung boots simply stop, mid-way through a greeter log line, with no
-`systemd-shutdown`, no unmount, no journal-stopped record.
-
-### The correlation
-
-The two boots that hung are **exactly the two boots where nobody ever logged in**:
-
-- `greeter exited with status` never appears in either.
-- The boot-time compositor (PID 1048 and 1042 respectively) is still the last thing
-  logging at the moment of death.
-- Both boots that *did* start a niri session (−4 and the current one) ended cleanly or
-  are still up.
-
-In both cases the last non-greeter activity was routine hourly `snapper-cleanup`,
-followed by nothing but the 60 Hz greeter flood — 52 minutes of it on boot −3, about 7
-minutes on boot −2 — and then the cut. Time-to-death varies (13h06m vs 6h20m), so it is
-not a fixed timer.
-
-**Caveat, stated plainly:** n=2, and "never logged in" is confounded with "nobody
-touched the machine." A logged-in-but-idle-for-13h boot that survives would separate
-those two explanations. No such sample exists yet — boot −4 was logged in but only for
-4h before a deliberate shutdown. So this is a strong hint, not proof.
-
-It does, however, point at the greeter/compositor path rather than the NVMe/PCIe theory
-that motivated the original cmdline flags.
-
-**Cheapest decisive experiment:** leave the machine logged into niri overnight instead
-of sitting at the greeter. If it survives repeatedly, the greeter is implicated.
-
-### What was *not* happening
-
-Across both hangs, zero of: `Xid`, `NVRM` errors, GPU hang/reset, `MCE`, machine check,
-thermal or throttling events, PCIe AER (all `aer_dev_*` counters read zero). The machine
-reported nothing at all before wedging — which is what a true hard lock looks like, and
-why §3 matters.
-
-Incidental oddity from boot −4, possibly related to `dots-1155`:
-
-```
-niri: WARN vblank_throttle: output DP-1 running faster than expected,
-      expected refresh 13.337065ms, got vblank after 6.658ms
-```
-
-13.337 ms is 75 Hz, 6.658 ms is 150 Hz — niri believes it configured 75 and the display
-is delivering double. Not a hang cause, but a second sign of display-pipeline weirdness
-on this setup.
-
-## 2. Journal retention — fixed
-
-**Resolved**, and worth keeping the lesson. The original hand-edit to
-`/etc/systemd/journald.conf` was inert for two independent reasons:
-
-1. **Missing unit.** `SystemMaxUse=26` parses as *26 bytes* — unsuffixed systemd size
-   values are bytes.
-2. **Overridden anyway.** `/usr/lib/systemd/journald.conf.d/00-journal-size.conf` ships
-   `SystemMaxUse=50M`, and for `foo.conf` + `foo.conf.d/` **the main file is read first,
-   so drop-ins win** — including a vendor drop-in over an admin main file.
-
-The fix was a drop-in in `/etc` sorting after `00-`:
-
-```ini
-# /etc/systemd/journald.conf.d/10-local.conf
-[Journal]
-SystemMaxUse=4G
-```
-
-Now effective: `cat-config` shows `50M` at line 55 overridden by `4G` at line 59, disk
-usage is ~1.8 G, and six boots are retained back to Sep 23 — which is what made §1
-possible.
-
-## 3. Lockup detection and post-mortem capture
-
-### Done
-
-`nowatchdog` and `quiet` are off the cmdline, and `/etc/sysctl.d/90-lockup-diag.conf` is
-installed (kept in-repo at `.yaks/artifacts/dots-d532/90-lockup-diag.conf`):
-
-```
-kernel.nmi_watchdog = 1      kernel.hardlockup_panic = 1
-kernel.watchdog = 1          kernel.softlockup_panic = 1
-kernel.soft_watchdog = 1     kernel.panic_on_oops = 1
-kernel.panic = 20            kernel.printk = 7 4 1 7
-```
-
-The hard-lockup detector genuinely initialised — this was the real risk, since the
-perf-based detector can fail to claim a counter:
-
-```
-kernel: NMI watchdog: Enabled. Permanently consumes one hw-PMU counter.
-```
-
-### Two CachyOS kill switches that made this non-obvious
-
-Removing `nowatchdog` from the cmdline was **not sufficient**.
-`/usr/lib/sysctl.d/70-cachyos-settings.conf` re-pins two settings on every boot:
-
-- line 30: `kernel.nmi_watchdog = 0` (comment cites boot speed, performance, power)
-- line 36: `kernel.printk = 3 3 3 3` ("To hide any kernel messages from the console")
-
-Observed directly: after the cmdline edit, `kernel.watchdog` flipped 0 → 1 but
-`kernel.nmi_watchdog` stayed 0 and `printk` stayed `3 3 3 3` until the `/etc` override
-was installed.
-
-### `sysctl.d` precedence (different from journald's!)
-
-Per `sysctl.d(5)`:
-
-> All configuration files are sorted by their filename in lexicographic order, regardless
-> of which of the directories they reside in. If multiple files specify the same option,
-> the entry in the file with the lexicographically latest name will take precedence.
-
-So the **filename** decides, across all four of `/etc`, `/run`, `/usr/local/lib`,
-`/usr/lib`. Directory priority applies only to files with the *same basename*, and then
-it is total replacement. Recommended bands: 10–40 for `/usr/`, **60–90 for `/etc/`** —
-hence `90-lockup-diag.conf`. There is no `/etc/sysctl.conf` on this box.
-
-(To mask a vendor file wholesale instead: `ln -s /dev/null /etc/sysctl.d/<same-name>`.)
-
-### Remaining: nothing persists a panic
-
-`hardlockup_panic=1` means the next hang should panic rather than wedge silently, and
-`panic=20` brings the box back — but **the panic text will not survive the reboot.**
-Console visibility is irrelevant here: plymouth is installed (so `splash` is live) and
-by hang time the greeter owns the display, so nobody is watching a VT.
-
-`efi_pstore` is the pragmatic capture path. This kernel has `CONFIG_EFI_VARS_PSTORE=y`
-but `CONFIG_EFI_VARS_PSTORE_DEFAULT_DISABLE=y`, so it needs an explicit flag. Add
-`efi_pstore.pstore_disable=0` to `KERNEL_CMDLINE[default]`, then `limine-update`.
-Ready-to-run script: `.yaks/artifacts/dots-d532/add-pstore-cmdline.sh`.
-
-After rebooting, verify:
-
-```sh
-cat /proc/cmdline
-journalctl -k | grep -i pstore    # want "Registered efi as persistent store backend"
-ls /sys/fs/pstore/                # where a captured panic lands
-```
-
-It writes to EFI NVRAM, so clear old records once read. Alternatives considered:
-`ramoops` (`CONFIG_PSTORE_RAM=m`) avoids NVRAM but needs a reserved physical memory
-region, which is fiddly to pick safely on x86; `netconsole` (`CONFIG_NETCONSOLE=m`)
-needs a second machine listening but is the only option if the lock is hard enough that
-even the NMI detector never fires. There are no ACPI ERST/BERT tables, so firmware-side
-logging is unavailable.
-
-## 4. The greeter log flood (`dots-3d5e`) — still open
-
-`noctalia-greeter-compositor` emits one wlroots line at **exactly 60/second**, one per
-frame, for as long as the greeter is up:
-
-```
-[types/output/output.c:1013] Direct scan-out disabled by software cursor
-```
-
-Roughly 1.47 M lines per idle session. Still ~41 k lines in the current boot; no
-`greetd.service` rate-limit drop-in installed yet. Less catastrophic at 4 G retention,
-but per §1 this is no longer merely a log-volume problem — it is the prime suspect's
-environment.
-
-### The documented knob does not work
-
-`/usr/bin/noctalia-greeter-session:63` looks like the answer and isn't:
-
-```sh
-# Raise log level with WLR_LOG=info when debugging (also set NOCTALIA_GREETER_LOG=stderr).
-export WLR_LOG="${WLR_LOG:-error}"
-```
-
-- `strings /usr/bin/noctalia-greeter-compositor | grep -c WLR_LOG` → **0**. Never read.
-  (wlroots doesn't read an env var for verbosity either; the compositor must pass one.)
-- There is exactly **one** `wlr_log_init` call site and its verbosity is a hardcoded
-  immediate: `mov $0x2,%edi` → `WLR_INFO`.
-
-So there is no supported way to quiet it. Worth reporting upstream against
-noctalia-greeter 1.5.0.
-
-Env vars the binary *does* read: `DISPLAY`, `GREETD_SOCK`, `GREETER_BIN`,
-`NOCTALIA_GREETER_IDLE_TIMEOUT`, `NOCTALIA_GREETER_LOG`, `NOCTALIA_GREETER_STATE_DIR`.
-
-### Workarounds
-
-Rate-limit the unit rather than the app — the flood arrives via syslog under greetd:
-
-```ini
-# systemctl edit greetd.service
-[Service]
-LogRateLimitIntervalSec=30s
-LogRateLimitBurst=200
-```
-
-`NOCTALIA_GREETER_IDLE_TIMEOUT` is the more interesting lever now: if it parks the
-compositor after idle, it changes exactly the condition under which the machine dies.
-
-## 5. BIOS (`dots-c1e2`) — still open
-
-Running **1.40, dated 2022-09-01** — about four years of AGESA fixes unapplied, several
-targeting Ryzen idle stability. The classic companion is **Power Supply Idle Control →
-Typical Current Idle**, a long-standing fix for Zen hard-locks at low load; BIOS-only,
-invisible from the OS.
-
-**No capsule/fwupd path exists**: `/sys/firmware/efi/esrt` is absent and `fwupd` isn't
-installed, so LVFS is not an option on this board. Use **M-FLASH**: latest BIOS for
-*MPG X570S EDGE MAX WIFI (MS-7D53)* → unzip to FAT32 USB → <kbd>Del</kbd> → Utilities →
-M-FLASH. Check the rear I/O for a Flash BIOS Button too (file renamed `MSI.ROM`, no CPU
-needed). MSI Center is Windows-only.
-
-### Boot survives the flash
-
-A flash typically clears NVRAM boot entries. Currently:
-
-```
-Boot0004* Limine   ...\EFI\LIMINE\LIMINE_X64.EFI
-Boot0005* UEFI OS  ...\EFI\BOOT\BOOTX64.EFI
-```
-
-`Boot0005` is the Limine fallback at the removable-media path, which firmware boots by
-default even with empty NVRAM — so the machine stays bootable. Re-register the named
-entry afterward with `sudo limine-install`.
-
-## 6. On `pcie_aspm=off`
-
-Now applied (added to the cmdline 2026-09-27), but still **unsupported by evidence**:
-
-- `/sys/module/pcie_aspm/parameters/policy` read `[default]` (firmware-controlled)
-  beforehand, so the flag does change behaviour — it is not a no-op.
-- But every `aer_dev_correctable` / `aer_dev_fatal` / `aer_dev_nonfatal` counter across
-  all PCIe devices is zero, and no NVMe timeouts appear in any retained boot.
-- `nvme_core.default_ps_max_latency_us=0` did take effect (confirmed in
-  `/sys/module/nvme_core/parameters/`).
-
-Given §1 points at the greeter, this is a confound with a small idle-power cost and no
-supporting signal. Reasonable to drop once the greeter hypothesis is tested — but it
-costs nothing to leave in place meanwhile, and removing it mid-experiment would change
-two variables at once.
+| C2 disabled | 39.9 W | 35.1 °C |
+| C2 enabled | 27.6 W | 32.9 °C |
+
+Most of Zen's idle saving lives in CC6/PC6, so ~12 W is the expected shape. **Upside worth
+remembering** before optimising this away: losing the ~18 µs C2 exit latency improves
+interactive, audio and network latency determinism.
+
+## Side quests
+
+- **`dots-3d5e`** — the noctalia greeter floods the journal at ~60 msg/s. Exonerated as a
+  hang cause; now purely a log-volume bug. The documented `WLR_LOG` knob does not work
+  (wlroots reads verbosity at `wlr_log_init` before the greeter sets it), so the practical
+  mitigations are a `greetd.service` rate-limit drop-in or an upstream report against
+  noctalia-greeter 1.5.0. Still open.
+- **`dots-5c4f`** — the BIOS flash silently re-enabled Secure Boot, which is what made
+  `memtest.efi` panic: Limine's `LoadImage()` was denied. Note the enforcement asymmetry —
+  the firmware happily booted unsigned Limine itself while refusing what Limine then tried
+  to load. Since turned off. Still open as a drift note.
+- **`dots-c1e2`** — BIOS 1.40 (2022) → 1.D4. Shorn; did not fix the hangs but is the right
+  baseline.
+- **`dots-dfbf`** — 4×32GB at XMP. Shorn: the hangs happened *at* the JEDEC 2133/1.2 V
+  fallback, so the premise could not hold, and memtest86+ passed twice. The machine is
+  still running underclocked memory — a performance question now, not a stability one.
+- **memtest86+ has no Limine entry** because its package ships a GRUB snippet only.
+  `limine-update` has nothing to do; the entry must be hand-written:
+
+  ```
+  /Memtest86+
+      protocol: efi
+      path: boot():/memtest86+/memtest.efi
+  ```
+
+  Single leading slash for a top-level entry (double would nest it under Snapshots).
+  `boot():/` resolves to the partition holding the config — the ESP, which here *is*
+  `/boot`. It survives `limine-update`, which only rewrites its own machine-id-tagged entry.

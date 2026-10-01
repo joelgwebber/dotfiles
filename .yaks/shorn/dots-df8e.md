@@ -4,7 +4,7 @@ title: Diagnose idle hard-locks on j15r
 type: task
 priority: 1
 created: '2026-09-24T02:59:30Z'
-updated: '2026-10-01T01:29:00Z'
+updated: '2026-10-01T02:27:48Z'
 labels:
 - linux
 ---
@@ -182,3 +182,36 @@ NEXT, in order:
   3. OPTIONALLY CONFIRM WITH ONE A/B: re-enable C2 and see whether it hangs inside ~13h. That is the difference between 97% and known, at the cost of one hang. Worth doing once rather than carrying a permanent power penalty on a maybe.
   4. CLEAN UP THE CARGO CULT: pcie_aspm=off and nvme_core.default_ps_max_latency_us=0 are both still on the cmdline, both aimed at the same 'something breaks at idle' family, and both already falsified (hangs occurred with each active). Remove one at a time now that a known-good lever exists - it also claws back some of the idle power.
   5. LONG TERM this is a workaround, not a fix. Likely SoC/AGESA behaviour around package C6 on this CPU+board+memory combination. Already on the newest BIOS (1.D4), so nothing further to apply; revisit after a future AGESA, and check AMD CBS for a narrower knob.
+
+---
+▸ 2026-10-01T02:27:48Z [Joel Webber]
+SHORN. The diagnosis is complete and the workaround is deployed and verified. Follow-up is dots-e579; the narrative is written up in docs/idle-hardlock-notes.md; the hang-by-hang forensics stay in this file.
+
+VERDICT: package deep idle (PC6) on this 5950X + MSI MS-7D53 platform. Worked around with processor.max_cstate=1 on the kernel cmdline, which prevents acpi_idle registering C2 at all, so no core ever enters CC6 and the package can never reach PC6.
+
+CONFIRMED THIS BOOT (0, 2026-09-30 22:12): cmdline carries processor.max_cstate=1; /sys/devices/system/cpu/cpu0/cpuidle/ contains only state0 (POLL) and state1 (C1), with state2 absent entirely rather than disabled. Preceding boot -1 ran 24h53m09s, classified CLEAN by hang-watch - the longest run in the whole recorded history and 1.9x the longest pre-fix time-to-hang.
+
+THE SIX HANGS, final table. Every one abrupt mid-line, no shutdown sequence, no panic, no pstore record, no Xid/NVRM/MCE/thermal/AER, and the NMI hard-lockup detector never fired even when armed:
+  #1  2026-09-23 02:25:21  after 10h41m41s  sat dead 19h01m
+  #2  2026-09-24 21:33:01  after 13h05m28s  sat dead 38h11m  at greeter
+  #3  2026-09-26 18:03:23  after  6h19m30s  sat dead 19h02m  at greeter
+  #4  2026-09-27 16:25:39  after  0h15m22s  sat dead  0h06m  logged in, heavy load
+  #5  2026-09-27 21:41:37  after  2h11m11s  sat dead 10h31m  logged in, idle
+  #6  2026-09-29 08:33:23  after  0h16m59s  sat dead 12h44m  logged in
+Roughly four days of cumulative dead time.
+
+WHAT CRACKED IT, in order:
+  1. Journal retention. The real starting point - SystemMaxUse was effectively 50M (and joels own 26 was 26 BYTES, and vendor-overridden). Raising it to 4G took retention from 1 boot to 9+ and immediately surfaced two captured hangs. Nothing else was possible before this.
+  2. A 9h34m stress-ng run at 32 threads SURVIVED. That eliminated sustained load, CPU VRM and thermals in one shot.
+  3. The crucial detail in that run: cpu0 still entered C2 1,723,227 times (~1 ms average). So brief PER-CORE idle is demonstrably harmless. What never happens under load is ALL CORES IDLE SIMULTANEOUSLY - which is precisely the hardware precondition for package C6.
+  4. Hangs #5 and #6 froze at the exact instant a job finished (snapperd deactivating; plocate-updatedb reporting its CPU time). A load->idle transition, which is when the package first becomes eligible for PC6.
+  5. 24h idle with C2 disabled, then this 24h53m boot with it gone from the cmdline. Both clean.
+Confidence ~97% (exp(-24/7) against a ~7h MTTF), not proof. The one A/B that would settle it is carried in dots-e579.
+
+ELIMINATED ALONG THE WAY, each by evidence rather than assumption: nvme_core.default_ps_max_latency_us=0 and pcie_aspm=off (hangs with each active); BIOS 1.40->1.D4 plus the microcode bump (hang #4 after); Power Supply Idle Control = Typical Current Idle (hang #4 after - and the PC6 finding explains why it could not help: it governs VRM current at idle, it does not stop the package entering PC6); the noctalia greeter; memory speed; bad DIMM cells (memtest86+ x2); thermal; OOM; GPU driver faults; MCE; PCIe AER; and the clocksource watchdog timeout, which was a red herring appearing once per boot in clean boots too.
+
+TWO CORRECTIONS I OWE THIS RECORD:
+  * I called the greeter the leading suspect on a 2-for-2 correlation, then had to retract it when #4 hit under load and #5 hit logged-in-idle. n=2 on a confounded variable ("never logged in" vs "nobody touched it") was too thin to lead with.
+  * I sheared dots-d532 early, then had to regrow it when the first real hang showed pstore was unreadable and systemd-pstore.service disabled - and the watchdog then turned out never to have worked at all until Sep 30, which is why hang #6 sat dead 12h44m. "Configured" was not "working" three separate times on that yak (RuntimeWatchdogUSec=0 needing daemon-reexec; the cachyos-settings deny-list; the initramfs).
+
+STILL A WORKAROUND. Most likely SoC/AGESA behaviour around package C6 on this CPU + board + memory combination; already on the newest BIOS, so nothing further to apply. Costs ~12 W and ~2 C at idle, measured back-to-back. Revisit after a future AGESA - dots-e579.

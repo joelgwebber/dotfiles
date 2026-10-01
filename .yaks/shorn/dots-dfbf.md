@@ -4,7 +4,7 @@ title: 4x32GB at XMP may be the real hard-lock cause
 type: task
 priority: 1
 created: '2026-09-27T22:30:31Z'
-updated: '2026-09-29T12:20:43Z'
+updated: '2026-10-01T02:27:20Z'
 parent: dots-df8e
 labels:
 - linux
@@ -86,3 +86,16 @@ WHAT MEMTEST DOES NOT CLEAR, so the memory subsystem is not fully exonerated:
 stress-ng --vm --verify is the complement and is now worth running: it targets exactly the IMC-under-contention and power-envelope cases memtest cannot reach.
 
 Also untested and adjacent: FCLK/UCLK ratios and SoC voltages with 4x32GB. Worth confirming what the BIOS picked rather than leaving it on auto.
+
+---
+▸ 2026-10-01T02:27:20Z [Joel Webber]
+SHORN - superseded. This yak asked whether 4x32GB at XMP was the hard-lock cause. The answer is no, on two independent grounds:
+
+1. The hangs happened AT THE JEDEC FALLBACK. From the BIOS flash onward the DIMMs ran 2133 MT/s / 1.2 V with A-XMP effectively at defaults, and hangs #4, #5 and #6 all occurred in that state. The premise of the yak - that rated XMP was straining the IMC - cannot explain hangs that happen at the most conservative memory config the board will run.
+2. memtest86+ passed twice (2026-09-29), clearing bad cells.
+
+And the actual cause was found elsewhere: package deep idle (PC6), worked around with processor.max_cstate=1. See dots-df8e for the derivation and dots-e579 for what remains open.
+
+The residue that was still live here is carried into dots-e579 OPEN ITEM 4 rather than lost: memory under CONTENTION was never tested (the 9.5h stress-ng --vm 32 run used the 256 MB default and was a CPU/cache soak), and FCLK/UCLK ratios plus SoC voltages with 4x32GB are still on auto and unconfirmed. Both only matter if max_cstate=1 proves insufficient.
+
+Worth noting as a loose end of its own: the machine is still running underclocked memory. That is a performance question now, not a stability one, so it does not belong in the hang investigation - but joel may want to re-enable A-XMP deliberately at some point.
