@@ -4,7 +4,7 @@ title: Diagnose idle hard-locks on j15r
 type: task
 priority: 1
 created: '2026-09-24T02:59:30Z'
-updated: '2026-09-30T10:55:00Z'
+updated: '2026-10-01T01:29:00Z'
 labels:
 - linux
 ---
@@ -157,3 +157,28 @@ IMPORTANT: the stress test does NOT discriminate between PC6 instability and PSU
 MEMORY IS NOT CLEARED BY THIS RUN: '--vm 32' without --vm-bytes uses the 256 MB default, which the man page states is the TOTAL shared across workers (8 GB even on the per-worker reading) - a rounding error against 125 GB. The run was effectively a CPU/cache soak. A real contention test is still outstanding: stress-ng --vm 32 --vm-bytes 90% --verify.
 
 12VHPWR weakened but unchecked - the GPU idled all night with the display on and nothing happened, but it was never stressed. Vanilla-kernel test now more specifically about the acpi_idle path.
+
+![cstate-cost](artifacts/dots-df8e/cstate-cost)
+
+---
+▸ 2026-10-01T01:29:00Z [claude]
+A/B measures idle package power and Tctl with cpuidle C2 disabled vs enabled, then restores C2 to disabled from an EXIT trap so Ctrl-C or an error cannot leave the machine exposed. Reads RAPL via /sys/class/powercap/intel-rapl:0 (AMD implements the RAPL MSRs, and intel_rapl_msr is loaded here), handles the counter wrap at max_energy_range_uj = 65532610987 uJ, and toggles all 32 CPUs. energy_uj is root-only, which is why this needs sudo rather than being something I could measure directly.
+
+---
+▸ 2026-10-01T01:29:00Z [claude]
+24-HOUR IDLE RUN WITH C2 DISABLED: NO HANG. Strongest evidence yet for the package-deep-idle theory.
+
+Quality of the evidence, stated carefully:
+  * uptime 24h09m, and genuinely idle - load average 0.08/0.06/0.06, and cpu0 spent 50407s of 86955s in C1 = 58% residency. So it has been idling heavily, just into C1 instead of C2.
+  * C2 counters frozen at their pre-disable values (usage 2282997, time 3341s), confirming it stayed off the whole run.
+  * Longest prior time-to-hang was 13h06m; this run is 1.84x that.
+  * Rough arithmetic: 6 hangs across roughly 45h of pre-fix uptime gives an MTTF near 7h, so surviving 24h is about exp(-24/7) ~ 3% likely had nothing changed. Suggestive at ~97%, not proof.
+
+COST, as far as it can be measured without root: Tctl 47.4 / Tccd1 42.0 / Tccd2 36.8 now (C2 off, idle) against Tctl 44.1 / Tccd1 37.2 / Tccd2 29.5 recorded Sep 27 (C2 on, idle) - roughly +3 to +7 C. Not a controlled comparison (different day and ambient), which is why the attached cstate-cost script does the A/B back to back. Idle package power is the real cost and needs the script; CC6/PC6 is where most Zen idle saving lives, so expect tens of watts. Genuine upside to name: removing an 18us exit latency improves interactive/audio/network latency determinism.
+
+NEXT, in order:
+  1. PERSIST IT FIRST. The sysfs write dies at reboot, so a reboot right now silently re-exposes the machine. Add processor.max_cstate=1 to KERNEL_CMDLINE[default] in /etc/default/limine, then limine-update. That applies from boot with no window, survives updates, and is greppable - preferable to the BIOS 'Global C-state Control = Disabled' route, which is more robust but platform-wide and invisible from the OS.
+  2. FIX THE WATCHDOG (dots-d532). Still deny-listed, still no /dev/watchdog. It is the safety net for this diagnosis being wrong or partial.
+  3. OPTIONALLY CONFIRM WITH ONE A/B: re-enable C2 and see whether it hangs inside ~13h. That is the difference between 97% and known, at the cost of one hang. Worth doing once rather than carrying a permanent power penalty on a maybe.
+  4. CLEAN UP THE CARGO CULT: pcie_aspm=off and nvme_core.default_ps_max_latency_us=0 are both still on the cmdline, both aimed at the same 'something breaks at idle' family, and both already falsified (hangs occurred with each active). Remove one at a time now that a known-good lever exists - it also claws back some of the idle power.
+  5. LONG TERM this is a workaround, not a fix. Likely SoC/AGESA behaviour around package C6 on this CPU+board+memory combination. Already on the newest BIOS (1.D4), so nothing further to apply; revisit after a future AGESA, and check AMD CBS for a narrower knob.

@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# cstate-cost -- measure what disabling cpuidle C2 (core C6) actually costs,
+# in idle package power and CPU temperature (dots-df8e).
+#
+# Measures with C2 DISABLED (the current workaround), then with C2 ENABLED,
+# then restores C2 to DISABLED. The restore runs from an EXIT trap, so it
+# happens even on Ctrl-C or an error -- the machine is never left exposed.
+#
+# RUN IT ON AN IDLE MACHINE: close anything busy first, or you are measuring
+# your workload rather than the idle state.
+#
+# RISK: the C2-enabled window re-exposes the suspected hang trigger. Observed
+# hangs took 15 minutes at the very fastest, so a 30-60s window is low risk,
+# but it is not zero. Keep the duration short.
+#
+# Usage: sudo cstate-cost [seconds_per_sample]   (default 30)
+
+set -uo pipefail
+
+DUR=${1:-30}
+RAPL=/sys/class/powercap/intel-rapl:0
+mapfile -t STATES < <(ls /sys/devices/system/cpu/cpu*/cpuidle/state2/disable 2>/dev/null)
+
+[ "$EUID" -eq 0 ] || { echo "error: run with sudo" >&2; exit 1; }
+[ -r "$RAPL/energy_uj" ] || { echo "error: $RAPL/energy_uj unreadable" >&2; exit 1; }
+[ "${#STATES[@]}" -gt 0 ] || { echo "error: no cpuidle state2 found" >&2; exit 1; }
+
+set_c2() { local v=$1; for f in "${STATES[@]}"; do echo "$v" > "$f"; done; }
+restore() { set_c2 1; echo; echo "C2 restored to disabled on all ${#STATES[@]} CPUs."; }
+trap restore EXIT
+
+MAXE=$(cat "$RAPL/max_energy_range_uj" 2>/dev/null || echo 0)
+
+sample() {
+  local label=$1 a b s e tctl
+  sleep 3                                    # let it settle after the toggle
+  a=$(cat "$RAPL/energy_uj"); s=$(date +%s%N)
+  sleep "$DUR"
+  b=$(cat "$RAPL/energy_uj"); e=$(date +%s%N)
+  tctl=$(sensors -u k10temp-pci-00c3 2>/dev/null | awk -F: '/temp1_input/{printf "%.1f", $2; exit}')
+  python3 -c "
+a=$a; b=$b; maxe=$MAXE
+dj = (b - a) if b >= a else (b - a + maxe)      # RAPL counters wrap
+dt = ($e - $s) / 1e9
+print(f'  {\"$label\":<18} {dj/1e6/dt:5.1f} W    Tctl ${tctl:-n/a} C')
+"
+}
+
+echo "Measuring idle package power, ${DUR}s per sample, ${#STATES[@]} CPUs."
+echo "load average right now: $(cut -d' ' -f1-3 /proc/loadavg)"
+echo
+
+set_c2 1; sample "C2 disabled"
+set_c2 0; sample "C2 enabled"
+# EXIT trap restores C2=1
