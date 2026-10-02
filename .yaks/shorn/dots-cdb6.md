@@ -4,7 +4,7 @@ title: Every time I change the wallpaper, I get a sudo dialog
 type: bug
 priority: 3
 created: '2026-09-27T18:24:42Z'
-updated: '2026-10-02T03:52:33Z'
+updated: '2026-10-02T04:31:05Z'
 labels:
 - greeter
 - linux
@@ -81,3 +81,7 @@ gated on `subject.active && subject.local`.
 Related but distinct: [[dots-2998]] is the other recurring auth prompt, and it
 is a PAM/keyring problem, not polkit. [[dots-3d5e]] is the third
 noctalia-greeter annoyance (journal flooding).
+
+---
+▸ 2026-10-02T04:31:04Z [Joel Webber]
+That worked a charm. Fixed!
