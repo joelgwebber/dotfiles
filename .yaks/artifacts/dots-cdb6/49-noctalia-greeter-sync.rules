@@ -1,0 +1,30 @@
+/* Install as /etc/polkit-1/rules.d/49-noctalia-greeter-sync.rules
+ *
+ * Let members of wheel sync Noctalia Shell appearance to the greeter without
+ * an authentication prompt.
+ *
+ * noctalia-greeter 1.5.0 ships allow_active=auth_admin in
+ * /usr/share/polkit-1/actions/org.noctalia.greeter.apply-appearance.policy --
+ * not even auth_admin_keep -- so with "Auto-Sync Greeter" on, every single
+ * wallpaper change pops a full password dialog. Upstream says this is
+ * deliberate: the Auto-Sync setting's own description notes "this setting does
+ * not enable passwordless sync", i.e. a local rule is the intended escape.
+ *
+ * Do not edit the vendor .policy file; it is owned by the package and will be
+ * overwritten on update. A rule in /etc wins over it and survives upgrades.
+ *
+ * Scope: the action's own annotations pin it to executing
+ * /usr/bin/noctalia-greeter-apply-appearance with --sync as argv[1]. The
+ * remaining argument is a caller-supplied path, so granting this to wheel
+ * means "any code running as joel can have root read a path of its choosing
+ * and copy it into /var/lib/noctalia-greeter". joel already has full sudo, so
+ * this is not a meaningful escalation -- but it is the reason to keep the rule
+ * narrowed to this one action id, active, and local.
+ */
+polkit.addRule(function (action, subject) {
+    if (action.id === "org.noctalia.greeter.sync-appearance" &&
+        subject.active && subject.local &&
+        subject.isInGroup("wheel")) {
+        return polkit.Result.YES;
+    }
+});

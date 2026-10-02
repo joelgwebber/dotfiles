@@ -1,0 +1,28 @@
+#%PAM-1.0
+#
+# Proposed replacement for /etc/pam.d/greetd on j15r.
+#
+# Two lines added vs. the shipped file (greetd 0.10.3-2.1, already patched by
+# noctalia-greeter's setup_greetd_pam.sh on 2026-09-13, which added only the
+# pam_systemd.so session line):
+#
+#   auth    optional  pam_gnome_keyring.so
+#   session optional  pam_gnome_keyring.so auto_start
+#
+# The auth line must come AFTER `auth include system-local-login` so that
+# pam_unix has already stashed the typed password in PAM_AUTHTOK; the keyring
+# module reads it from there rather than prompting a second time.
+#
+# No `password` stanza is added on purpose: greetd never performs a password
+# change, so `password optional pam_gnome_keyring.so use_authtok` would be
+# dead weight here. If you ever change your login password, change the keyring
+# password to match (seahorse, or it will start prompting again).
+
+auth       required     pam_securetty.so
+auth       requisite    pam_nologin.so
+auth       include      system-local-login
+auth       optional     pam_gnome_keyring.so
+account    include      system-local-login
+session    include      system-local-login
+session    optional     pam_gnome_keyring.so auto_start
+session    required     pam_systemd.so

@@ -4,11 +4,10 @@ title: Update MSI MS-7D53 BIOS from 1.40 (2022)
 type: task
 priority: 2
 created: '2026-09-24T03:01:49Z'
-updated: '2026-09-27T22:02:53Z'
+updated: '2026-10-01T02:36:31Z'
 parent: dots-df8e
 labels:
 - linux
-needs: human
 verify: test "$(cat /sys/class/dmi/id/bios_version)" = '1.D4'
 ---
 

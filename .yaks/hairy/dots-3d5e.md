@@ -2,13 +2,12 @@
 id: dots-3d5e
 title: noctalia-greeter floods journal at 60 msg/s
 type: bug
-priority: 1
+priority: 3
 created: '2026-09-24T03:01:49Z'
-updated: '2026-09-28T12:22:27Z'
-parent: dots-df8e
+updated: '2026-10-01T02:36:28Z'
 labels:
 - linux
-needs: human
+- greeter
 ---
 
 ---

@@ -4,7 +4,7 @@ title: Secure Boot silently re-enabled by the BIOS flash
 type: bug
 priority: 2
 created: '2026-09-28T21:18:14Z'
-updated: '2026-09-29T03:07:28Z'
+updated: '2026-10-01T02:35:16Z'
 parent: dots-df8e
 labels:
 - linux

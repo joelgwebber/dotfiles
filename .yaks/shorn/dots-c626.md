@@ -4,7 +4,7 @@ title: Stale entries in ~/.agents/.skill-lock.json
 type: task
 priority: 3
 created: '2026-09-13T22:48:37Z'
-updated: '2026-09-13T22:48:37Z'
+updated: '2026-10-01T02:44:31Z'
 ---
 
 Now that .skill-lock.json is synced across machines, its accuracy matters more.
