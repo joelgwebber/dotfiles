@@ -1,0 +1,31 @@
+[core]
+	fsmonitor = false
+	untrackedcache = true
+[user]
+	email = joel@fullstory.com
+	name = Joel Webber
+[init]
+	defaultBranch = main
+[filter "lfs"]
+	process = git-lfs filter-process
+	required = true
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+[credential]
+{{- if eq .chezmoi.os "darwin" }}
+	helper = osxkeychain
+{{- else if eq .chezmoi.os "linux" }}
+	helper = /usr/lib/git-core/git-credential-libsecret
+{{- end }}
+{{- /* `gh auth setup-git` writes an absolute path to gh, which differs per
+       machine (/opt/homebrew/bin on macOS, /usr/bin on Linux). Resolve it at
+       apply time instead of baking in one machine's path. The empty helper
+       resets the list so GitHub uses only gh, not the keychain above. */}}
+{{- with lookPath "gh" }}
+[credential "https://github.com"]
+	helper =
+	helper = !{{ . }} auth git-credential
+[credential "https://gist.github.com"]
+	helper =
+	helper = !{{ . }} auth git-credential
+{{- end }}
