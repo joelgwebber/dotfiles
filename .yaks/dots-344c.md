@@ -1,11 +1,11 @@
 ---
 id: dots-344c
 title: 'Ghostty: document keybinds, ctrl+shift+[/] for tabs'
-status: shaving
+status: shorn
 type: task
 priority: 3
 created: '2026-10-15T02:21:15Z'
-updated: '2026-10-15T02:21:48Z'
+updated: '2026-10-15T02:39:26Z'
 labels:
 - config
 verify: ghostty +validate-config && ghostty +list-keybinds | grep -q "ctrl+shift+\[=previous_tab" && ! ghostty +list-keybinds | grep -qE "^keybind = ctrl\+page_"
@@ -22,3 +22,15 @@ Documented Linux default keybinds (ghostty +list-keybinds --default) as grouped 
 ---
 ▸ 2026-10-15T02:21:48Z [Joel Webber]
 verify: `ghostty +validate-config && ghostty +list-keybinds | grep -q "ctrl+shift+\[=previous_tab" && ! ghostty +list-keybinds | grep -qE "^keybind = ctrl\+page_"` -> PASS (exit 0)
+
+---
+▸ 2026-10-15T02:39:26Z [Joel Webber]
+Joel confirmed live: ctrl+shift+[/] switch tabs after reload (char-based trigger works, no need for bracket_left).
+
+---
+▸ 2026-10-15T02:39:26Z [Joel Webber]
+verify: `ghostty +validate-config && ghostty +list-keybinds | grep -q "ctrl+shift+\[=previous_tab" && ! ghostty +list-keybinds | grep -qE "^keybind = ctrl\+page_"` -> PASS (exit 0)
+
+---
+▸ 2026-10-15T02:39:26Z [Joel Webber]
+moved: shaving -> shorn

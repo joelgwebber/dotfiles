@@ -75,3 +75,6 @@ keybind = ctrl+shift+]=next_tab
 # ...and give ctrl+page_up/down back to the terminal apps (nvim, etc.).
 keybind = ctrl+page_up=unbind
 keybind = ctrl+page_down=unbind
+
+theme = Adventure
+
