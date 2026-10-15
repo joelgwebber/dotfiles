@@ -1,0 +1,3 @@
+# Ghostty config (managed by chezmoi: ~/dotfiles/home/dot_config/ghostty).
+# Reference: `ghostty +show-config --default --docs`, or https://ghostty.org/docs/config
+# Reload in a running Ghostty with ctrl+shift+, (Linux) / cmd+shift+, (macOS).
