@@ -1,0 +1,102 @@
+---
+id: dots-dfbf
+title: 4x32GB at XMP may be the real hard-lock cause
+status: shorn
+type: task
+priority: 1
+created: '2026-09-27T22:30:31Z'
+updated: '2026-10-01T02:27:20Z'
+parent: dots-df8e
+labels:
+- linux
+---
+
+---
+▸ 2026-09-27T22:30:51Z [claude]
+dmidecode -t 17 after the flash shows all four DIMMs at Speed 2133 MT/s, Configured Memory Speed 2133 MT/s, Configured Voltage 1.2 V - i.e. JEDEC DDR4 baseline with A-XMP off, because the flash restored BIOS defaults. Total is 125 GiB, so this is 4x32GB.
+
+WHY THIS IS A LEAD, NOT JUST A PERF REGRESSION: 4x32GB (very likely dual-rank) on AM4 is a well-known strain on the Zen 3 memory controller, and many such kits are not actually stable at their rated XMP even when they POST and pass light use. Memory instability on non-ECC RAM produces exactly the signature seen here: instant hard freeze, no logs, no MCE, no Xid, nothing for the NMI watchdog to catch. It fits all three hangs better than the greeter did, and it fits hang #3's under-load profile especially well.
+
+CONFOUND TO AVOID: the machine is currently at the most conservative memory config it will ever run (2133 / 1.2 V). So the observation period about to start is not 'new BIOS' - it is 'new BIOS AND memory underclocked'. Two variables at once.
+
+RECOMMENDED: re-enable A-XMP to joel's normal profile in the same BIOS trip as Power Supply Idle Control. That restores performance and makes the BIOS the single changed variable versus the hang history. If a hang recurs on the new BIOS at XMP, deliberately dropping memory speed (or just FCLK/timings) becomes the next test, and a clean one.
+
+Cheap independent check that does not need a reboot: a long memtester / stressapptest run at whatever speed is configured.
+
+---
+▸ 2026-09-28T00:01:51Z [claude]
+Joel reports A-XMP was ALREADY enabled, set to 'XMP Profile 1', and that profile appeared to be at 2133 / 1.2 V.
+
+That reading is itself the finding: 2133 MT/s at 1.2 V is the DDR4 SPD-safe fallback, not a plausible XMP profile. XMP profiles by definition exceed JEDEC base, and DDR4 kits above ~2666 essentially always specify around 1.35 V. 'XMP Profile 1 selected' + 'running 2133 / 1.2 V' is the signature of the board selecting the profile and then FAILING TO TRAIN it, falling back to safe values. That is the classic 4x32GB AM4 outcome - four likely-dual-rank DIMMs push the Zen 3 IMC past what it can train.
+
+CORRECTION to my previous note: if the board was already falling back to 2133 before the flash - likely, since XMP was already enabled - then memory speed is NOT a newly changed variable and the confound I warned about does not exist. The observation window really is 'new BIOS + Power Supply Idle Control'. I never measured pre-flash memory speed, so this is inference, not proof.
+
+The hypothesis gets STRONGER though: a config that cannot train its own rated profile is running at the edge of the memory controller's capability, and falling back to 2133 does not establish stability - fallback timings on 4x32GB at 1.2 V can still be marginal.
+
+NEEDED to settle it (root): sudo dmidecode -t 17 | grep -E 'Size|Speed|Part Number|Manufacturer|Rank|Configured' - the part number gives the rated spec, which tells us whether 2133 is a fallback or actually the kit's rating.
+
+FASTER PATH THAN WAITING: no memory stress tool is installed; memtester and stress-ng are both in the repos (cachyos-extra-v3 / extra). Given hang #3 happened under load, a stress run is a plausible reproducer, and a reproducible hang is worth far more than days of waiting. Risk to state plainly: it may hard-lock the box - which is the point.
+
+---
+▸ 2026-09-28T12:22:27Z [claude]
+NOW THE TOP CANDIDATE, and note the shift: hang #4 occurred at the JEDEC 2133/1.2V fallback, so 'XMP too aggressive' is eliminated. What remains is a genuinely faulty DIMM, or an IMC/fabric marginal even at base speed on a 4x32GB load. That is consistent with everything: zero logs, no MCE (non-ECC), nothing for the NMI watchdog to see, and failures in both idle and load.
+
+DECISIVE TEST: memtest86+. Not installed; extra/memtest86+-efi 7.20-2 is in the repos. It runs outside the OS, so it removes every software variable at once, and limine-entry-tool should pick up a boot entry for it automatically. An overnight pass over 128GB is exactly the test this needs.
+
+BLOCKED ON: pacman is still stale (db Sep 13, kernel still 7.2.4-3 - the -Syu has not been run), so nothing installs. 'sudo pacman -Syu' first, then 'sudo pacman -S memtest86+-efi' (and stress-ng while there), then 'sudo limine-update' and reboot into the memtest entry.
+
+If memtest86+ passes a full overnight run, memory is largely cleared and power delivery becomes the leading suspect.
+
+---
+▸ 2026-09-28T19:59:41Z [claude]
+Prerequisite for the memtest run: joel can't see the limine menu long enough to pick an entry (his monitor switches inputs on reboot). Per limine 12.9.0's CONFIG.md, 'timeout' is a GLOBAL option and 'timeout: no' disables automatic boot entirely, so the menu waits indefinitely - which is what's needed to select the memtest86+ entry. Editing /boot/limine.conf is safe here: ENABLE_ENROLL_LIMINE_CONFIG is not set in /etc/default/limine or /etc/limine-entry-tool.conf, so it defaults to no and limine-enroll-config is not required. limine-update only rewrites its own machine-id-tagged OS entry, so a global option at the top of the file survives.
+
+---
+▸ 2026-09-28T21:18:14Z [claude]
+WHY NO MEMTEST ENTRY APPEARED - nothing was ever going to create one:
+  * memtest86+-efi ships exactly 3 payload files: /boot/memtest86+/memtest.efi and /etc/grub.d/60_memtest86+-efi. It is a GRUB-only package; the generator script is for grub-mkconfig.
+  * limine-entry-tool has ZERO memtest support: 'grep -ci memtest' returns 0 for limine-entry-tool, limine-update, limine-mkinitcpio and limine-install.
+  * No pacman hook mentions memtest.
+So limine-update had nothing to do. The entry must be hand-written.
+
+ENTRY TO APPEND AT THE END of /boot/limine.conf (single leading slash = top-level entry; a double slash would make it a sub-entry of the Snapshots directory):
+  /Memtest86+
+      protocol: efi
+      path: boot():/memtest86+/memtest.efi
+
+Syntax verified against limine 12.9.0's CONFIG.md: 'EFI Chainload protocol' takes 'path' (alias image_path); 'protocol: efi' has aliases uefi/efi_chainload. 'boot():/...' resolves to the partition containing the config file on the boot drive, which is the ESP - and since /boot IS the ESP (nvme0n1p1, vfat), /boot/memtest86+/memtest.efi is /memtest86+/memtest.efi in limine's namespace. Survives limine-update, which only rewrites its own machine-id-tagged OS entry.
+
+---
+▸ 2026-09-29T03:07:28Z [claude]
+The hand-written limine entry is probably correct; the panic is a Secure Boot LoadImage denial, not a config error - see dots-5c4f. Disable Secure Boot and retry.
+
+PLAN B if it still panics with Secure Boot off (two routes that avoid Limine's LoadImage entirely):
+  1. Register memtest.efi as its own UEFI boot entry so the FIRMWARE loads it directly:
+     sudo efibootmgr -c -d /dev/nvme0n1 -p 1 -L 'Memtest86+' -l '\memtest86+\memtest.efi'
+     (mind the literal '+' in the directory name)
+  2. Write memtest86+'s own USB image to the Cruzer Glide and boot it directly. Most reliable - no bootloader in the path at all - and the stick is already FAT32 from the BIOS flash.
+
+---
+▸ 2026-09-29T12:20:43Z [claude]
+memtest86+ PASSED TWICE (2026-09-29, after disabling Secure Boot per dots-5c4f). Bad DIMM cells are largely ruled out - that was the main thing this yak was about, so dropping to p3 rather than shearing.
+
+WHAT MEMTEST DOES NOT CLEAR, so the memory subsystem is not fully exonerated:
+  * It ran at the 2133/1.2V fallback, not at a rated profile.
+  * It is a largely linear sweep with modest CPU/IMC contention - it does not reproduce 32 threads hammering the memory controller simultaneously.
+  * It draws very little power, so it exercises neither Infinity Fabric under load nor transient power delivery.
+stress-ng --vm --verify is the complement and is now worth running: it targets exactly the IMC-under-contention and power-envelope cases memtest cannot reach.
+
+Also untested and adjacent: FCLK/UCLK ratios and SoC voltages with 4x32GB. Worth confirming what the BIOS picked rather than leaving it on auto.
+
+---
+▸ 2026-10-01T02:27:20Z [Joel Webber]
+SHORN - superseded. This yak asked whether 4x32GB at XMP was the hard-lock cause. The answer is no, on two independent grounds:
+
+1. The hangs happened AT THE JEDEC FALLBACK. From the BIOS flash onward the DIMMs ran 2133 MT/s / 1.2 V with A-XMP effectively at defaults, and hangs #4, #5 and #6 all occurred in that state. The premise of the yak - that rated XMP was straining the IMC - cannot explain hangs that happen at the most conservative memory config the board will run.
+2. memtest86+ passed twice (2026-09-29), clearing bad cells.
+
+And the actual cause was found elsewhere: package deep idle (PC6), worked around with processor.max_cstate=1. See dots-df8e for the derivation and dots-e579 for what remains open.
+
+The residue that was still live here is carried into dots-e579 OPEN ITEM 4 rather than lost: memory under CONTENTION was never tested (the 9.5h stress-ng --vm 32 run used the 256 MB default and was a CPU/cache soak), and FCLK/UCLK ratios plus SoC voltages with 4x32GB are still on auto and unconfirmed. Both only matter if max_cstate=1 proves insufficient.
+
+Worth noting as a loose end of its own: the machine is still running underclocked memory. That is a performance question now, not a stability one, so it does not belong in the hang investigation - but joel may want to re-enable A-XMP deliberately at some point.
