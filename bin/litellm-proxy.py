@@ -32,7 +32,13 @@ Local reverse proxy that works around two LiteLLM/Zed-family gaps:
 - Does NOT fix cross-model substitution (a request for one Claude model
   occasionally being served by a different one) -- that's server-side on
   LiteLLM and outside what a client-side proxy can address.
-- Streams responses through unmodified, chunk by chunk, for SSE.
+- Streams responses through unmodified, forwarding bytes as soon as they
+  arrive, for SSE.
+- Retries transient upstream failures (connection errors, 429/5xx/529) with
+  short backoff, but only before anything has been sent to the client. Once
+  a response is streaming, an upstream failure just closes the connection
+  (a truncated stream), since a retry would duplicate output. Client
+  disconnects are logged as one line rather than a traceback.
 
 Usage:
   python3 cache_fix_proxy.py [listen_port] [upstream_base_url]
@@ -42,7 +48,7 @@ Point Delta/Zed's provider base URL at http://127.0.0.1:<listen_port>
 instead of the real LiteLLM host, keeping the real API key configured
 there as before.
 """
-import sys, json, hashlib, http.server, urllib.request, urllib.error, socketserver
+import sys, json, time, hashlib, http.client, http.server, urllib.request, urllib.error, socketserver
 
 LISTEN_PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 4319
 UPSTREAM = (sys.argv[2] if len(sys.argv) > 2 else "https://litellm.internal.corp.fs.team").rstrip("/")
@@ -50,7 +56,68 @@ UPSTREAM = (sys.argv[2] if len(sys.argv) > 2 else "https://litellm.internal.corp
 HOP_BY_HOP = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
               "te", "trailers", "transfer-encoding", "upgrade", "host", "content-length"}
 
+RESP_SKIP = HOP_BY_HOP - {"content-length"}
+
 CACHE_CONTROL_PATHS = ("/v1/messages", "/v1/chat/completions", "/chat/completions", "/messages")
+
+# Upstream timeout per socket operation: connecting, or waiting for the next
+# bytes of a response.
+UPSTREAM_TIMEOUT = 300
+# Total attempts per request, including the first. Backoff is 1s, 2s, 4s
+# unless upstream sends a numeric Retry-After; capped at MAX_RETRY_DELAY.
+MAX_ATTEMPTS = 4
+MAX_RETRY_DELAY = 10.0
+# 529 is Anthropic's "overloaded" status, which LiteLLM passes through.
+RETRY_STATUSES = {408, 429, 500, 502, 503, 504, 529}
+# Errors on the client socket meaning Zed/Delta hung up (cancelled, timed out,
+# ...). There is no one left to answer.
+CLIENT_GONE = (BrokenPipeError, ConnectionResetError, ConnectionAbortedError)
+# Errors from talking to upstream: URLError (an OSError), socket errors,
+# timeouts, and http.client protocol errors such as IncompleteRead.
+UPSTREAM_ERRORS = (OSError, http.client.HTTPException)
+
+def log(msg):
+    sys.stderr.write(f"[cache-fix-proxy] {msg}\n")
+
+def _describe(e):
+    """Short one-line description of an upstream failure."""
+    if isinstance(e, urllib.error.URLError) and isinstance(e.reason, BaseException):
+        e = e.reason
+    return f"{type(e).__name__}: {e}" if str(e) else type(e).__name__
+
+def _is_timeout(e):
+    return isinstance(e, TimeoutError) or (
+        isinstance(e, urllib.error.URLError) and isinstance(e.reason, TimeoutError))
+
+def _retry_delay(attempt, headers=None):
+    try:
+        delay = float(headers.get("Retry-After"))
+    except (AttributeError, TypeError, ValueError):
+        delay = 2.0 ** (attempt - 1)
+    return min(max(delay, 0.0), MAX_RETRY_DELAY)
+
+def open_upstream(req, label):
+    """Send req upstream, retrying transient failures. Retrying is safe only
+    because nothing has been sent to the client yet.
+
+    Returns the response; an HTTP error status is returned as the HTTPError,
+    which is response-like, so it can be relayed. Raises the last error for
+    connection failures that are exhausted or not retryable. Timeouts are not
+    retried: each one has already waited UPSTREAM_TIMEOUT."""
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            return urllib.request.urlopen(req, timeout=UPSTREAM_TIMEOUT)
+        except urllib.error.HTTPError as e:
+            if e.code not in RETRY_STATUSES or attempt == MAX_ATTEMPTS:
+                return e
+            reason, delay = f"HTTP {e.code}", _retry_delay(attempt, e.headers)
+            e.close()
+        except UPSTREAM_ERRORS as e:
+            if _is_timeout(e) or attempt == MAX_ATTEMPTS:
+                raise
+            reason, delay = _describe(e), _retry_delay(attempt)
+        log(f"{label}: upstream {reason} (attempt {attempt}/{MAX_ATTEMPTS}); retrying in {delay:g}s")
+        time.sleep(delay)
 
 # Any header LiteLLM already recognizes as a session/trace id (see its
 # litellm_pre_call_utils.py): the two explicit headers, plus the generic
@@ -153,6 +220,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.0"
 
     def _proxy(self, method):
+        label = f"{method} {self.path}"
+        try:
+            self._proxy_request(method, label)
+        except CLIENT_GONE as e:
+            # Only client-socket I/O can raise these here: _proxy_request
+            # handles every upstream error itself.
+            log(f"{label}: client disconnected ({type(e).__name__}); response dropped")
+            self.close_connection = True
+
+    def _proxy_request(self, method, label):
         length = int(self.headers.get("Content-Length") or 0)
         body = self.rfile.read(length) if length else b""
 
@@ -164,9 +241,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.path, body, _client_has_session_header(self.headers)
             )
         sess_note = f"session={session_id}" if session_id else "session=client/none"
-        sys.stderr.write(
-            f"[cache-fix-proxy] {method} {self.path} -> {note or 'no cache change'}; {sess_note}\n"
-        )
+        log(f"{label} -> {note or 'no cache change'}; {sess_note}")
 
         headers = {k: v for k, v in self.headers.items() if k.lower() not in HOP_BY_HOP}
         if session_id:
@@ -175,48 +250,56 @@ class Handler(http.server.BaseHTTPRequestHandler):
         req = urllib.request.Request(UPSTREAM + self.path, data=body if body else None,
                                       headers=headers, method=method)
         try:
-            with urllib.request.urlopen(req, timeout=300) as resp:
-                self.send_response(resp.status)
-                resp_skip = HOP_BY_HOP - {"content-length"}
-                for k, v in resp.getheaders():
-                    if k.lower() not in resp_skip:
-                        self.send_header(k, v)
-                self.send_header("Connection", "close")
-                self.end_headers()
-                while True:
-                    chunk = resp.read(8192)
-                    if not chunk:
-                        break
-                    self.wfile.write(chunk)
-                    self.wfile.flush()
-        except TimeoutError:
-            self.send_response(504)
-            self.send_header("Content-Type", "text/plain")
-            self.send_header("Connection", "close")
-            self.end_headers()
-            self.wfile.write(b"cache-fix-proxy: upstream timed out\n")
-        except urllib.error.HTTPError as e:
-            body_err = e.read()
-            self.send_response(e.code)
-            resp_skip = HOP_BY_HOP - {"content-length"}
-            for k, v in e.headers.items():
-                if k.lower() not in resp_skip:
-                    self.send_header(k, v)
-            self.send_header("Connection", "close")
-            self.end_headers()
-            self.wfile.write(body_err)
-        except urllib.error.URLError as e:
-            self.send_response(502)
-            self.send_header("Content-Type", "text/plain")
-            self.send_header("Connection", "close")
-            self.end_headers()
-            self.wfile.write(f"cache-fix-proxy: upstream error: {e}\n".encode())
-        except Exception as e:
-            self.send_response(500)
-            self.send_header("Content-Type", "text/plain")
-            self.send_header("Connection", "close")
-            self.end_headers()
-            self.wfile.write(f"cache-fix-proxy: proxy error: {e}\n".encode())
+            resp = open_upstream(req, label)
+        except UPSTREAM_ERRORS as e:
+            if _is_timeout(e):
+                log(f"{label}: upstream timed out")
+                self._send_plain(504, "upstream timed out")
+            else:
+                log(f"{label}: upstream failed: {_describe(e)}")
+                self._send_plain(502, f"upstream error: {_describe(e)}")
+            return
+        with resp:
+            if isinstance(resp, urllib.error.HTTPError):
+                log(f"{label}: upstream HTTP {resp.code}, passed through")
+            self._relay(resp, label)
+
+    def _relay(self, resp, label):
+        """Send upstream's status and headers, then stream its body as bytes
+        arrive. After the status line is out, an upstream failure can't become
+        an error response: writing one would put a second status line inside
+        the body. Closing early, leaving a truncated stream, is the only clean
+        signal."""
+        self.send_response(resp.status)
+        for k, v in resp.headers.items():
+            if k.lower() not in RESP_SKIP:
+                self.send_header(k, v)
+        self.send_header("Connection", "close")
+        self.end_headers()
+        sent = 0
+        while True:
+            try:
+                # read1, not read: on a chunked response read(n) blocks until
+                # n bytes accumulate, which holds SSE events back.
+                chunk = resp.read1(65536)
+            except UPSTREAM_ERRORS as e:
+                log(f"{label}: upstream failed mid-stream after {sent} bytes "
+                    f"({_describe(e)}); closing client connection")
+                return
+            if not chunk:
+                return
+            self.wfile.write(chunk)
+            self.wfile.flush()
+            sent += len(chunk)
+
+    def _send_plain(self, status, text):
+        body = f"cache-fix-proxy: {text}\n".encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "text/plain")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Connection", "close")
+        self.end_headers()
+        self.wfile.write(body)
 
     def do_GET(self): self._proxy("GET")
     def do_POST(self): self._proxy("POST")
