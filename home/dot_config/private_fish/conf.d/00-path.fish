@@ -21,3 +21,10 @@ end
 fish_add_path --global --move --path $PNPM_HOME/bin
 
 fish_add_path --global --move --path ~/.antigravity/antigravity/bin
+
+# nvm is bash-only, so fish can't run `nvm use`. Where node came from nvm
+# rather than Homebrew (the DGX box), put the newest installed version on PATH.
+if test -d ~/.nvm/versions/node
+    set -l nvm_bin (printf '%s\n' ~/.nvm/versions/node/*/bin | sort -V | tail -1)
+    test -n "$nvm_bin"; and fish_add_path --global --move --path $nvm_bin
+end

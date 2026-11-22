@@ -9,13 +9,11 @@ Everything else here is repo material chezmoi never looks at.
 
 ```
 home/            <- chezmoi source state (the only part that lands in ~)
-  dot_zshrc.tmpl   -> ~/.zshrc        (templated: OS + work machine)
-  dot_shared.sh    -> ~/.shared.sh
   dot_vimrc        -> ~/.vimrc
-  dot_gitconfig    -> ~/.gitconfig
-  dot_config/      -> ~/.config/{fish,nvim,kitty,zed,git}
+  dot_gitconfig.tmpl -> ~/.gitconfig  (templated: OS, installed helpers)
+  dot_config/      -> ~/.config/{fish,nvim,kitty,ghostty,zed,git}
   dot_claude/      -> ~/.claude/settings.json
-  dot_local/bin/   -> ~/.local/bin  (on PATH via .shared.sh)
+  dot_local/bin/   -> ~/.local/bin  (on PATH via fish's 00-path)
 docs/            <- notes, not config
 fonts/           <- checked in, but installed by hand; chezmoi never places these
 sieve/           <- server-side mail filters, deployed by hand
@@ -28,32 +26,37 @@ Note that files literally starting with `.` inside `home/` are **ignored** by ch
 
 ## Shells
 
-fish is the login shell on both machines. zsh is kept fully working as a fallback,
-so anything shared has to survive in both.
+fish is the login shell everywhere, and the only shell this repo configures. zsh and
+bash are left at whatever the OS ships.
 
 ```
 ~/.config/fish/
-  conf.d/00-path.fish    PATH, Homebrew, bun, pnpm    } sourced for EVERY fish,
-  conf.d/10-env.fish     EDITOR, ls/ll/grep aliases   } interactive or not
+  conf.d/00-path.fish    PATH, Homebrew, bun, pnpm, nvm } sourced for EVERY fish,
+  conf.d/10-env.fish     EDITOR, ls/ll/grep aliases     } interactive or not
   conf.d/20-tools.fish   pyenv, direnv
+  conf.d/25-nvidia.fish  NVSHMEM library path (DGX only)
   conf.d/30-work.fish    FullStory env (work machines only, templated)
   config.fish            vi bindings + the interactive-only loaders
   functions/             fish_prompt, _prompt_path, load-secrets, load-work-env
 ```
 
+Machine differences are handled at runtime where possible (`command -q`, `test -d`), so
+one file works on every box and a missing tool is skipped rather than an error. Only
+the FullStory block is a chezmoi template, because it depends on a choice, not on what's
+installed.
+
 Two bridges exist because fish can't source POSIX shell:
 
-- **`load-secrets`** parses `~/.s3kr1tz.sh`. That file stays POSIX `export K=V` so zsh
-  can still source it directly and there's only ever one copy of the keys on disk.
+- **`load-secrets`** parses `~/.s3kr1tz.sh`. That file stays POSIX `export K=V` so bash
+  tooling can still source it directly and there's only ever one copy of the keys on disk.
 - **`load-work-env`** runs `~/.fsprofile` in bash and imports the resulting environment.
   It's FullStory-managed (`### DO NOT EDIT ###`) bash that sources more bash, so it can't
   be ported — only imported. PATH is deliberately excluded from the import so it can't
   clobber what `00-path.fish` built. The aliases `environment.inc` defines don't survive
   an env import and are re-declared in `30-work.fish`.
 
-Both loaders run only in interactive shells, matching what `.zshrc` did. Scripts that
-need them can call either by name. PATH and `EDITOR`, by contrast, now apply to every
-fish — under zsh they only existed interactively.
+Both loaders run only in interactive shells. Scripts that need them can call either by
+name. PATH and `EDITOR`, by contrast, apply to every fish.
 
 `FS_SKIP_COMP`/`FS_SKIP_CD`/`SKIP_FS_PS1` and `NODE_EXTRA_CA_CERTS` are set *before*
 `load-work-env` runs, because `.fsprofile` and `environment.inc` check them and honour
@@ -69,7 +72,7 @@ of them belong in a repo:
 | installed by `npx skills` | `subtext-*`, `find-skills` | **no** — reproduced from `.skill-lock.json` |
 | hand-authored, generic | `changesets`, `github-stacked-prs` | yes, as files |
 | hand-authored, internal | `sightkick-*`, `fsta-sightmap-browser` | **no** — see below |
-| symlink into a source repo | `yaks*` | yes, as relative symlinks |
+| installed by `yaks skills install` | `yaks*` | **no** — bundled in the yaks binary |
 
 Installed skills are tracked in `.skill-lock.json` by source + folder hash, so
 syncing the 5KB lock reproduces all eleven of them with `npx skills update`.
@@ -80,10 +83,16 @@ unreleased work (`fullstorydev/sightmap` is a private repo) plus a staging hostn
 They're listed in `home/.chezmoiignore` so a stray `chezmoi add -r ~/.agents` can't
 sweep them in.
 
-The `yaks*` entries are symlinks into the dev checkout at `~/src/rs/yaks`. Their
-sources use chezmoi's `symlink_` prefix, where the source file's *contents* are the
-link target — kept **relative** (`../../src/rs/yaks/skills/yaks`) so they resolve on
-any machine with that checkout, rather than baking in `/Users/joel`.
+The `yaks*` skills ship inside the yaks binary, so `yaks skills install --user` writes
+the full set (all seven, matching the installed version) and `yaks skills status` says
+when they're behind. They used to be symlinks into `~/src/rs/yaks/skills/`, but yaks
+moved that directory to `.agents/skills/` and the links went dead. On a machine that
+still has them, replace them:
+
+```sh
+rm ~/.agents/skills/yaks ~/.agents/skills/yaks-*   # the old symlinks only
+yaks skills install --user
+```
 
 Note `.skill-lock.json` carries `installedAt`/`updatedAt` timestamps and folder
 hashes, so running `npx skills update` on either machine produces a real diff here.
@@ -102,14 +111,37 @@ chezmoi init --source=~/dotfiles --apply https://github.com/joelgwebber/dotfiles
 `--source=~/dotfiles` matters: the generated config records that path, so cloning anywhere else
 leaves chezmoi pointing at a directory that doesn't exist. Init asks whether it's a work machine
 and writes the answer to `~/.config/chezmoi/chezmoi.toml`, which gates the FullStory block in
-`.zshrc`.
+fish's `30-work.fish`.
 
-Then recreate `~/.s3kr1tz.sh` by hand (see below) — it is deliberately not in this repo.
+Then:
+
+1. Install fish and make it the login shell. macOS: `brew install fish`. Linux:
+   `sudo apt install fish`, or Homebrew below.
+   Then: `echo $(command -v fish) | sudo tee -a /etc/shells; chsh -s $(command -v fish)`.
+2. Homebrew (Linux too: `/home/linuxbrew/.linuxbrew`, which `00-path.fish` picks up),
+   then `brew install direnv`. Everything in `conf.d` skips tools that aren't installed,
+   so this can come later.
+3. `gh auth login`. Git uses gh for GitHub on every machine, so there's no token in
+   `~/.git-credentials` to manage.
+4. `yaks skills install --user` (see Agent skills).
+5. Recreate `~/.s3kr1tz.sh` by hand (see below). It is deliberately not in this repo.
+
+## Git identity and credentials
+
+The default email is `jgw@pobox.com` on every machine. Any repo with a remote under
+`github.com/fullstorydev` (https or ssh) also includes `~/.config/git/fullstory`, which
+switches it to `joel@fullstory.com`. So the address follows the repo, not the machine:
+these dotfiles commit as the personal address even from a work laptop.
+
+Credentials: GitHub always goes through `gh auth git-credential`. Every other host
+(e.g. huggingface.co) uses the OS store: the macOS keychain, libsecret where its helper
+is installed, and otherwise git's plaintext `store` (`~/.git-credentials`). Ubuntu doesn't
+ship a built libsecret helper.
 
 ## Daily use
 
 ```sh
-chezmoi edit ~/.zshrc     # edit source, not the target
+chezmoi edit ~/.config/fish/config.fish   # edit source, not the target
 chezmoi apply             # push source -> home
 chezmoi diff              # preview what apply would change
 chezmoi re-add            # pull an in-place edit back into source
@@ -124,7 +156,7 @@ don't, which is the point — but it does mean drift is something you pull in de
 ## `.s3kr1tz.sh`
 
 Unmanaged on purpose: this repo is public, so no ciphertext of live keys goes in it.
-`.zshrc` sources it only if present.
+fish's `load-secrets` reads it if present. Keep it `chmod 600`.
 
 ```sh
 export OPENROUTER_API_KEY="..."

@@ -2,8 +2,8 @@ function load-secrets --description 'Load ~/.s3kr1tz.sh (POSIX export syntax) in
     set -l file ~/.s3kr1tz.sh
     test -f $file; or return 0
 
-    # The file stays POSIX so zsh can still source it directly and so any
-    # bash/zsh tooling that reads it keeps working. fish can't source it, so we
+    # The file stays POSIX so bash tooling (and any shell but fish) can
+    # source it directly. fish can't source it, so we
     # parse the `export K="V"` lines instead. Commented lines start with # and
     # therefore never match.
     while read -l line

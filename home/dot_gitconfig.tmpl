@@ -2,8 +2,15 @@
 	fsmonitor = false
 	untrackedcache = true
 [user]
-	email = joel@fullstory.com
+	email = jgw@pobox.com
 	name = Joel Webber
+{{- /* Identity follows the repo, not the machine: anything cloned from the
+       fullstorydev org commits as the work address on every machine, and
+       everything else (these dotfiles included) as the personal one. */}}
+[includeIf "hasconfig:remote.*.url:https://github.com/fullstorydev/**"]
+	path = ~/.config/git/fullstory
+[includeIf "hasconfig:remote.*.url:git@github.com:fullstorydev/**"]
+	path = ~/.config/git/fullstory
 [init]
 	defaultBranch = main
 [filter "lfs"]
@@ -14,8 +21,13 @@
 [credential]
 {{- if eq .chezmoi.os "darwin" }}
 	helper = osxkeychain
-{{- else if eq .chezmoi.os "linux" }}
+{{- else if stat "/usr/lib/git-core/git-credential-libsecret" }}
 	helper = /usr/lib/git-core/git-credential-libsecret
+{{- else }}
+	{{- /* Ubuntu ships libsecret's helper only as source, so most Linux boxes
+	       fall back to the plaintext store. Only non-GitHub hosts (e.g.
+	       huggingface.co) ever reach it; GitHub goes through gh below. */}}
+	helper = store
 {{- end }}
 {{- /* `gh auth setup-git` writes an absolute path to gh, which differs per
        machine (/opt/homebrew/bin on macOS, /usr/bin on Linux). Resolve it at

@@ -12,3 +12,9 @@
 # The remaining skills under ~/.agents/skills are installed by `npx skills` and
 # reproduce from .skill-lock.json, so they are intentionally unmanaged too --
 # tracking their files would fight `npx skills update`, which owns them.
+
+# yaks bundles its own skills and installs them with `yaks skills install --user`
+# (its `yaks skills status` says when they are behind the binary). Like the npx
+# ones, they are owned by their installer, not by this repo.
+.agents/skills/yaks
+.agents/skills/yaks-*
