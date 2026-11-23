@@ -17,8 +17,9 @@ home/            <- chezmoi source state (the only part that lands in ~)
 docs/            <- notes, not config
 fonts/           <- checked in, but installed by hand; chezmoi never places these
 sieve/           <- server-side mail filters, deployed by hand
-.yaks/           <- task tracker
 ```
+
+Tasks are tracked with yaks on the orphan `yaks` branch (`yaks path` shows its checkout).
 
 Source-name prefixes are chezmoi's: `dot_` becomes a leading `.`, `.tmpl` marks a template.
 Note that files literally starting with `.` inside `home/` are **ignored** by chezmoi (except

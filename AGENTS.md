@@ -1,6 +1,6 @@
 # Agent Instructions
 
-This project uses Yaks to track work. The Yaks skill (activated by the `.yaks/` directory) defines the required workflow — follow it.
+This project uses Yaks to track work. The farm lives on the `yaks` branch (`yaks path` prints its checkout); the Yaks skill defines the required workflow — follow it.
 
 
 ## Landing the Plane (Session Completion)
