@@ -1,7 +1,0 @@
-{{- /* Generates ~/.config/chezmoi/chezmoi.toml at `chezmoi init`. */ -}}
-{{- $work := promptBoolOnce . "work" "Is this a work (FullStory) machine" -}}
-
-sourceDir = {{ (joinPath .chezmoi.homeDir "dotfiles") | quote }}
-
-[data]
-    work = {{ $work }}
