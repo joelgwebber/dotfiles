@@ -124,8 +124,9 @@ Then:
    `sudo apt install fish`, or Homebrew below.
    Then: `echo $(command -v fish) | sudo tee -a /etc/shells; chsh -s $(command -v fish)`.
 2. Homebrew (Linux too: `/home/linuxbrew/.linuxbrew`, which `00-path.fish` picks up),
-   then `brew install direnv`. Everything in `conf.d` skips tools that aren't installed,
-   so this can come later.
+   then `brew install direnv tree-sitter-cli`. Everything in `conf.d` skips tools that
+   aren't installed, so this can come later. nvim-treesitter's `main` branch compiles
+   parsers with the `tree-sitter` CLI; without it every start re-downloads them and fails.
 3. `gh auth login`. Git uses gh for GitHub on every machine, so there's no token in
    `~/.git-credentials` to manage.
 4. `yaks skills install --user` (see Agent skills).

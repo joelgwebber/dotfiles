@@ -136,7 +136,6 @@ require('lazy').setup {
   { 'norcalli/nvim-colorizer.lua' },
 
   { 'jbyuki/venn.nvim' },
-  { 'Apeiros-46B/qalc.nvim' },
 
   { -- Beads issue tracking integration
     'joeblubaugh/nvim-beads',
