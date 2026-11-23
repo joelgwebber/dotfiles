@@ -19,7 +19,8 @@ chezmoi can't point one source at two targets, so the options are:
 
 Option 1 is the least duplication.
 
----
-▸ 2026-09-13T20:25:12Z [Joel Webber]
+#### 2026-09-13T20:25:12Z
+
+*Joel Webber*
 
 Won't do. User: 'No worries about the font thing. Let's just leave that as checked in files, and I'll install them manually on both systems.' Fonts are now plain repo files at fonts/, outside chezmoi's view, so there is no OS-specific install path to build.

@@ -44,8 +44,9 @@ TWO HARD PARTS:
 
 BLOCKING: need the Linux fish config before designing this, or the two machines will diverge again immediately.
 
----
-▸ 2026-09-13T20:33:35Z [Joel Webber]
+#### 2026-09-13T20:33:35Z
+
+*Joel Webber*
 
 Mac side done and verified. fish config built fresh from the zsh port; Linux reconciliation still outstanding (user's choice -- they'll diff their existing Linux fish config against this).
 

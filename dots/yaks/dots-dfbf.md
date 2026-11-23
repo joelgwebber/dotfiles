@@ -11,8 +11,9 @@ tags:
 - linux
 ---
 
----
-▸ 2026-09-27T22:30:51Z [claude]
+#### 2026-09-27T22:30:51Z
+
+*claude*
 
 dmidecode -t 17 after the flash shows all four DIMMs at Speed 2133 MT/s, Configured Memory Speed 2133 MT/s, Configured Voltage 1.2 V - i.e. JEDEC DDR4 baseline with A-XMP off, because the flash restored BIOS defaults. Total is 125 GiB, so this is 4x32GB.
 
@@ -24,8 +25,9 @@ RECOMMENDED: re-enable A-XMP to joel's normal profile in the same BIOS trip as P
 
 Cheap independent check that does not need a reboot: a long memtester / stressapptest run at whatever speed is configured.
 
----
-▸ 2026-09-28T00:01:51Z [claude]
+#### 2026-09-28T00:01:51Z
+
+*claude*
 
 Joel reports A-XMP was ALREADY enabled, set to 'XMP Profile 1', and that profile appeared to be at 2133 / 1.2 V.
 
@@ -39,8 +41,9 @@ NEEDED to settle it (root): sudo dmidecode -t 17 | grep -E 'Size|Speed|Part Numb
 
 FASTER PATH THAN WAITING: no memory stress tool is installed; memtester and stress-ng are both in the repos (cachyos-extra-v3 / extra). Given hang #3 happened under load, a stress run is a plausible reproducer, and a reproducible hang is worth far more than days of waiting. Risk to state plainly: it may hard-lock the box - which is the point.
 
----
-▸ 2026-09-28T12:22:27Z [claude]
+#### 2026-09-28T12:22:27Z
+
+*claude*
 
 NOW THE TOP CANDIDATE, and note the shift: hang #4 occurred at the JEDEC 2133/1.2V fallback, so 'XMP too aggressive' is eliminated. What remains is a genuinely faulty DIMM, or an IMC/fabric marginal even at base speed on a 4x32GB load. That is consistent with everything: zero logs, no MCE (non-ECC), nothing for the NMI watchdog to see, and failures in both idle and load.
 
@@ -50,13 +53,15 @@ BLOCKED ON: pacman is still stale (db Sep 13, kernel still 7.2.4-3 - the -Syu ha
 
 If memtest86+ passes a full overnight run, memory is largely cleared and power delivery becomes the leading suspect.
 
----
-▸ 2026-09-28T19:59:41Z [claude]
+#### 2026-09-28T19:59:41Z
+
+*claude*
 
 Prerequisite for the memtest run: joel can't see the limine menu long enough to pick an entry (his monitor switches inputs on reboot). Per limine 12.9.0's CONFIG.md, 'timeout' is a GLOBAL option and 'timeout: no' disables automatic boot entirely, so the menu waits indefinitely - which is what's needed to select the memtest86+ entry. Editing /boot/limine.conf is safe here: ENABLE_ENROLL_LIMINE_CONFIG is not set in /etc/default/limine or /etc/limine-entry-tool.conf, so it defaults to no and limine-enroll-config is not required. limine-update only rewrites its own machine-id-tagged OS entry, so a global option at the top of the file survives.
 
----
-▸ 2026-09-28T21:18:14Z [claude]
+#### 2026-09-28T21:18:14Z
+
+*claude*
 
 WHY NO MEMTEST ENTRY APPEARED - nothing was ever going to create one:
   * memtest86+-efi ships exactly 3 payload files: /boot/memtest86+/memtest.efi and /etc/grub.d/60_memtest86+-efi. It is a GRUB-only package; the generator script is for grub-mkconfig.
@@ -71,8 +76,9 @@ ENTRY TO APPEND AT THE END of /boot/limine.conf (single leading slash = top-leve
 
 Syntax verified against limine 12.9.0's CONFIG.md: 'EFI Chainload protocol' takes 'path' (alias image_path); 'protocol: efi' has aliases uefi/efi_chainload. 'boot():/...' resolves to the partition containing the config file on the boot drive, which is the ESP - and since /boot IS the ESP (nvme0n1p1, vfat), /boot/memtest86+/memtest.efi is /memtest86+/memtest.efi in limine's namespace. Survives limine-update, which only rewrites its own machine-id-tagged OS entry.
 
----
-▸ 2026-09-29T03:07:28Z [claude]
+#### 2026-09-29T03:07:28Z
+
+*claude*
 
 The hand-written limine entry is probably correct; the panic is a Secure Boot LoadImage denial, not a config error - see dots-5c4f. Disable Secure Boot and retry.
 
@@ -82,8 +88,9 @@ PLAN B if it still panics with Secure Boot off (two routes that avoid Limine's L
      (mind the literal '+' in the directory name)
   2. Write memtest86+'s own USB image to the Cruzer Glide and boot it directly. Most reliable - no bootloader in the path at all - and the stick is already FAT32 from the BIOS flash.
 
----
-▸ 2026-09-29T12:20:43Z [claude]
+#### 2026-09-29T12:20:43Z
+
+*claude*
 
 memtest86+ PASSED TWICE (2026-09-29, after disabling Secure Boot per dots-5c4f). Bad DIMM cells are largely ruled out - that was the main thing this yak was about, so dropping to p3 rather than shearing.
 
@@ -95,8 +102,9 @@ stress-ng --vm --verify is the complement and is now worth running: it targets e
 
 Also untested and adjacent: FCLK/UCLK ratios and SoC voltages with 4x32GB. Worth confirming what the BIOS picked rather than leaving it on auto.
 
----
-▸ 2026-10-01T02:27:20Z [Joel Webber]
+#### 2026-10-01T02:27:20Z
+
+*Joel Webber*
 
 SHORN - superseded. This yak asked whether 4x32GB at XMP was the hard-lock cause. The answer is no, on two independent grounds:
 

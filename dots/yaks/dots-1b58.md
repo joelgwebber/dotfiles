@@ -32,8 +32,9 @@ TWO BUGS FOUND:
 - Stale lock: .skill-lock.json still lists 'yak' and 'yak-tracker' (old names, source joelgwebber/yaks), but on disk those are now symlinks named yaks/yaks-tracker pointing into the dev repo. 'npx skills update' would try to reinstall over them.
 - The dev checkout ~/src/rs/yaks has remote rocketsurgery-games/yaks, while both the lock and the Claude plugin marketplace point at joelgwebber/yaks. Unclear which is canonical.
 
----
-▸ 2026-09-13T22:48:37Z [Joel Webber]
+#### 2026-09-13T22:48:37Z
+
+*Joel Webber*
 
 Implemented the safe-subset option. Managed now:
   ~/.agents/AGENTS.md

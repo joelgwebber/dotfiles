@@ -10,13 +10,15 @@ updated: '2026-09-13T18:31:05Z'
 
 AGENTS.md 'Landing the Plane' mandates 'bd sync' in the push sequence, but this repo moved from beads to yaks in 5b6e18a. The bd binary is not part of the current workflow, so that step silently no-ops or errors for any agent following the instructions literally. Should read 'yaks' or drop the sync step.
 
----
-▸ 2026-09-13T18:27:58Z [Joel Webber]
+#### 2026-09-13T18:27:58Z
+
+*Joel Webber*
 
 Definitely drop that comment!
 
----
-▸ 2026-09-13T18:31:05Z [Joel Webber]
+#### 2026-09-13T18:31:05Z
+
+*Joel Webber*
 
 Dropped the 'bd sync' line from AGENTS.md's push sequence.
 

@@ -13,8 +13,9 @@ verify: grep -q processor.max_cstate=1 /proc/cmdline
 
 The idle hard-locks on j15r (dots-df8e, six hangs between 2026-09-23 and 2026-09-29) are worked around by processor.max_cstate=1 on the kernel cmdline, which keeps the package out of deep idle (PC6). It costs about 12 W at idle and 2 C. This yak is the reminder that it is a WORKAROUND, not a fix, and that it should be retested periodically rather than carried forever.
 
----
-▸ 2026-10-01T02:27:10Z [Joel Webber]
+#### 2026-10-01T02:27:10Z
+
+*Joel Webber*
 
 Successor to dots-df8e, which is shorn: the diagnosis is done and the workaround is deployed and confirmed. This yak holds only what is still genuinely open.
 

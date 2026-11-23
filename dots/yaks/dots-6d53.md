@@ -15,13 +15,15 @@ verify: printf 'protocol=https\nhost=github.com\n\n' | GIT_TERMINAL_PROMPT=0 git
 
 ~/.gitconfig had macOS-only helpers (osxkeychain, /opt/homebrew/bin/gh) after syncing from the laptop. GitHub HTTPS auth fails: the gh helper path doesn't exist and the empty helper= reset drops the fallback.
 
----
-▸ 2026-10-04T15:34:19Z [Joel Webber]
+#### 2026-10-04T15:34:19Z
+
+*Joel Webber*
 
 verify: `printf 'protocol=https\nhost=github.com\n\n' | GIT_TERMINAL_PROMPT=0 git credential fill >/dev/null` -> PASS (exit 0)
 
----
-▸ 2026-10-04T15:34:29Z [Joel Webber]
+#### 2026-10-04T15:34:29Z
+
+*Joel Webber*
 
 Cause: on the Mac, `gh auth setup-git` writes `!/opt/homebrew/bin/gh auth git-credential` (absolute path) plus `helper = osxkeychain`, and that got captured into the plain (non-template) home/dot_gitconfig. On Linux, /opt/homebrew/bin/gh does not exist, and the empty `helper =` reset clears the libsecret fallback, so GitHub HTTPS had no working helper at all. A local hand-edit had fixed only the osxkeychain line.
 

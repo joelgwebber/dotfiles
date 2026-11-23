@@ -15,8 +15,9 @@ Not sure why. I checked, and it's working everywhere else, but pasting back into
 
 It doesn't seem to be just the terminal (Ghostty), as it pastes fine into `micro` running in the same terminal.
 
----
-▸ 2026-10-02T05:05:18Z [Joel Webber]
+#### 2026-10-02T05:05:18Z
+
+*Joel Webber*
 
 Fixed. `~/.config/nvim/lua/plugins/osc52.lua` installed an OSC52 clipboard
 provider whose `paste` function never reads the system clipboard:
@@ -67,7 +68,8 @@ Verified after the change: `g:clipboard` is unset (built-in autodetect) and
 The simpler alternative, if you never want OSC52: delete the file. Keeping it
 gated costs nothing locally and saves rediscovering this on the next remote box.
 
----
-▸ 2026-10-02T05:05:19Z [Joel Webber]
+#### 2026-10-02T05:05:19Z
+
+*Joel Webber*
 
 verify: `nvim --headless -c "if has_key(get(g:, \"clipboard\", {}), \"name\") | cquit | endif" -c q` -> PASS (exit 0)

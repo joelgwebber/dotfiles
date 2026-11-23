@@ -14,7 +14,8 @@ The 'time' applies to only the first export statement in brew's output and print
 
 Fix: drop 'time ' from the eval in home/dot_zshrc.tmpl, then chezmoi apply.
 
----
-▸ 2026-09-13T20:25:12Z [Joel Webber]
+#### 2026-09-13T20:25:12Z
+
+*Joel Webber*
 
 Dropped. The eval is now: eval "$(/opt/homebrew/bin/brew shellenv)" (and the linuxbrew equivalent). Applied; ~/.zshrc no longer times its first export on every shell start.

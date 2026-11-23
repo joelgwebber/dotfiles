@@ -12,18 +12,21 @@ tags:
 verify: journalctl -b -k | grep -q 'Registered efi_pstore as persistent store backend' && test "$(sysctl -n kernel.nmi_watchdog)" = 1 && test "$(sysctl -n kernel.hardlockup_panic)" = 1 && test "$(sysctl -n kernel.panic)" = 20
 ---
 
----
-▸ 2026-09-24T03:03:04Z [claude]
+#### 2026-09-24T03:03:04Z
+
+*claude*
 
 Nothing can currently record a hard lock: nmi_watchdog=0, watchdog=0, hardlockup_panic=0, panic=0, panic_on_oops=0, no /dev/watchdog. All because 'nowatchdog' is on the cmdline - which disables the very NMI hard-lockup detector that would catch this. Kernel HAS the machinery: CONFIG_HARDLOCKUP_DETECTOR{,_PERF}=y, CONFIG_EFI_VARS_PSTORE=y (default-disabled, needs efi_pstore.pstore_disable=0), CONFIG_PSTORE_RAM=m, CONFIG_NETCONSOLE=m. No ACPI ERST/BERT tables.
 
----
-▸ 2026-09-24T03:03:15Z [claude]
+#### 2026-09-24T03:03:15Z
+
+*claude*
 
 Needs sudo + a reboot: drop 'nowatchdog' (and probably 'quiet') from KERNEL_CMDLINE in /etc/default/limine, add efi_pstore.pstore_disable=0, run limine-update, add /etc/sysctl.d/99-lockup.conf. Decision for you: EFI-NVRAM pstore vs ramoops vs netconsole.
 
----
-▸ 2026-09-24T03:23:08Z [claude]
+#### 2026-09-24T03:23:08Z
+
+*claude*
 
 sysctl.d precedence checked against sysctl.d(5): all files across /etc, /run, /usr/local/lib, /usr/lib are sorted together by BASENAME, lexicographically-latest wins; directory priority only applies to same-name files (full masking). No /etc/sysctl.conf on this box. Recommended bands: 10-40 for /usr, 60-90 for /etc.
 
@@ -35,13 +38,15 @@ Drafted /etc/sysctl.d/90-lockup-diag.conf (in session scratchpad, not yet instal
 
 [90-lockup-diag](dots-d532/90-lockup-diag.conf)
 
----
-▸ 2026-09-27T17:32:52Z [claude]
+#### 2026-09-27T17:32:52Z
+
+*claude*
 
 Regenerated (the scratchpad copy was cleaned). Attaching so it lives in the repo instead of /tmp. Install with: sudo install -m644 -o root -g root .yaks/artifacts/dots-d532/90-lockup-diag.conf /etc/sysctl.d/ && sudo sysctl --system
 
----
-▸ 2026-09-27T17:33:00Z [claude]
+#### 2026-09-27T17:33:00Z
+
+*claude*
 
 State check 2026-09-27: cmdline is now 'splash rw rootflags=subvol=/@ root=UUID=... nvme_core.default_ps_max_latency_us=0 pcie_aspm=off' -- joel removed 'quiet' and 'nowatchdog' and added pcie_aspm=off.
 
@@ -49,8 +54,9 @@ Second-kill-switch prediction CONFIRMED empirically: kernel.watchdog flipped 0 -
 
 Also still missing: efi_pstore.pstore_disable=0 on the cmdline, so a panic has nowhere to land across a reboot. kernel.panic is still 0 (no auto-reboot).
 
----
-▸ 2026-09-27T17:47:10Z [claude]
+#### 2026-09-27T17:47:10Z
+
+*claude*
 
 Install verified 2026-09-27. All targets correct: nmi_watchdog=1, watchdog=1, soft_watchdog=1, hardlockup_panic=1, softlockup_panic=1, panic=20, panic_on_oops=1, printk=7 4 1 7. Kernel confirms the hard-lockup detector actually initialised on the AMD PMU: 'NMI watchdog: Enabled. Permanently consumes one hw-PMU counter.' (perf-based init was the open risk; it did not fail.)
 
@@ -60,23 +66,27 @@ REMAINING GAP: no pstore backing. efi_pstore.pstore_disable=0 is still absent fr
 
 [add-pstore-cmdline](dots-d532/add-pstore-cmdline.sh)
 
----
-▸ 2026-09-27T18:08:11Z [claude]
+#### 2026-09-27T18:08:11Z
+
+*claude*
 
 Ready-to-run script to add efi_pstore.pstore_disable=0 to KERNEL_CMDLINE[default] and run limine-update. Backs up /etc/default/limine first, verifies the edit applied (restores on failure), prints a diff, then regenerates entries. Guarded by a grep so re-running is a no-op. Adds ONLY the pstore flag so the in-flight pcie_aspm=off experiment is not disturbed. sed verified against a copy of the real file - produces the intended line exactly.
 
----
-▸ 2026-09-27T20:27:08Z [claude]
+#### 2026-09-27T20:27:08Z
+
+*claude*
 
 Done. Capture path is fully live and survives reboot: 'nowatchdog'/'quiet' off the cmdline, efi_pstore.pstore_disable=0 added, and boot 0 (Sep 27 16:10:17) logs both 'NMI watchdog: Enabled. Permanently consumes one hw-PMU counter.' and 'pstore: Registered efi_pstore as persistent store backend'. Sysctls confirmed after reboot: nmi_watchdog=1, hardlockup_panic=1, panic=20, printk=7 4 1 7. The next hard lock should now panic, auto-reboot after 20s, and leave a record in /sys/fs/pstore.
 
----
-▸ 2026-09-27T20:27:08Z [Joel Webber]
+#### 2026-09-27T20:27:08Z
+
+*Joel Webber*
 
 verify: `journalctl -b -k | grep -q 'Registered efi_pstore as persistent store backend' && test "$(sysctl -n kernel.nmi_watchdog)" = 1 && test "$(sysctl -n kernel.hardlockup_panic)" = 1 && test "$(sysctl -n kernel.panic)" = 20` -> PASS (exit 0)
 
----
-▸ 2026-09-27T20:56:28Z [claude]
+#### 2026-09-27T20:56:28Z
+
+*claude*
 
 REOPENED. I sheared this on the evidence that efi_pstore registered, but the first real hang shows the capture path is incomplete in two ways:
 
@@ -87,8 +97,9 @@ Also: the detector WAS armed during the hung boot. Boot -1 logged 'NMI watchdog:
 
 TODO: (a) sudo ls -la /sys/fs/pstore/ and read any record - EFI records persist so it should still be there; (b) systemctl enable --now systemd-pstore.service so future records are archived readably and drained out of NVRAM.
 
----
-▸ 2026-09-27T22:30:31Z [claude]
+#### 2026-09-27T22:30:31Z
+
+*claude*
 
 pstore side is COMPLETE and good going forward. Audited: efi_pstore.pstore_disable=0 on cmdline, 'Registered efi_pstore as persistent store backend' in this boot, systemd-pstore.service enabled, /var/lib/systemd/pstore present and empty. Defaults are the right ones - Storage=external (archives to disk, survives journal rotation) and Unlink=yes (drains records out of EFI NVRAM after archiving, so NVRAM cannot fill up). Nothing further needed.
 
@@ -100,8 +111,9 @@ THE REMAINING GAP IS A HARDWARE WATCHDOG, for recovery rather than post-mortem:
   RuntimeWatchdogUSec   0 (systemd's runtime watchdog disabled)
 The SP5100 TCO is an AMD chipset timer independent of whether the CPU can still execute, so it can reset a totally wedged box that the NMI watchdog cannot see. Worth trying: load sp5100_tco (may need sp5100_tco.force=1 on some MSI boards) and set RuntimeWatchdogSec to something generous like 60s in /etc/systemd/system.conf.d/. Tradeoff to state plainly: a spurious fire during a long legitimate stall causes an unexpected reset, hence the generous timeout. It yields automatic recovery, not a log - it complements pstore rather than replacing it.
 
----
-▸ 2026-09-28T12:22:27Z [claude]
+#### 2026-09-28T12:22:27Z
+
+*claude*
 
 PSTORE IS A DEAD END - closing out its original premise. Hangs #3 and #4 both ran with the NMI watchdog armed and efi_pstore registered, and both left /sys/fs/pstore empty ('systemd-pstore.service: skipped, unmet condition check ConditionDirectoryNotEmpty'). The kernel never panics, so there is nothing for pstore to capture. The setup itself is correct and worth keeping - it costs nothing and would catch a genuine oops - but it should not be expected to explain these hangs.
 
@@ -117,8 +129,9 @@ Tradeoff as before: a spurious fire during a long legitimate stall causes an une
 
 [hang-watch](dots-d532/hang-watch)
 
----
-▸ 2026-09-28T19:28:00Z [claude]
+#### 2026-09-28T19:28:00Z
+
+*claude*
 
 Boot-time hang detector. Needed because sp5100_tco does NOT advertise WDIOF_CARDRESET (options mask 0x8180 = KEEPALIVEPING|MAGICCLOSE|SETTIMEOUT), so bootstatus is permanently 0 and the kernel cannot report a watchdog-caused reset. This infers it from the journal instead.
 
@@ -130,13 +143,15 @@ Validated against the full retained history: flags exactly the five hangs and no
 
 [hang-watch](dots-d532/hang-watch.service)
 
----
-▸ 2026-09-28T19:28:00Z [claude]
+#### 2026-09-28T19:28:00Z
+
+*claude*
 
 Oneshot unit, After/Requires systemd-journal-flush.service so the persistent journal is readable. Install: sudo install -m755 .yaks/artifacts/dots-d532/hang-watch /usr/local/bin/hang-watch && sudo install -m644 .yaks/artifacts/dots-d532/hang-watch.service /etc/systemd/system/ && sudo systemctl enable hang-watch.service
 
----
-▸ 2026-09-28T19:28:12Z [claude]
+#### 2026-09-28T19:28:12Z
+
+*claude*
 
 WATCHDOG IS INSTALLED BUT NOT ARMED. /dev/watchdog and /dev/watchdog0 exist, sp5100_tco loaded cleanly ('Using 0xfeb00000 for watchdog MMIO address', 'initialized. heartbeat=60 sec'), and /etc/systemd/system.conf.d/watchdog.conf correctly contains '[Manager] RuntimeWatchdogSec=60'. But systemctl still reports RuntimeWatchdogUSec=0 and /sys/class/watchdog/watchdog0/state is 'inactive' - nothing is pinging it, so it will never fire.
 
@@ -150,8 +165,9 @@ FULL HANG HISTORY recovered by hang-watch --history, which found a FIFTH hang I 
   5. 2026-09-27 21:41:37  after  2h11m11s  sat dead 10h31m
 Every deliberate reboot in the same window classifies CLEAN. Cumulative dead time is roughly four days - which is the argument for arming the watchdog regardless of diagnosis.
 
----
-▸ 2026-09-30T10:54:33Z [claude]
+#### 2026-09-30T10:54:33Z
+
+*claude*
 
 THE WATCHDOG HAS NEVER ACTUALLY WORKED - and hang #6 proves it. /usr/lib/modprobe.d/blacklist.conf (owned by cachyos-settings 1:1.4.1-1) contains 'blacklist sp5100_tco', so systemd-modules-load refuses it every boot:
   Sep 29 08:16:27 systemd-modules-load[558]: Module 'sp5100_tco' is deny-listed (by kmod)
@@ -167,13 +183,15 @@ FIX (two parts, because systemd opens the watchdog at PID1 startup, before syste
 Verify after reboot: ls /dev/watchdog; systemctl show -p RuntimeWatchdogUSec; cat /sys/class/watchdog/watchdog0/state (want 'active'); wdctl.
 Caveat: CachyOS blacklists both TCO watchdogs deliberately and sp5100_tco has a history of spurious resets on some boards. With a 60s timeout that risk is low, but it is not zero.
 
----
-▸ 2026-10-01T02:26:15Z [Joel Webber]
+#### 2026-10-01T02:26:15Z
+
+*Joel Webber*
 
 verify: `journalctl -b -k | grep -q 'Registered efi_pstore as persistent store backend' && test "$(sysctl -n kernel.nmi_watchdog)" = 1 && test "$(sysctl -n kernel.hardlockup_panic)" = 1 && test "$(sysctl -n kernel.panic)" = 20` -> PASS (exit 0)
 
----
-▸ 2026-10-01T02:26:31Z [Joel Webber]
+#### 2026-10-01T02:26:31Z
+
+*Joel Webber*
 
 SHORN - the whole capture path is live and verified on boot 0 (2026-09-30 22:12).
 

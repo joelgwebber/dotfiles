@@ -21,8 +21,9 @@ Audit of current state (2026-09-13):
 - Repo meta that must NOT become home-dir state: .yaks/, README.md, AGENTS.md, CLAUDE.md, notes.md, LICENSE.
 - Working tree dirty at audit time: config/claude/settings.json, config/nvim/init.lua (+4 more since partially reverted).
 
----
-▸ 2026-09-13T18:14:39Z [Joel Webber]
+#### 2026-09-13T18:14:39Z
+
+*Joel Webber*
 
 DECISIONS (user, 2026-09-13):
 1. Source layout: keep ~/dotfiles repo, add .chezmoiroot containing 'home'. Repo meta (.yaks, README, notes.md, LICENSE, config/sieve, bin) stays at root, outside chezmoi's view.
@@ -32,8 +33,9 @@ DECISIONS (user, 2026-09-13):
 
 Rejected: age encryption (public repo), Bitwarden template (bw is installed, but vault-unlock friction not worth it for a quick hack), making the repo private.
 
----
-▸ 2026-09-13T18:20:38Z [Joel Webber]
+#### 2026-09-13T18:20:38Z
+
+*Joel Webber*
 
 DONE. Committed as 5f9e7eb (migration) on top of d6b444b (drift checkpoint).
 
@@ -52,8 +54,9 @@ Backup of pre-migration state (live files, symlink map, uncommitted patch, runti
 
 Spun off: dots-2260 (tmux, needs human), dots-c09d (AGENTS.md bd->yaks), dots-1c34 ('time' in brew eval), dots-e225 (bin/bw-cleanup uninstalled).
 
----
-▸ 2026-09-13T18:24:09Z [Joel Webber]
+#### 2026-09-13T18:24:09Z
+
+*Joel Webber*
 
 REBASE NOTE: the push hit upstream commits from the Linux machine (a46ea57 'Turning off nvim stuff', c037a65 'Tweaking keymaps on Linux') that this Mac didn't have.
 

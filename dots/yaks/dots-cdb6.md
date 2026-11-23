@@ -15,8 +15,9 @@ verify: test -f /etc/polkit-1/rules.d/49-noctalia-greeter-sync.rules
 
 "Authorization is required to sync appearance to the login greeter"
 
----
-▸ 2026-10-02T03:52:24Z [Joel Webber]
+#### 2026-10-02T03:52:24Z
+
+*Joel Webber*
 
 Root cause found, and it is upstream's deliberate default rather than a
 misconfiguration here.
@@ -84,7 +85,8 @@ Related but distinct: [[dots-2998]] is the other recurring auth prompt, and it
 is a PAM/keyring problem, not polkit. [[dots-3d5e]] is the third
 noctalia-greeter annoyance (journal flooding).
 
----
-▸ 2026-10-02T04:31:04Z [Joel Webber]
+#### 2026-10-02T04:31:04Z
+
+*Joel Webber*
 
 That worked a charm. Fixed!

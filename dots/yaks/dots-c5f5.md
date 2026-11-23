@@ -18,17 +18,20 @@ Reproduced against a fake chunked-SSE upstream:
 
 Fix: stream with read1; retry transient upstream failures (connection errors, 408/429/500/502/503/504/529; 1s/2s/4s or Retry-After, capped 10s; 4 attempts) only before anything is sent to the client; after streaming starts, an upstream failure just closes the connection; client disconnects log one line.
 
----
-▸ 2026-10-17T03:18:53Z [Delta agent]
+#### 2026-10-17T03:18:53Z
+
+*Delta agent*
 
 moved: hairy -> shaving
 
----
-▸ 2026-10-17T03:19:04Z [Delta agent]
+#### 2026-10-17T03:19:04Z
+
+*Delta agent*
 
 Verified with a fake chunked-SSE upstream: events now arrive at 0.5s intervals; mid-stream upstream failure truncates cleanly (no injected status line); 529x2 retried then streamed; 400 passed through without retry; RemoteDisconnected and connection-refused retried 3x then 502 after 7s; client hangup logs one line and closes upstream. Follow-up: dots-a234.
 
----
-▸ 2026-10-17T03:19:04Z [Delta agent]
+#### 2026-10-17T03:19:04Z
+
+*Delta agent*
 
 moved: shaving -> shorn

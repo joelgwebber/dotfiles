@@ -10,13 +10,15 @@ tags:
 - linux
 ---
 
----
-▸ 2026-09-24T03:04:38Z [claude]
+#### 2026-09-24T03:04:38Z
+
+*claude*
 
 Investigation phase complete; findings in docs/idle-hardlock-notes.md. All four remediation children blocked on sudo/physical access (yaks inbox). Leaving parent shaving until they land. Incidental blocker found and filed: dots-2c1b (macOS credential helper in ~/.gitconfig broke the push).
 
----
-▸ 2026-09-27T17:47:10Z [claude]
+#### 2026-09-27T17:47:10Z
+
+*claude*
 
 BREAKTHROUGH - the 4G journal retention paid off immediately. Six boots now retained (Sep 23 -> Sep 27) and two of them are captured hard hangs.
 
@@ -32,8 +34,9 @@ Incidental: niri logged 'vblank_throttle: output DP-1 running faster than expect
 
 This elevates dots-3d5e from log-noise cleanup to a possible cause.
 
----
-▸ 2026-09-27T20:27:44Z [claude]
+#### 2026-09-27T20:27:44Z
+
+*claude*
 
 STATUS Sep 27 16:25 - the hypothesis is NOT yet tested. Do not read the absence of hangs as success.
 
@@ -51,8 +54,9 @@ RED HERRING ruled out: 'clocksource: Watchdog remote CPU N read timed out' occur
 
 Still clean since the fixes: no lockup/panic events, no Xid/NVRM, no MCE, no thermal, and all PCIe AER counters still zero even with pcie_aspm=off now active.
 
----
-▸ 2026-09-27T20:56:28Z [claude]
+#### 2026-09-27T20:56:28Z
+
+*claude*
 
 HANG #3, and it breaks the greeter hypothesis.
 
@@ -70,8 +74,9 @@ Ruled out again for this hang: no Xid/NVRM, no MCE, no thermal, no AER, no OOM (
 
 This promotes dots-c1e2 (BIOS 1.40 from 2022 + Power Supply Idle Control) to the top remaining lever.
 
----
-▸ 2026-09-27T22:05:15Z [claude]
+#### 2026-09-27T22:05:15Z
+
+*claude*
 
 NEW BASELINE Sep 27 17:55. BIOS 1.40 (AGESA 1.2.0.7, 2022) -> 1.D4 (AGESA 1.2.0.12, 2026), microcode 0x0a20102e -> 0x0a201030. dots-c1e2 shorn. This resets the observation window: every prior hang was on 4-year-old firmware, so the hang history is no longer directly comparable.
 
@@ -81,20 +86,23 @@ WHAT A MEANINGFUL TEST LOOKS LIKE NOW: the two idle hangs took 13h06m and 6h20m,
 
 pcie_aspm=off is still on the cmdline despite being falsified by hang #3. Recommend leaving it for one observation period so the BIOS is the only changed variable, then dropping it - the new BIOS is the first one to expose PCIe ASPM Control in setup (added in v17), so the platform's own handling now has 4 years of fixes behind it.
 
----
-▸ 2026-09-27T22:30:51Z [claude]
+#### 2026-09-27T22:30:51Z
+
+*claude*
 
 New child dots-dfbf: 4x32GB at XMP as a candidate root cause. Raised because the post-flash dmidecode shows all four DIMMs fell back to JEDEC 2133 / 1.2 V. Two consequences: (1) memory instability on a 4-DIMM AM4 config fits the no-logs/no-MCE/no-NMI signature better than anything else considered so far, including the greeter; (2) the observation window starting now is confounded - it is 'new BIOS AND underclocked memory', not 'new BIOS'. Recommended re-enabling A-XMP in the same BIOS trip as Power Supply Idle Control to keep it a single variable.
 
----
-▸ 2026-09-28T00:01:51Z [claude]
+#### 2026-09-28T00:01:51Z
+
+*claude*
 
 Post-BIOS-settings state, Sep 27 19:30 boot: BIOS 1.D4, Power Supply Idle Control set to Typical Current Idle (not verifiable from the OS - it affects VRM idle current, not the exposed ACPI C-states; cpuidle shows POLL/C1/C2 under acpi_idle, and I have no pre-change baseline to compare anyway). limine-install ran - 'Boot0000* Limine' is restored and the USB stick entry is gone. Both reboots clean, no unclean-shutdown markers. Minor: BootOrder is 0001,0000 so the fallback still boots first; harmless since both point at Limine on the same ESP, but 'sudo efibootmgr -o 0000,0001' would put the named entry first.
 
 Uptime 30m. Nothing proven yet - see the calibration note above (13h06m / 6h20m / 15m-under-load).
 
----
-▸ 2026-09-28T12:22:06Z [claude]
+#### 2026-09-28T12:22:06Z
+
+*claude*
 
 HANG #4. Boot -1: Sep 27 19:30:26 -> 21:41:37 = 2h11m11s. Ends abruptly on 'snapperd.service: Deactivated successfully' with no shutdown sequence. It sat dead from 21:41 until joel powered it on at 08:12 next morning (10.5h), so panic=20 did NOT auto-reboot it - i.e. no panic.
 
@@ -115,8 +123,9 @@ ELIMINATED: nvme_core.default_ps_max_latency_us=0, pcie_aspm=off, BIOS 1.40->1.D
 
 STILL STANDING: a faulty DIMM or an IMC marginal at any speed (dots-dfbf, untested); power delivery / PSU, which fits a zero-log freeze in both idle and load, and 5950X + RTX 4090 is a brutal transient load; motherboard VRM. Worth asking joel what PSU this is - model, wattage, age - since nothing in the OS can see it.
 
----
-▸ 2026-09-29T12:21:11Z [claude]
+#### 2026-09-29T12:21:11Z
+
+*claude*
 
 STATUS 2026-09-29. No hang since #5 (Sep 27 21:41:37) - hang-watch reports boots -7..-1 all CLEAN. But exposure is thin again: those seven boots ran 42m, 1h00m, 28s, 7m, 5m, 57m, 8m - about 3h20m total, longest 1h00m, against hangs that took 15m to 13h06m. Not evidence of a fix.
 
@@ -142,8 +151,9 @@ REMAINING CANDIDATES, ranked by fit x cost:
 
 Eliminated so far: nvme APST, pcie_aspm, BIOS 1.40->1.D4, Power Supply Idle Control, the greeter, memory speed, bad DIMM cells, thermal, OOM, GPU driver faults (no Xid), MCE, PCIe AER.
 
----
-▸ 2026-09-30T10:55:00Z [claude]
+#### 2026-09-30T10:55:00Z
+
+*claude*
 
 HANG #6 + the stress-ng result reorder the leaderboard substantially.
 
@@ -171,13 +181,15 @@ MEMORY IS NOT CLEARED BY THIS RUN: '--vm 32' without --vm-bytes uses the 256 MB 
 
 [cstate-cost](dots-df8e/cstate-cost)
 
----
-▸ 2026-10-01T01:29:00Z [claude]
+#### 2026-10-01T01:29:00Z
+
+*claude*
 
 A/B measures idle package power and Tctl with cpuidle C2 disabled vs enabled, then restores C2 to disabled from an EXIT trap so Ctrl-C or an error cannot leave the machine exposed. Reads RAPL via /sys/class/powercap/intel-rapl:0 (AMD implements the RAPL MSRs, and intel_rapl_msr is loaded here), handles the counter wrap at max_energy_range_uj = 65532610987 uJ, and toggles all 32 CPUs. energy_uj is root-only, which is why this needs sudo rather than being something I could measure directly.
 
----
-▸ 2026-10-01T01:29:00Z [claude]
+#### 2026-10-01T01:29:00Z
+
+*claude*
 
 24-HOUR IDLE RUN WITH C2 DISABLED: NO HANG. Strongest evidence yet for the package-deep-idle theory.
 
@@ -196,8 +208,9 @@ NEXT, in order:
   4. CLEAN UP THE CARGO CULT: pcie_aspm=off and nvme_core.default_ps_max_latency_us=0 are both still on the cmdline, both aimed at the same 'something breaks at idle' family, and both already falsified (hangs occurred with each active). Remove one at a time now that a known-good lever exists - it also claws back some of the idle power.
   5. LONG TERM this is a workaround, not a fix. Likely SoC/AGESA behaviour around package C6 on this CPU+board+memory combination. Already on the newest BIOS (1.D4), so nothing further to apply; revisit after a future AGESA, and check AMD CBS for a narrower knob.
 
----
-▸ 2026-10-01T02:27:48Z [Joel Webber]
+#### 2026-10-01T02:27:48Z
+
+*Joel Webber*
 
 SHORN. The diagnosis is complete and the workaround is deployed and verified. Follow-up is dots-e579; the narrative is written up in docs/idle-hardlock-notes.md; the hang-by-hang forensics stay in this file.
 

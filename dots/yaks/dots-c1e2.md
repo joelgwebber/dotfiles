@@ -12,28 +12,33 @@ tags:
 verify: test "$(cat /sys/class/dmi/id/bios_version)" = '1.D4'
 ---
 
----
-▸ 2026-09-24T03:03:04Z [claude]
+#### 2026-09-24T03:03:04Z
+
+*claude*
 
 BIOS 1.40 dated 2022-09-01 on MS-7D53. No capsule path: /sys/firmware/efi/esrt absent, fwupd not installed => LVFS impossible on this board. M-FLASH from FAT32 USB is the route. Also want BIOS 'Power Supply Idle Control = Typical Current Idle' (classic Zen idle-hardlock fix, OS-invisible). Boot survives an NVRAM wipe: Boot0005 UEFI OS -> EFI/BOOT/BOOTX64.EFI is the Limine fallback.
 
----
-▸ 2026-09-24T03:03:15Z [claude]
+#### 2026-09-24T03:03:15Z
+
+*claude*
 
 Needs physical action: M-FLASH from a FAT32 USB stick, plus setting Power Supply Idle Control = Typical Current Idle. Nothing I can do from the OS.
 
----
-▸ 2026-09-27T20:27:22Z [claude]
+#### 2026-09-27T20:27:22Z
+
+*claude*
 
 Still open: BIOS reads 1.40 / 09/01/2022 as of Sep 27.
 
----
-▸ 2026-09-27T20:56:29Z [claude]
+#### 2026-09-27T20:56:29Z
+
+*claude*
 
 Promoted: with pcie_aspm=off falsified and the NMI detector failing to catch hang #3, a platform/firmware-level freeze is now the leading theory, which makes the 4-year-old AGESA and the Power Supply Idle Control setting the most promising untried lever.
 
----
-▸ 2026-09-27T21:14:02Z [claude]
+#### 2026-09-27T21:14:02Z
+
+*claude*
 
 Firmware path researched and image verified.
 
@@ -58,8 +63,9 @@ TPM RISK CLEARED: v1D1 updates TPM firmware and MSI recommends a BitLocker backu
 
 No intermediate version is required per MSI's notes and the changelog history; v14 -> v1D4 direct is fine.
 
----
-▸ 2026-09-27T22:02:52Z [claude]
+#### 2026-09-27T22:02:52Z
+
+*claude*
 
 FLASHED SUCCESSFULLY. bios_version 1.40 -> 1.D4, bios_date 09/01/2022 -> 08/14/2026 (matches the E7D53AMS.1D4 ROM's internal date). First boot on it: Sep 27 17:55:34, clean, no new kernel errata.
 
@@ -71,7 +77,8 @@ NVRAM WAS cleared, exactly as predicted: 'Boot0004 Limine' is gone. The machine 
 
 Still unverified from the OS and needing joel: whether Power Supply Idle Control was set to Typical Current Idle, and whether the memory profile (XMP/EXPO) survived the settings reset - 'sudo dmidecode -t 17' is the check.
 
----
-▸ 2026-09-27T22:02:52Z [Joel Webber]
+#### 2026-09-27T22:02:52Z
+
+*Joel Webber*
 
 verify: `test "$(cat /sys/class/dmi/id/bios_version)" = '1.D4'` -> PASS (exit 0)

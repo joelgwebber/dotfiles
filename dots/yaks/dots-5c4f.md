@@ -11,8 +11,9 @@ tags:
 - linux
 ---
 
----
-▸ 2026-09-28T21:18:29Z [claude]
+#### 2026-09-28T21:18:29Z
+
+*claude*
 
 Before the BIOS flash, bootctl reported 'Secure Boot: disabled (unknown)' - I checked it on Sep 27 while clearing the TPM-firmware risk. It now reports 'Secure Boot: enabled (deployed)', and the raw efivars agree: SecureBoot=1, SetupMode=0, i.e. deployed mode, nominally full enforcement. Almost certainly a side effect of the flash restoring BIOS defaults (or of a setting toggled during the Power Supply Idle Control trip).
 
@@ -25,8 +26,9 @@ CONSEQUENCES:
 
 SEPARATE DRIFT FOUND: the deployed bootloader is Limine 12.7.0 (per bootctl's Product line) while the installed package is limine 12.9.0. The ESP binary is behind the package; 'sudo limine-install' refreshes it.
 
----
-▸ 2026-09-29T03:07:28Z [claude]
+#### 2026-09-29T03:07:28Z
+
+*claude*
 
 CONFIRMED AS THE LIKELY CAUSE of the memtest panic, and the earlier contradiction is resolved.
 
