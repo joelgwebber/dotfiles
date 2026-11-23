@@ -37,8 +37,13 @@ bash are left at whatever the OS ships.
   conf.d/25-nvidia.fish  NVSHMEM library path (DGX only)
   conf.d/30-work.fish    FullStory env (work machines only, templated)
   config.fish            vi bindings + the interactive-only loaders
-  functions/             fish_prompt, _prompt_path, load-secrets, load-work-env
+  functions/             fish_prompt, _prompt_path, load-secrets, load-work-env, nvwb
 ```
+
+`nvwb` ports NVIDIA AI Workbench's bash wrapper (sourced from `.bashrc` by its
+installer). Plain commands call the CLI directly; `activate`/`deactivate`/`open`/`close`
+emit bash meant to be eval'd, so those run in the real wrapper and leave you in a bash
+shell (`exit` returns to fish). It's harmless where Workbench isn't installed.
 
 Machine differences are handled at runtime where possible (`command -q`, `test -d`), so
 one file works on every box and a missing tool is skipped rather than an error. Only
